@@ -30,6 +30,11 @@ namespace pips_options
       /* default double values */
       double_options["dummy"] = 1.0;
 
+      setPresolveDefaults();
+   }
+
+   void StochOptions::setPresolveDefaults()
+   {
       /** all presolve/postsolve constants and settings */
       // TODO : many of these need adjustments/ have to be thought about
       double_options["PRESOLVE_INFINITY"] = std::numeric_limits<double>::infinity();
@@ -82,11 +87,21 @@ namespace pips_options
       /// PRESOLVE DATA
       /** absolute maximum for newly found bounds accepted by presolve */
       double_options["PRESOLVE_MAX_BOUND_ACCEPTED"] = 1e10;
-      /** epsilon used for changing bounds found in bound tightening so that they will be non-tight in the final solution */
-      double_options["PRESOLVE_EPS_BOUNDS_NONTIGHT"] = 1e4 * feastol;
+      /** track row/column through presolve */
+      bool_options["PRESOLVE_TRACK_ROW"] = false;
+      bool_options["PRESOLVE_TRACK_COL"] = false;
+      /** the row */
+      int_options["PRESOLVE_TRACK_ROW_INDEX"] = 0;
+      int_options["PRESOLVE_TRACK_ROW_NODE"] = -1;
+      int_options["PRESOLVE_TRACK_ROW_SYSTEM"] = 0; // 0 -> EQ, 1 -> INEQ
+      bool_options["PRESOLVE_TRACK_ROW_LINKING"] = false;
+      /** the column */
+      int_options["PRESOLVE_TRACK_COL_INDEX"] = 0;
+      int_options["PRESOLVE_TRACK_COL_NODE"] = -1;
 
       /// POSTSOLVE
       /** tolerance used for checking residuals after postsolve */
       double_options["POSTSOLVE_TOLERANCE"] = feastol * 1e2;
    }
+
 }

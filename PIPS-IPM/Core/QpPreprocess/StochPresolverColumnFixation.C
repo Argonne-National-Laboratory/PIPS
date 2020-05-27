@@ -28,9 +28,7 @@ StochPresolverColumnFixation::~StochPresolverColumnFixation()
 bool StochPresolverColumnFixation::applyPresolving()
 {
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyActivities());
-   assert(presData.verifyNnzcounters());
+   assert(presData.presDataInSync());
 
 #ifndef NDEBUG
    if( my_rank == 0 && verbosity > 1)
@@ -150,9 +148,7 @@ bool StochPresolverColumnFixation::applyPresolving()
 #endif
 
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyActivities());
-   assert(presData.verifyNnzcounters());
+   assert(presData.presDataInSync());
 
    if( fixed_columns_run != 0)
       return true;

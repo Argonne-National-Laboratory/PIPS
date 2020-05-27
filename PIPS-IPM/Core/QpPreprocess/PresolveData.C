@@ -21,62 +21,19 @@
 #include <string>
 #include <cmath>
 
-/* can specify a cloumn here which bound changes we wanna track maybe */
+bool PresolveData::iTrackColumn() const
+{
+   return track_col && ( !nodeIsDummy(tracked_col.getNode()) && (my_rank == 0 || !tracked_col.isLinkingCol() ) );
+}
 
-// #ifndef NDEBUG
-//   #define TRACK_C
-//   #define COLUMN_INDEX 523
-//   #define COL_NODE -1
-// #endif
-
-//#ifndef NDEBUG
-//    #define TRACK_R
-//    #define ROW_INDEX 32
-//    #define ROW_NODE -1
-//    #define ROW_BLOCK BL_MAT
-//    #define ROW_IS_LINK true
-//    #define ROW_SYS EQUALITY_SYSTEM
-//#endif
-
-#ifdef TRACK_C
-#define TRACK_COLUMN(col)                      \
-   ( col == INDEX(COL, COL_NODE, COLUMN_INDEX) \
-      && (my_rank == 0 || COL_NODE != -1)      \
-      && !nodeIsDummy(COL_NODE) )
-#else
-#define TRACK_COLUMN(col) false
-#endif
-
-#ifdef TRACK_R
-#define TRACK_ROW(row)            \
-   ( row == INDEX(ROW, ROW_NODE, ROW_INDEX, ROW_IS_LINK, ROW_SYS) \
-      && !nodeIsDummy(ROW_NODE)                                   \
-      && (my_rank == 0 || ROW_IS_LINK || ROW_NODE != -1) )
-#else
-#define TRACK_ROW(row) false
-#endif
-
-#ifdef TRACK_R
-#define I_TRACK_ROW                                \
-   (!nodeIsDummy(ROW_NODE)                         \
-      && (my_rank == 0 || ROW_IS_LINK              \
-         || ROW_NODE != -1))
-#else
-#define I_TRACK_ROW false
-#endif
-
-#ifdef TRACK_C
-#define I_TRACK_COLUMN                             \
-   !nodeIsDummy(COL_NODE)                          \
-      && (my_rank == 0 || COL_NODE != -1)
-#else
-#define I_TRACK_COLUMN false
-#endif
+bool PresolveData::iTrackRow() const
+{
+   return track_row && ( !nodeIsDummy(tracked_row.getNode()) && (my_rank == 0 || tracked_row.isLinkingRow() || tracked_row.getNode() != -1) );
+}
 
 PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) :
       postsolver(postsolver),
       limit_max_bound_accepted( pips_options::getDoubleParameter("PRESOLVE_MAX_BOUND_ACCEPTED") ),
-      eps_bounds_nontight( pips_options::getDoubleParameter("PRESOLVE_EPS_BOUNDS_NONTIGHT") ),
       length_array_outdated_indicators(6),
       array_outdated_indicators(new bool[length_array_outdated_indicators]),
       outdated_lhsrhs(array_outdated_indicators[0]),
@@ -102,6 +59,14 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
       INF_NEG( -pips_options::getDoubleParameter("PRESOLVE_INFINITY") ),
       INF_POS( pips_options::getDoubleParameter("PRESOLVE_INFINITY") ),
       nChildren(nnzs_col->children.size()),
+      track_row( pips_options::getBoolParameter("PRESOLVE_TRACK_ROW") ),
+      track_col( pips_options::getBoolParameter("PRESOLVE_TRACK_COL") ),
+      tracked_row(ROW, pips_options::getIntParameter("PRESOLVE_TRACK_ROW_NODE"),
+            pips_options::getIntParameter("PRESOLVE_TRACK_ROW_INDEX"),
+            pips_options::getBoolParameter("PRESOLVE_TRACK_ROW_LINKING"),
+            (pips_options::getIntParameter("PRESOLVE_TRACK_ROW_SYSTEM") == 0 ? EQUALITY_SYSTEM : INEQUALITY_SYSTEM) ),
+      tracked_col(COL, pips_options::getIntParameter("PRESOLVE_TRACK_COL_NODE"),
+            pips_options::getIntParameter("PRESOLVE_TRACK_COL_INDEX") ),
       objOffset(0.0), obj_offset_chgs(0.0),
       objective_vec_chgs( new SimpleVector(nnzs_col->vec->length()) ),
       lower_bound_implied_by_system(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
@@ -184,26 +149,22 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
 
    initAbsminAbsmaxInCols(*absmin_col, *absmax_col);
 
-#ifdef TRACK_C
-   if( I_TRACK_COLUMN )
+   if( iTrackColumn() )
    {
-      const double xupp = getSimpleVecFromColStochVec(*presProb->bux, COL_NODE)[COLUMN_INDEX];
-      const double xlow = getSimpleVecFromColStochVec(*presProb->blx, COL_NODE)[COLUMN_INDEX];
-      const double ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, COL_NODE)[COLUMN_INDEX];
-      const double ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, COL_NODE)[COLUMN_INDEX];
-      std::cout << "TRACKING_COLUMN: colum " << COLUMN_INDEX << " node " << COL_NODE << std::endl;
+      const double xupp = getSimpleVecFromColStochVec(*presProb->bux, tracked_col);
+      const double xlow = getSimpleVecFromColStochVec(*presProb->blx, tracked_col);
+      const double ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, tracked_col);
+      const double ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, tracked_col);
+      std::cout << "TRACKING_COLUMN: " << tracked_col << std::endl;
       std::cout << "\tbound x € [" << ((PIPSisZero(ixlow)) ? -std::numeric_limits<double>::infinity() : xlow) 
          << ", " << ((PIPSisZero(ixupp)) ? std::numeric_limits<double>::infinity() : xupp) << "]" << std::endl;
    }
-#endif
 
-#ifdef TRACK_R
-   if( I_TRACK_ROW )
+   if( iTrackRow() )
    {
-      std::cout << "TRACKING_ROW: row " << ROW_INDEX << " node " << ROW_NODE << " linking " << ROW_IS_LINK << " SystemType " << ROW_SYS << std::endl;
-      writeRowLocalToStreamDense(std::cout, INDEX(ROW, ROW_NODE, ROW_INDEX, ROW_IS_LINK, ROW_SYS));
+      std::cout << "TRACKING_ROW: " << tracked_row << std::endl;
+      writeRowLocalToStreamDense(std::cout, tracked_row);
    }
-#endif
 }
 
 PresolveData::~PresolveData()
@@ -238,6 +199,7 @@ void PresolveData::setUndefinedRowboundsTo(double value)
    setNotIndicatedEntriesTo(cupp, icupp, value);
 }
 
+// TODO: move to StochVector
 void PresolveData::setNotIndicatedEntriesTo(StochVector& svec, StochVector& sivec, double value)
 {
    assert(svec.children.size() == sivec.children.size());
@@ -287,7 +249,7 @@ sData* PresolveData::finalize()
 
 #ifndef NDEBUG
    if(distributed)
-      PIPS_MPIlogicOrArrayInPlace(array_outdated_indicators, length_array_outdated_indicators, MPI_COMM_WORLD);
+      PIPS_MPIlogicOrArrayInPlace(array_outdated_indicators, length_array_outdated_indicators);
    assert(!outdated_activities && !outdated_lhsrhs && !outdated_nnzs && !outdated_linking_var_bounds && !outdated_obj_vector && !postsolve_linking_row_propagation_needed);
 #endif
 
@@ -428,7 +390,7 @@ void PresolveData::recomputeActivities(bool linking_only, StochVector& actmax_eq
    SimpleVectorBase<int>& actmax_ineq_link_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd.vecl);
 
    /* Bl0 */
-   if(my_rank == 0)
+   if( my_rank == 0 )
    {
       addActivityOfBlock(mat_A.Blmat->getStorageDynamicRef(), actmin_eq_link_part, actmin_eq_link_ubndd, actmax_eq_link_part, actmax_eq_link_ubndd,
             xlow_root, ixlow_root, xupp_root, ixupp_root);
@@ -503,15 +465,15 @@ void PresolveData::recomputeActivities(bool linking_only, StochVector& actmax_eq
    if( distributed )
    {
       // todo is copying and then allreducing once cheaper than allreducing 4 times ? by a lot?
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_eq_part.vecl)->elements(), actmin_eq_part.vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_eq_part.vecl)->elements(), actmax_eq_part.vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_ineq_part.vecl)->elements(), actmin_ineq_part.vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_ineq_part.vecl)->elements(), actmax_ineq_part.vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_eq_part.vecl)->elements(), actmin_eq_part.vecl->n);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_eq_part.vecl)->elements(), actmax_eq_part.vecl->n);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_ineq_part.vecl)->elements(), actmin_ineq_part.vecl->n);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_ineq_part.vecl)->elements(), actmax_ineq_part.vecl->n);
 
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmin_eq_ubndd.vecl)->elements(), actmin_eq_ubndd.vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmax_eq_ubndd.vecl)->elements(), actmax_eq_ubndd.vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmin_ineq_ubndd.vecl)->elements(), actmin_ineq_ubndd.vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmax_ineq_ubndd.vecl)->elements(), actmax_ineq_ubndd.vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmin_eq_ubndd.vecl)->elements(), actmin_eq_ubndd.vecl->n);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmax_eq_ubndd.vecl)->elements(), actmax_eq_ubndd.vecl->n);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmin_ineq_ubndd.vecl)->elements(), actmin_ineq_ubndd.vecl->n);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmax_ineq_ubndd.vecl)->elements(), actmax_ineq_ubndd.vecl->n);
    }
 
 
@@ -571,27 +533,17 @@ void PresolveData::recomputeActivities(bool linking_only, StochVector& actmax_eq
          dynamic_cast<SimpleVector&>(*actmax_ineq_part.vecl)[row] = INF_POS;
    }
 
-#ifdef TRACK_R
-   if( I_TRACK_ROW )
+   if( iTrackRow() )
    {
-   double act_min = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(actmin_eq_part, ROW_NODE, ROW_IS_LINK )[ROW_INDEX] :
-         getSimpleVecFromRowStochVec(actmin_ineq_part, ROW_NODE, ROW_IS_LINK )[ROW_INDEX];
-   double act_max = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(actmax_eq_part, ROW_NODE, ROW_IS_LINK )[ROW_INDEX] :
-         getSimpleVecFromRowStochVec(actmax_ineq_part, ROW_NODE, ROW_IS_LINK )[ROW_INDEX];
+      double act_min, act_max;
+      int act_min_ubndd, act_max_ubndd;
 
-   int act_min_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(actmin_eq_ubndd, ROW_NODE, ROW_IS_LINK )[ROW_INDEX] :
-         getSimpleVecFromRowStochVec(actmin_ineq_ubndd, ROW_NODE, ROW_IS_LINK )[ROW_INDEX];
-   int act_max_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(actmax_eq_ubndd, ROW_NODE, ROW_IS_LINK )[ROW_INDEX] :
-         getSimpleVecFromRowStochVec(actmax_ineq_ubndd, ROW_NODE, ROW_IS_LINK )[ROW_INDEX];
+      getRowActivities(tracked_row, act_max, act_min, act_max_ubndd, act_min_ubndd);
 
-
-   std::cout << "TRACKING_ROW: Recomputed activity of tracked row" << std::endl;
-   std::cout << "\tnew min/max activity is: " << act_min << "/" << act_max << ", min/max unbounded counters are " << act_min_ubndd << "/" << act_max_ubndd << std::endl;
+      std::cout << "TRACKING_ROW: Recomputed activity of tracked row" << std::endl;
+      std::cout << "\tnew min/max activity is: " << act_min << "/" << act_max << ", min/max unbounded counters are " << act_min_ubndd << "/" << act_max_ubndd << std::endl;
    }
-#endif
-
 }
-
 
 /** Computes minimal and maximal activity of all rows in given matrix. Adds activities to min/max_activities accordingly. */
 void PresolveData::addActivityOfBlock( const SparseStorageDynamic& matrix, SimpleVector& min_partact, SimpleVectorBase<int>& unbounded_min,
@@ -643,7 +595,7 @@ void PresolveData::addActivityOfBlock( const SparseStorageDynamic& matrix, Simpl
 
 void PresolveData::allreduceLinkingVarBounds()
 {
-   PIPS_MPIgetLogicOrInPlace( outdated_linking_var_bounds, MPI_COMM_WORLD );
+   PIPS_MPIgetLogicOrInPlace( outdated_linking_var_bounds );
 
    if(!outdated_linking_var_bounds)
       return;
@@ -661,10 +613,10 @@ void PresolveData::allreduceLinkingVarBounds()
       SimpleVector* ixlow_old_vec = dynamic_cast<SimpleVector*>(ixlow_new_vec.cloneFull());
       SimpleVector* ixupp_old_vec = dynamic_cast<SimpleVector*>(ixupp_new_vec.cloneFull());
 
-      PIPS_MPImaxArrayInPlace(xlow_new_vec.elements(), xlow_new_vec.length(), MPI_COMM_WORLD);
-      PIPS_MPImaxArrayInPlace(ixlow_new_vec.elements(), ixlow_new_vec.length(), MPI_COMM_WORLD);
-      PIPS_MPIminArrayInPlace(xupp_new_vec.elements(), xupp_new_vec.length(), MPI_COMM_WORLD);
-      PIPS_MPImaxArrayInPlace(ixupp_new_vec.elements(), ixupp_new_vec.length(), MPI_COMM_WORLD);
+      PIPS_MPImaxArrayInPlace(xlow_new_vec.elements(), xlow_new_vec.length());
+      PIPS_MPImaxArrayInPlace(ixlow_new_vec.elements(), ixlow_new_vec.length());
+      PIPS_MPIminArrayInPlace(xupp_new_vec.elements(), xupp_new_vec.length());
+      PIPS_MPImaxArrayInPlace(ixupp_new_vec.elements(), ixupp_new_vec.length());
 
       // this will affect the activities of basically all rows - use with care
       for(int col = 0; col < xlow_new_vec.length(); ++col)
@@ -703,9 +655,9 @@ void PresolveData::allreduceLinkingVarBounds()
 void PresolveData::allreduceAndApplyLinkingRowActivities()
 {
    /* check for new linking rows that have to be computed */
-   PIPS_MPIgetLogicOrInPlace(outdated_activities, MPI_COMM_WORLD);
+   PIPS_MPIgetLogicOrInPlace(outdated_activities);
    // todo : better criterion - if there have been this and that many changes etc
-   PIPS_MPIgetSumInPlace(linking_rows_need_act_computation, MPI_COMM_WORLD);
+   PIPS_MPIgetSumInPlace(linking_rows_need_act_computation);
 
    if(!outdated_activities && linking_rows_need_act_computation == 0)
       return;
@@ -714,9 +666,7 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
     * rows in the changes array, allreduces MPI_SUM the changes array and update local activities with the global ones
     */
    if(distributed)
-   {
-      PIPS_MPIsumArrayInPlace(array_act_unbounded_chgs, lenght_array_act_chgs, MPI_COMM_WORLD);
-   }
+      PIPS_MPIsumArrayInPlace(array_act_unbounded_chgs, lenght_array_act_chgs);
 
    dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd->vecl).axpy( 1.0, *actmin_eq_ubndd_chgs);
    dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd->vecl).axpy( 1.0, *actmax_eq_ubndd_chgs);
@@ -760,12 +710,12 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
    }
 
    if( distributed )
-      PIPS_MPIsumArrayInPlace(array_act_chgs, lenght_array_act_chgs, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(array_act_chgs, lenght_array_act_chgs);
 
-   dynamic_cast<SimpleVector&>(*actmin_eq_part->vecl).axpy( 1.0, *actmin_eq_chgs);
-   dynamic_cast<SimpleVector&>(*actmax_eq_part->vecl).axpy( 1.0, *actmax_eq_chgs);
-   dynamic_cast<SimpleVector&>(*actmin_ineq_part->vecl).axpy( 1.0, *actmin_ineq_chgs);
-   dynamic_cast<SimpleVector&>(*actmax_ineq_part->vecl).axpy( 1.0, *actmax_ineq_chgs);
+   dynamic_cast<SimpleVector&>(*actmin_eq_part->vecl).axpy(1.0, *actmin_eq_chgs);
+   dynamic_cast<SimpleVector&>(*actmax_eq_part->vecl).axpy(1.0, *actmax_eq_chgs);
+   dynamic_cast<SimpleVector&>(*actmin_ineq_part->vecl).axpy(1.0, *actmin_ineq_chgs);
+   dynamic_cast<SimpleVector&>(*actmax_ineq_part->vecl).axpy(1.0, *actmax_ineq_chgs);
 
    actmin_eq_chgs->setToZero();
    actmax_eq_chgs->setToZero();
@@ -804,13 +754,13 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
 /** allreduce changes in the nnz counters and apply them locally */
 void PresolveData::allreduceAndApplyNnzChanges()
 {
-   PIPS_MPIgetLogicOrInPlace(outdated_nnzs, MPI_COMM_WORLD);
+   PIPS_MPIgetLogicOrInPlace(outdated_nnzs);
 
    if(!outdated_nnzs)
       return;
 
    if( distributed )
-      PIPS_MPIsumArrayInPlace(array_nnz_chgs, length_array_nnz_chgs, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(array_nnz_chgs, length_array_nnz_chgs);
 
    /* update local nnzCounters */
    nnzs_col->vec->axpy(1, *nnzs_col_chgs);
@@ -857,15 +807,13 @@ void PresolveData::allreduceAndApplyNnzChanges()
 
 void PresolveData::allreduceAndApplyBoundChanges()
 {
-   PIPS_MPIgetLogicOrInPlace(outdated_lhsrhs, MPI_COMM_WORLD);
+   PIPS_MPIgetLogicOrInPlace(outdated_lhsrhs);
 
    if(!outdated_lhsrhs)
       return;
 
    if(distributed)
-   {
-      PIPS_MPIsumArrayInPlace(array_bound_chgs, lenght_array_bound_chgs, MPI_COMM_WORLD);
-   }
+      PIPS_MPIsumArrayInPlace(array_bound_chgs, lenght_array_bound_chgs);
 
    dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*presProb->bA).vecl)->axpy( 1.0, *bound_chgs_A);
    dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*presProb->bl).vecl)->axpy( 1.0, *bound_chgs_C);
@@ -879,13 +827,13 @@ void PresolveData::allreduceAndApplyBoundChanges()
 
 void PresolveData::allreduceAndApplyObjVecChanges()
 {
-   PIPS_MPIgetLogicOrInPlace(outdated_obj_vector, MPI_COMM_WORLD);
+   PIPS_MPIgetLogicOrInPlace(outdated_obj_vector);
 
    if(!outdated_obj_vector)
       return;
 
    if(distributed)
-      PIPS_MPIsumArrayInPlace(objective_vec_chgs->elements(), objective_vec_chgs->length(), MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(objective_vec_chgs->elements(), objective_vec_chgs->length());
 
    dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*presProb->g).vec)->axpy(1.0, *objective_vec_chgs);
 
@@ -896,7 +844,7 @@ void PresolveData::allreduceAndApplyObjVecChanges()
 void PresolveData::allreduceObjOffset()
 {
    if(distributed)
-      PIPS_MPIgetSumInPlace(obj_offset_chgs, MPI_COMM_WORLD);
+      PIPS_MPIgetSumInPlace(obj_offset_chgs);
 
    objOffset += obj_offset_chgs;
    obj_offset_chgs = 0;
@@ -1006,9 +954,9 @@ bool PresolveData::reductionsEmpty()
    double recv = 0;
    if(distributed)
    {
-      PIPS_MPIlogicOrArrayInPlace(array_outdated_indicators, length_array_outdated_indicators, MPI_COMM_WORLD);
+      PIPS_MPIlogicOrArrayInPlace(array_outdated_indicators, length_array_outdated_indicators);
 
-      recv = PIPS_MPIgetSum(obj_offset_chgs, MPI_COMM_WORLD);
+      recv = PIPS_MPIgetSum(obj_offset_chgs);
    }
    if( outdated_obj_vector && my_rank == 0 )
       std::cout << "Error: objective vector is outdated!" << std::endl;
@@ -1023,7 +971,6 @@ bool PresolveData::reductionsEmpty()
    if( recv != 0.0 && my_rank == 0 )
       std::cout << "Error: objcetive offset not synced!" << std::endl;
 
-   MPI_Barrier(MPI_COMM_WORLD);
    return !outdated_obj_vector && !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs && (recv == 0.0) && !postsolve_linking_row_propagation_needed;
 }
 
@@ -1091,13 +1038,11 @@ void PresolveData::resetOriginallyFreeVarsBounds(const sData& orig_prob)
    {
       n += resetOriginallyFreeVarsBounds( getSimpleVecFromColStochVec(*orig_prob.ixlow, node), getSimpleVecFromColStochVec(*orig_prob.ixupp, node), node);
       if(my_rank != 0 && node == -1)
-      {
          n = 0;
-      }
    }
 
 #ifndef NDEBUG
-   PIPS_MPIgetSumInPlace(n, MPI_COMM_WORLD);
+   PIPS_MPIgetSumInPlace(n);
    if(my_rank == 0)
       std::cout << "Reset " << n << " bounds" << std::endl;
 #endif
@@ -1188,9 +1133,9 @@ INDEX PresolveData::getRowMarkedAsImplyingColumnBound(const INDEX& col, bool upp
    StochVectorBaseHandle<int>& by_system = upper_bound ? upper_bound_implied_by_system : lower_bound_implied_by_system;
    StochVectorBaseHandle<int>& by_row = upper_bound ? upper_bound_implied_by_row : lower_bound_implied_by_row;
 
-   const int row_node_int = getSimpleVecFromColStochVec( *by_node, col.getNode())[col.getIndex()];
-   const int system_type_int = getSimpleVecFromColStochVec( *by_system, col.getNode())[col.getIndex()];
-   const int row_index = getSimpleVecFromColStochVec( *by_row, col.getNode())[col.getIndex()];
+   const int row_node_int = getSimpleVecFromColStochVec(*by_node, col);
+   const int system_type_int = getSimpleVecFromColStochVec(*by_system, col);
+   const int row_index = getSimpleVecFromColStochVec(*by_row, col);
 
    if( row_node_int == -10 )
    {
@@ -1201,8 +1146,11 @@ INDEX PresolveData::getRowMarkedAsImplyingColumnBound(const INDEX& col, bool upp
 
    assert( 0 <= row_index );
    assert( -2 <= row_node_int && row_node_int < nChildren );
+
    const int row_node = ( row_node_int == -2 ) ? -1 : row_node_int;
+
    assert( 0 <= system_type_int && system_type_int <= 1 );
+
    const SystemType system_type = ( system_type_int == 0 ) ? EQUALITY_SYSTEM : INEQUALITY_SYSTEM;
    const bool linking = ( row_node_int == -2 ) ? true : false;
 
@@ -1211,29 +1159,28 @@ INDEX PresolveData::getRowMarkedAsImplyingColumnBound(const INDEX& col, bool upp
 
 void PresolveData::markRowAsImplyingColumnBound(const INDEX& col, const INDEX& row, bool upper_bound)
 {
-   assert(row.isRow());
-   assert(col.isCol());
+   assert( row.isRow() );
+   assert( col.isCol() );
 
    StochVectorBaseHandle<int>& by_node = upper_bound ? upper_bound_implied_by_node : lower_bound_implied_by_node;
    StochVectorBaseHandle<int>& by_system = upper_bound ? upper_bound_implied_by_system : lower_bound_implied_by_system;
    StochVectorBaseHandle<int>& by_row = upper_bound ? upper_bound_implied_by_row : lower_bound_implied_by_row;
 
-   getSimpleVecFromColStochVec( *by_node, col.getNode())[col.getIndex()] = (row.getLinking()) ? -2 : row.getNode();
-   getSimpleVecFromColStochVec( *by_system, col.getNode())[col.getIndex()] = row.getSystemType();
-   getSimpleVecFromColStochVec( *by_row, col.getNode())[col.getIndex()] = row.getIndex();
+   getSimpleVecFromColStochVec(*by_node, col) = (row.getLinking()) ? -2 : row.getNode();
+   getSimpleVecFromColStochVec(*by_system, col) = row.getSystemType();
+   getSimpleVecFromColStochVec(*by_row, col) = row.getIndex();
 }
 
 /** returns whether or not the current bound on column col is implied by row */
 bool PresolveData::varBoundImpliedFreeBy( bool upper, const INDEX& col, const INDEX& row)
 {
-   assert(col.isCol());
-   assert(row.isRow());
+   assert( col.isCol() );
+   assert( row.isRow() );
 
-   const SystemType system_type = row.getSystemType();
    // todo : not sure whether there is an instance that ever calls this
    // todo : theoretically there might be nnzs changes in some buffers somewhere - should not happen but how to check?
    // todo : should this be only one method varBoundsImpliedFree?
-   if( 0 == getSimpleVecFromRowStochVec( system_type == EQUALITY_SYSTEM ? *nnzs_row_A : *nnzs_row_C, row) )
+   if( 0 == getNnzsRow(row) )
       return false;
 
    bool res = false;
@@ -1259,10 +1206,10 @@ bool PresolveData::varBoundImpliedFreeBy( bool upper, const INDEX& col, const IN
 /* uses current activities (non-updated) to check whether said column's bounds are implied by row */
 void PresolveData::varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower_implied, const INDEX& col, const INDEX& row) const
 {
-   assert(!outdated_activities);
+   assert( !outdated_activities );
 
-   assert(col.isCol());
-   assert(row.isRow());
+   assert( col.isCol() );
+   assert( row.isRow() );
 
    upper_implied = false;
    lower_implied = false;
@@ -1290,9 +1237,7 @@ void PresolveData::varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower
 
    /* if nothing was found the column has already been removed from that row and nothing is implied anymore */
    if(col_ptr == row_end)
-   {
       return;
-   }
 
    /* coefficient of col in row */
    const double coeff = mat.getMat(col_ptr);
@@ -1359,21 +1304,16 @@ void PresolveData::varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower
 
 void PresolveData::fixEmptyColumn(const INDEX& col, double val)
 {
-   assert(col.isCol());
-
-   const int node = col.getNode();
-   const int col_index = col.getIndex();
-
-   assert(-1 <= node && node < nChildren);
-   assert(0 <= col_index);
+   assert( col.isCol() );
+   assert( col.hasValidNode(nChildren) );
 
    if(postsolver)
    {
-      const double obj_value = getSimpleVecFromColStochVec(*presProb->g, node)[col_index];
-      const double lbx = getSimpleVecFromColStochVec(*presProb->blx, node)[col_index];
-      const double ubx = getSimpleVecFromColStochVec(*presProb->bux, node)[col_index];
-      const int ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, node)[col_index];
-      const int ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, node)[col_index];
+      const double obj_value = getSimpleVecFromColStochVec(*presProb->g, col);
+      const double lbx = getSimpleVecFromColStochVec(*presProb->blx, col);
+      const double ubx = getSimpleVecFromColStochVec(*presProb->bux, col);
+      const int ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, col);
+      const int ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, col);
 
       if(ixlow == 1)
          assert(PIPSisLE(lbx, val) );
@@ -1386,8 +1326,8 @@ void PresolveData::fixEmptyColumn(const INDEX& col, double val)
 
    removeColumn(col, val);
 
-   if( node != -1)
-      assert( getSimpleVecFromColStochVec(*nnzs_col, node)[col_index] == 0 );
+   if( !col.isLinkingCol() )
+      assert( getSimpleVecFromColStochVec(*nnzs_col, col) == 0 );
 
 }
 
@@ -1405,7 +1345,7 @@ void PresolveData::fixColumn( const INDEX& col, double value)
    if( col.isLinkingCol() )
       assert( PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD) );
 
-   if( TRACK_COLUMN(col) )
+   if( track_col && tracked_col == col )
       std::cout << "TRACKING_COLUMN: " << col << " got fixed to " << value << std::endl;
    
    /* current upper and lower bound as well as column - linking variables have to be done by all processes simultaneously because communication in postsolve is required */
@@ -1441,7 +1381,7 @@ void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double
    assert( col.hasValidNode(nChildren) );
 
    if( row.isLinkingRow() )
-      assert( PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD) );
+      assert( PIPS_MPIisValueEqual(row.getIndex()) );
    if( col.isLinkingCol() )
       assert( row.getNode() == -1 );
 
@@ -1483,19 +1423,19 @@ void PresolveData::removeSingletonRowSynced(const INDEX& row, const INDEX& col, 
    assert( col.isLinkingCol() );
    assert( row.isEmpty() || !row.isLinkingRow() );
 
-   assert( PIPS_MPIisValueEqual( row.getIndex(), MPI_COMM_WORLD) );
-   assert( PIPS_MPIisValueEqual( col.getIndex(), MPI_COMM_WORLD) );
-   assert( PIPS_MPIisValueEqual( xlow_new, MPI_COMM_WORLD) );
-   assert( PIPS_MPIisValueEqual( xupp_new, MPI_COMM_WORLD) );
+   assert( PIPS_MPIisValueEqual(row.getIndex()) );
+   assert( PIPS_MPIisValueEqual(col.getIndex()) );
+   assert( PIPS_MPIisValueEqual(xlow_new) );
+   assert( PIPS_MPIisValueEqual(xupp_new) );
 
    if( row.isRow() )
    {
       assert( getNnzsRow(row) == 1 );
-      assert( (row.getSystemType() == EQUALITY_SYSTEM && xlow_new == xupp_new) ||
+      assert( (row.inEqSys() && xlow_new == xupp_new) ||
          (xlow_new == INF_NEG || xupp_new == INF_POS) );
    }
 
-   assert( PIPS_MPIgetSum( row.isRow() ? 1 : 0, MPI_COMM_WORLD ) == 1 );
+   assert( PIPS_MPIgetSum( row.isRow() ? 1 : 0 ) == 1 );
 
    assert( xlow_new != INF_NEG || xupp_new != INF_POS );
 
@@ -1529,58 +1469,6 @@ void PresolveData::startBoundTightening()
    in_bound_tightening = true;
 }
 
-// TODO we still want to do tightenings that fix a variable
-bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new )
-{
-   assert(false);
-   assert(in_bound_tightening);
-   assert( row.hasValidNode(nChildren) );
-   /* infeasibility check is done in rowPropagatedBounds */
-   const int ixlow = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, col ) ) ? 0 : 1;
-   const double xlow = ixlow ? getSimpleVecFromColStochVec( *presProb->blx, col ) : INF_NEG;
-   const int ixupp =  PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixupp, col ) ) ? 0 : 1;
-   const double xupp = ixupp ? getSimpleVecFromColStochVec( *presProb->bux, col) : INF_POS;
-
-   if( !PIPSisLT(xlow, xlow_new) )
-      xlow_new = INF_NEG;
-
-   if( !PIPSisLT(xupp_new, xupp) )
-      xupp_new = INF_POS;
-
-   if( xlow_new == INF_NEG && xupp_new == INF_POS )
-      return false;
-
-   /* tightenings that fix a variable will still be done */
-   if( PIPSisEQ(std::max(xlow, xlow_new), std::min(xupp_new, xupp)) )
-      return rowPropagatedBounds( row, col, xlow_new, xupp_new);
-
-   /* we cannot tighten bounds with matrix entries that are too small - 1.0e-8 since eps_bounds_nontight == 1.0e-8 and 1.0e-16 is considered too small for an epslion */
-   double coeff_var = getRowCoeff(row, col);
-   if(coeff_var < 1.0e-8)
-      return false;
-
-   /* this is actually not so easy - relaxing the bounds so that a tight bound will definitely be infeasible is non-trivial since all equations (also bounds) only with feastol precision */
-
-   /* adjust bounds so that they cannot be tight in the final solution and thus no dual postsolve should be necessary */
-
-   if( xlow_new != INF_NEG )
-      xlow_new = xlow_new - (feastol + eps_bounds_nontight) / std::fabs(coeff_var);
-
-   if( xupp_new != INF_POS )
-      xupp_new = xupp_new + (feastol + eps_bounds_nontight) / std::fabs(coeff_var);
-
-   if( !PIPSisLT(xlow, xlow_new) )
-      xlow_new = INF_NEG;
-
-   if( !PIPSisLT(xupp_new, xupp) )
-      xupp_new = INF_POS;
-
-   if( xlow_new == INF_NEG && xupp_new == INF_POS )
-      return false;
-
-   return rowPropagatedBounds( row, col, xlow_new, xupp_new);
-}
-
 bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new)
 {
    assert( in_bound_tightening );
@@ -1589,23 +1477,22 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
 
    const bool at_root_node = row.isEmpty() ? false : col.isLinkingCol() && row.getNode() == -1;
 
-
    if( col.isLinkingCol() && !at_root_node )
    {
-      PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD);
-      PIPS_MPIisValueEqual(xlow_new, MPI_COMM_WORLD);
-      PIPS_MPIisValueEqual(xupp_new, MPI_COMM_WORLD);
+      PIPS_MPIisValueEqual(col.getIndex());
+      PIPS_MPIisValueEqual(xlow_new);
+      PIPS_MPIisValueEqual(xupp_new);
 #ifndef NDEBUG
       const int my_tightening = row.isEmpty() ? 0 : 1;
 #endif
-      assert( PIPS_MPIgetSum(my_tightening, MPI_COMM_WORLD) == 1);
+      assert( PIPS_MPIgetSum(my_tightening) == 1);
    }
 
    if( col.isLinkingCol() && at_root_node )
    {
-      PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD);
-      PIPS_MPIisValueEqual(xlow_new, MPI_COMM_WORLD);
-      PIPS_MPIisValueEqual(xupp_new, MPI_COMM_WORLD);
+      PIPS_MPIisValueEqual(col.getIndex());
+      PIPS_MPIisValueEqual(xlow_new);
+      PIPS_MPIisValueEqual(xupp_new);
    }
 
    if( xlow_new == INF_NEG && xupp_new == INF_POS )
@@ -1617,11 +1504,11 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
       assert( row.hasValidNode(nChildren) );
 
    const int ixlow_old = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, col ) ) ? 0 : 1;
-   const double xlow_old = ixlow_old ? getSimpleVecFromColStochVec( *presProb->blx, col ) : INF_NEG;
+   const double xlow_old = getSimpleVecFromColStochVec( *presProb->blx, col );
    const int ixupp_old = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixupp, col ) ) ? 0 : 1;
-   const double xupp_old = ixupp_old ? getSimpleVecFromColStochVec( *presProb->bux, col ) : INF_POS;
+   const double xupp_old = getSimpleVecFromColStochVec( *presProb->bux, col );
 
-   if( TRACK_COLUMN(col) )
+   if( track_col && tracked_col == col )
    {
       std::cout << "TRACKING_COLUMN: new bounds [" << xlow_new << ", " << xupp_new << "] propagated for column " << col
          << " from row " << row << ":" << std::endl;
@@ -1716,15 +1603,22 @@ void PresolveData::endBoundTightening()
 void PresolveData::checkBoundsInfeasible(const INDEX& col, double xlow_new, double xupp_new) const
 {
    assert(xlow_new != INF_NEG || xupp_new != INF_POS);
+   assert( col.isCol() );
 
-   assert(col.isCol());
 
    /* get current bounds */
-   const int ixlow = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, col) ) ? 0 : 1;
-   const double xlow = ixlow ? getSimpleVecFromColStochVec( *presProb->blx, col ) : INF_NEG;
-   const int ixupp = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixupp, col ) ) ? 0 : 1;
-   const double xupp = ixupp ? getSimpleVecFromColStochVec( *presProb->bux, col) : INF_POS;
+   const double xlow = getSimpleVecFromColStochVec( *presProb->blx, col );
+   const double xupp = getSimpleVecFromColStochVec( *presProb->bux, col);
 
+#ifndef NDEBUG
+   const int ixupp = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixupp, col ) ) ? 0 : 1;
+   const int ixlow = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, col) ) ? 0 : 1;
+
+   if( ixupp == 0 )
+      assert( xupp == INF_POS );
+   if( ixlow == 0 )
+      assert( xlow == INF_NEG );
+#endif
    if( !PIPSisLE( std::max(xlow_new,xlow), std::min(xupp_new, xupp)) )
    {
       std::cout << "[" << xlow_new << ", " << xupp_new << "] not in [" << xlow << ", " << xupp << "]" << std::endl;
@@ -1734,7 +1628,7 @@ void PresolveData::checkBoundsInfeasible(const INDEX& col, double xlow_new, doub
 
 void PresolveData::syncPostsolveOfBoundsPropagatedByLinkingRows()
 {
-   PIPS_MPIgetLogicOrInPlace(postsolve_linking_row_propagation_needed, MPI_COMM_WORLD);
+   PIPS_MPIgetLogicOrInPlace(postsolve_linking_row_propagation_needed);
 
    if( !postsolve_linking_row_propagation_needed )
       return;
@@ -1760,12 +1654,11 @@ void PresolveData::tightenRowBoundsParallelRow(const INDEX& row1, const INDEX& r
    assert( clow_new != INF_NEG || cupp_new != INF_POS );
    assert( PIPSisLE(clow_new, cupp_new) );
 
-   if( TRACK_ROW(row1) )
+   if( track_row && tracked_row == row1 )
    {
       std::cout << "TRACKING_ROW: before RHS LHS adjustment" << std::endl;
       writeRowLocalToStreamDense(std::cout, row1 );
    }
-
 
    const double clow = getSimpleVecFromRowStochVec(*presProb->bl, row1);
    const double cupp = getSimpleVecFromRowStochVec(*presProb->bu, row1);
@@ -1799,7 +1692,7 @@ void PresolveData::tightenRowBoundsParallelRow(const INDEX& row1, const INDEX& r
       getSimpleVecFromRowStochVec(*presProb->bu, row1) = cupp_new;
    }
 
-   if( TRACK_ROW(row1) )
+   if( track_row && tracked_row == row1 )
    {
       std::cout << "TRACKING_ROW: after RHS LHS adjustment " << std::endl;
       writeRowLocalToStreamDense(std::cout, row1);
@@ -1811,7 +1704,7 @@ void PresolveData::adjustMatrixRhsLhsBy(const INDEX& row, double value, bool at_
 {
    assert( row.isRow() );
    assert( row.hasValidNode(nChildren) );
-   if( TRACK_ROW( row ) )
+   if( track_row && tracked_row == row )
    {
       std::cout << "TRACKING_ROW: RHS LHS of row " << row << " being adjusted by " << value << std::endl;
       writeRowLocalToStreamDense(std::cout, row );
@@ -1840,7 +1733,7 @@ void PresolveData::adjustMatrixRhsLhsBy(const INDEX& row, double value, bool at_
          getSimpleVecFromRowStochVec(*presProb->bl, row) += value;
    }
 
-   if( TRACK_ROW( row ) )
+   if( track_row && tracked_row == row )
    {
       std::cout << "TRACKING_ROW: after RHS LHS adjustment " << std::endl;
       writeRowLocalToStreamDense(std::cout, row);
@@ -1883,7 +1776,7 @@ void PresolveData::changeNnzCounterRow(const INDEX& row, int amount, bool at_roo
       chgs += amount;
       outdated_nnzs = true;
 
-      assert( 0 <= getSimpleVecFromRowStochVec(row.inEqSys() ? *nnzs_row_A : *nnzs_row_C, row) + chgs );
+      assert( 0 <= getNnzsRow(row) + chgs );
    }
    else
    {
@@ -1926,7 +1819,7 @@ void PresolveData::changeNnzCounterColumn(const INDEX& col, int amount, bool at_
    {
       int& chgs = (*nnzs_col_chgs)[col.getIndex()];
       chgs += amount;
-      assert( 0 <= getSimpleVecFromColStochVec(*nnzs_col, col) + chgs);
+      assert( 0 <= getNnzsCol(col) + chgs);
       outdated_nnzs = true;
    }
    else
@@ -1949,7 +1842,7 @@ void PresolveData::removeColumn(const INDEX& col, double fixation)
 
    assert( col.isCol() );
    if( col.isLinkingCol() )
-      assert( PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD) );
+      assert( PIPS_MPIisValueEqual(col.getIndex()) );
    assert( col.hasValidNode(nChildren) );
    const int dummy_index = std::numeric_limits<int>::infinity();
 
@@ -2016,12 +1909,12 @@ void PresolveData::removeColumnFromMatrix(const INDEX& dummy_row, const INDEX& c
    const bool at_root = (dummy_row.getNode() == -1 && col.isLinkingCol());
 
    if( at_root )
-      assert( PIPS_MPIisValueEqual( col.getIndex(), MPI_COMM_WORLD ) );
+      assert( PIPS_MPIisValueEqual( col.getIndex() ) );
 
    SparseGenMatrix* mat = getSparseGenMatrix(dummy_row, col);
    const SparseStorageDynamic& matrix_transp = mat->getStorageDynamicTransposedRef();
 
-   assert( 0 <= col.getIndex() && col.getIndex() < matrix_transp.getM() );
+   assert( col.getIndex() < matrix_transp.getM() );
 
    /* remove all entries in column from the sparse storage dynamic */
    for( int j = matrix_transp.getRowPtr(col.getIndex()).start; j < matrix_transp.getRowPtr(col.getIndex()).end; j++ )
@@ -2032,11 +1925,11 @@ void PresolveData::removeColumnFromMatrix(const INDEX& dummy_row, const INDEX& c
       const INDEX row = INDEX(ROW, dummy_row.getNode(), row_index, dummy_row.isLinkingRow(), dummy_row.getSystemType());
       assert( !PIPSisEQ(0.0, coeff) );
 
-      if( TRACK_ROW( row ) )
+      if( track_row && tracked_row == row )
          std::cout << "TRACKING_ROW: fixation of " << col << " in " << row << std::endl;
 
       /* remove the entry, adjust activity and row counters and rhs/lhs */
-      if(postsolver)
+      if( postsolver )
       {
          postsolver->notifyRowModified( row );
          postsolver->notifyColModified( col );
@@ -2048,20 +1941,14 @@ void PresolveData::removeColumnFromMatrix(const INDEX& dummy_row, const INDEX& c
 
       adjustRowActivityFromDeletion( row, col, coeff );
 
-      if( TRACK_ROW(row) )
+      if( track_row && tracked_row == row )
       {
          std::cout << "TRACKING_ROW: after removal of column" << std::endl;
          writeRowLocalToStreamDense(std::cout, row);
 
-         const double act_min = row.inEqSys() ? getSimpleVecFromRowStochVec(*actmin_eq_part, row) :
-               getSimpleVecFromRowStochVec(*actmin_ineq_part, row);
-         const double act_max = row.inEqSys() ? getSimpleVecFromRowStochVec(*actmax_eq_part, row) :
-               getSimpleVecFromRowStochVec(*actmax_ineq_part, row);
-
-         const int act_min_ubndd = row.inEqSys() ? getSimpleVecFromRowStochVec(*actmin_eq_ubndd, row) :
-               getSimpleVecFromRowStochVec(*actmin_ineq_ubndd, row);
-         const int act_max_ubndd = row.inEqSys() ? getSimpleVecFromRowStochVec(*actmax_eq_ubndd, row) :
-               getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, row);
+         double act_min, act_max;
+         int act_min_ubndd, act_max_ubndd;
+         getRowActivities(row, act_max, act_min, act_max_ubndd, act_min_ubndd);
 
          std::cout << "TRACKING_ROW: New activity of row " << row << std::endl;
          std::cout << "\tnew min/max activity is: " << act_min << "/" << act_max << ", min/max unbounded counters are " << act_min_ubndd << "/" << act_max_ubndd << std::endl;
@@ -2278,10 +2165,8 @@ void PresolveData::removeRedundantParallelRow( const INDEX& rm_row, const INDEX&
       assert( wasRowRemoved(rm_row) );
    }
 
-   if( TRACK_ROW(rm_row) )
-   {
+   if( track_row && tracked_row == rm_row )
       std::cout << "TRACKING_ROW: removal of tracked row as parallel and redundant row to " << par_row << std::endl;
-   }
 
    removeRow( rm_row );
 }
@@ -2329,10 +2214,8 @@ void PresolveData::removeRedundantRow( const INDEX& row )
       assert(postsolver->wasRowRemoved(row));
    }
  
-   if( TRACK_ROW( row ) )
-   {
+   if( track_row && tracked_row == row )
       std::cout << "TRACKING_ROW: removal of tracked row as redundant row" << std::endl;
-   }
 
    removeRow( row );
 }
@@ -2394,12 +2277,10 @@ void PresolveData::removeFreeColumnSingletonInequalityRow( const INDEX& row, con
 
    const double rhs = (clow != INF_NEG ) ? -clow : cupp;
 
-   if( TRACK_COLUMN(col) )
+   if( track_col && tracked_col == col )
      std::cout << "TRACKING_COLUMN: tracked column removed as free column singleton" << std::endl;
-   if( TRACK_ROW(row) )
-   {
+   if( track_row && tracked_row == row )
       std::cout << "TRACKING_ROW: removal of " << row << " since it contained a free column singleton" << std::endl;
-   }
 
    double& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), col);
    double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), col);
@@ -2423,13 +2304,13 @@ void PresolveData::removeFreeColumnSingletonInequalityRow( const INDEX& row, con
 
    if( col.isLinkingCol() && my_rank == 0 )
    {
-      assert( getSimpleVecFromColStochVec(*nnzs_col, col) + (*nnzs_col_chgs)[col.getIndex()] == 0 );
+      assert( getNnzsCol(col) + (*nnzs_col_chgs)[col.getIndex()] == 0 );
       assert( PIPSisZero(getSimpleVecFromColStochVec(*presProb->g, col) + (*objective_vec_chgs)[col.getIndex()]) );
    }
    else if( !col.isLinkingCol() )
    {
       assert( PIPSisZero(getSimpleVecFromColStochVec( *presProb->g, col)) );
-      assert( getSimpleVecFromColStochVec(*nnzs_col, col) == 0 );
+      assert( getNnzsCol(col) == 0 );
    }
 }
 
@@ -2463,12 +2344,10 @@ void PresolveData::removeFreeColumnSingletonInequalityRowSynced( const INDEX& ro
 
    if( col.isCol() )
    {
-      if( TRACK_COLUMN(col) )
-        std::cout << "TRACKING_COLUMN: tracked column removed as free column singleton" << std::endl;
-      if( TRACK_ROW(row) )
-      {
+      if( track_col && tracked_col == col )
+         std::cout << "TRACKING_COLUMN: tracked column removed as free column singleton" << std::endl;
+      if( track_row && tracked_row == row )
          std::cout << "TRACKING_ROW: removal of " << row << " since it contained a free column singleton" << std::endl;
-      }
    }
 
    PIPS_MPIgetSumInPlace(coeff, MPI_COMM_WORLD);
@@ -2521,23 +2400,22 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRowSynced( const INDE
       assert( !wasColumnRemoved(col) );
    }
 
-
 #ifndef NDEBUG
    /* only one process has a local linking column */
    const int my_col = col.isCol();
-   assert( PIPS_MPIgetSum(my_col, MPI_COMM_WORLD) == 1 );
+   assert( PIPS_MPIgetSum(my_col) == 1 );
 #endif
-   assert( PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD) );
+   assert( PIPS_MPIisValueEqual(row.getIndex()) );
 
    if( col.isCol() )
    {
       assert( getSimpleVecFromColStochVec(*nnzs_col, col) == 1);
 
-      if( TRACK_COLUMN(col) )
+      if( track_col && tracked_col == col )
         std::cout << "TRACKING_COLUMN: tracked column removed as (implied) free column singleton" << std::endl;
    }
 
-   if( TRACK_ROW(row) )
+   if( track_row && tracked_row == row )
    {
       std::cout << "TRACKING_ROW: removal of " << row << " since it contained an (implied) free column singleton" << std::endl;
       writeRowLocalToStreamDense(std::cout, row);
@@ -2565,8 +2443,8 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRowSynced( const INDE
    }
 
    // TODO: make more efficient
-   PIPS_MPIgetSumInPlace(col_coeff, MPI_COMM_WORLD);
-   PIPS_MPIgetSumInPlace(obj_coeff, MPI_COMM_WORLD);
+   PIPS_MPIgetSumInPlace(col_coeff);
+   PIPS_MPIgetSumInPlace(obj_coeff);
 
    if( col.isCol() )
    {
@@ -2617,10 +2495,10 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
    assert( !wasRowRemoved(row) );
    assert( !wasColumnRemoved(col) );
 
-   if( TRACK_COLUMN(col) )
+   if( track_col && tracked_col == col )
       std::cout << "TRACKING_COLUMN: tracked column removed as (implied) free column singleton" << std::endl;
 
-   if(TRACK_ROW(row) )
+   if( track_row && tracked_row == row )
    {
       std::cout << "TRACKING_ROW: removal of " << row << " since it contained an (implied) free column singleton" << std::endl;
       writeRowLocalToStreamDense(std::cout, row);
@@ -2664,13 +2542,13 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
 
    if( col.isLinkingCol() && my_rank == 0 )
    {
-      assert( getSimpleVecFromColStochVec(*nnzs_col, col) + (*nnzs_col_chgs)[col.getIndex()] == 0 );
+      assert( getNnzsCol(col) + (*nnzs_col_chgs)[col.getIndex()] == 0 );
       assert( PIPSisZero(getSimpleVecFromColStochVec(*presProb->g, col) + (*objective_vec_chgs)[col.getIndex()]) );
    }
    else if( !col.isLinkingCol() )
    {
       assert( PIPSisZero(getSimpleVecFromColStochVec( *presProb->g, col)) );
-      assert( getSimpleVecFromColStochVec(*nnzs_col, col) == 0 );
+      assert( getNnzsCol(col) == 0 );
    }
 }
 
@@ -2685,13 +2563,13 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
       assert( col.hasValidNode(nChildren) );
 
       if( col.isLinkingCol() && row.getNode() == -1 && !row.isLinkingRow() )
-         assert(PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD));
+         assert(PIPS_MPIisValueEqual(row.getIndex()));
    }
 
    if( col.isEmpty() )
       assert( row.isLinkingRow() );
    if( row.isLinkingRow() )
-      assert(PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD));
+      assert(PIPS_MPIisValueEqual(row.getIndex()));
 
    assert( row.hasValidNode(nChildren) );
 
@@ -2850,7 +2728,7 @@ void PresolveData::addCoeffColToRow( double coeff, const INDEX& col, const INDEX
    /* only increase non-zero counters if coeff has not been in the row before */
    if( new_coeff_in_row )
    {
-      const bool at_root = row.getNode() == -1 && col.getNode() == -1;
+      const bool at_root = row.getNode() == -1 && col.isLinkingCol();
       increaseNnzCounterColumnBy(col, 1, at_root);
       increaseNnzCounterRowBy(row, 1, at_root);
    }
@@ -3469,7 +3347,7 @@ void PresolveData::computeRowMinOrMaxActivity(const INDEX& row, bool upper)
 
    const int dummy_index = std::numeric_limits<int>::infinity();
    
-   if( TRACK_ROW( row ) )
+   if( track_row && tracked_row == row )
    {
       if( row.isLinkingRow() )
          std::cout << "TRACKING_ROW: " << row << " is linking constraint and needs " << (upper ? "upper" : "lower") << " activity recomputation " << std::endl;
@@ -3569,7 +3447,7 @@ void PresolveData::computeRowMinOrMaxActivity(const INDEX& row, bool upper)
       }
    }
 
-   if( TRACK_ROW(row) )
+   if( track_row && tracked_row == row )
          std::cout << "TRACKING_ROW: new " << (upper ? "upper" : "lower") << " activity is " << act_part << std::endl;
 }
 
@@ -3587,9 +3465,8 @@ bool PresolveData::updateBoundsVariable( const INDEX& col, double xlow_new, doub
    assert(!PIPSisZero(ixlow) || INF_NEG == xlow);
    assert(!PIPSisZero(ixupp) || INF_POS == xupp);
 
-   if( TRACK_COLUMN(col) )
-      std::cout << "TRACKING_COLUMN: updating column bounds from [" << (PIPSisZero(ixlow) ? INF_NEG : xlow)
-          << ", " << (PIPSisZero(ixupp) ? INF_POS : xupp) << "] for " << col << " with [" <<
+   if( track_col && tracked_col == col )
+      std::cout << "TRACKING_COLUMN: updating column bounds from [" << xlow << ", " << xupp << "] for " << col << " with [" <<
          xlow_new << ", " << xupp_new << "]" << std::endl;
 
    checkBoundsInfeasible(col, xlow_new, xupp_new);
@@ -3620,7 +3497,7 @@ bool PresolveData::updateBoundsVariable( const INDEX& col, double xlow_new, doub
 
    if( updated )
    {
-      if(  TRACK_COLUMN(col) )
+      if(  track_col && tracked_col == col )
       {
          std::cout << "TRACKING_COLUMN: bounds are now [" << xlow << ", " << xupp << "]" << std::endl;
          std::cout << "TRACKING_COLUMN: moving on to update activities" << std::endl;
@@ -3630,7 +3507,7 @@ bool PresolveData::updateBoundsVariable( const INDEX& col, double xlow_new, doub
    }
    else
    {
-      if( TRACK_COLUMN(col) )
+      if( track_col && tracked_col == col )
          std::cout << "TRACKING_COLUMN: " << col << " was not updated" << std::endl;
    }
 
@@ -3653,7 +3530,7 @@ void PresolveData::updateRowActivities(const INDEX& col, double xlow_new, double
 
    const int dummy_index = std::numeric_limits<int>::infinity();
 
-   if( TRACK_COLUMN(col) )
+   if( track_col && tracked_col == col )
    {
       std::cout << "TRACKING_COLUMN: " << col << " gets it's activities updated" << std::endl;
       std::cout << "\t bounds changed from [" << xlow_old << ", " << xupp_old << "] to [" << xlow_new << ", " << xupp_new << "]" << std::endl;
@@ -3662,7 +3539,7 @@ void PresolveData::updateRowActivities(const INDEX& col, double xlow_new, double
    /* if node == -1 go through all linking var blocks of both systems */
    if( col.isLinkingCol() )
    {
-      if( TRACK_COLUMN(col) )
+      if( track_col && tracked_col == col )
          std::cout << "TRACKING_COLUMN: the column is linking (root node)" << std::endl;
       /* B0 and D0block */
       updateRowActivitiesBlock(INDEX(ROW, -1, dummy_index, false, EQUALITY_SYSTEM), col, xlow_new, xupp_new, xlow_old, xupp_old);
@@ -3684,7 +3561,7 @@ void PresolveData::updateRowActivities(const INDEX& col, double xlow_new, double
    }
    else
    {
-      if( TRACK_COLUMN(col) )
+      if( track_col && tracked_col == col )
          std::cout << "TRACKING_COLUMN: the column is non-linking (non-root)" << std::endl;
       /* Bmat, Blmat */
       /* Bmat */
@@ -3758,7 +3635,7 @@ void PresolveData::updateRowActivitiesBlock(const INDEX& row, const INDEX& col, 
    SimpleVector& actmax_part_chgs = row.inEqSys() ? *actmax_eq_chgs : *actmax_ineq_chgs;
    SimpleVector& actmin_part_chgs = row.inEqSys() ? *actmin_eq_chgs : *actmin_ineq_chgs;
 
-   if( TRACK_COLUMN(col) )
+   if( track_col && tracked_col == col )
       std::cout << "TRACKING_COLUMN: updating activities of " << col << " in " << row <<
          " with new " << ( upper ? "upper" : "lower" ) << " bound " << bound << " from " << old_bound << std::endl;
 
@@ -3780,7 +3657,7 @@ void PresolveData::updateRowActivitiesBlock(const INDEX& row, const INDEX& col, 
       SimpleVectorBase<int>& act_ubndd = (switch_upperlower) ? actmax_ubndd : actmin_ubndd;
       SimpleVectorBase<int>& act_ubndd_chgs = (switch_upperlower) ? actmax_ubndd_chgs : actmin_ubndd_chgs;
 
-      if( TRACK_ROW(row_INDEX) )
+      if( track_row && tracked_row == row_INDEX )
       {
          std::cout << "TRACKING_ROW: activities of " << row_INDEX << " are getting updated. Current state:" << std::endl;
          if( row_INDEX.isLinkingRow() )
@@ -3798,7 +3675,7 @@ void PresolveData::updateRowActivitiesBlock(const INDEX& row, const INDEX& col, 
       /* if the old bound was not set we have to modify the unbounded counters */
       if( old_bound == INF_NEG || old_bound == INF_POS )
       {
-         if( TRACK_ROW(row_INDEX) )
+         if( track_row && tracked_row == row_INDEX )
                std::cout << "TRACKING_ROW: ubndd counters are being changed" << std::endl;
 
          /* every process works the root node - even in the linking row case */
@@ -3823,7 +3700,7 @@ void PresolveData::updateRowActivitiesBlock(const INDEX& row, const INDEX& col, 
                || (act_ubndd[row_index] == 1 && !row_INDEX.isLinkingRow()) )
          {
 
-            if( TRACK_ROW(row_INDEX) )
+            if( track_row && tracked_row == row_INDEX )
             {
                if( row_INDEX.isLinkingRow()  )
                   std::cout << "TRACKING_ROW: " << ( switch_upperlower ? "upper" : "lower" ) << " now needs act computation " << std::endl;
@@ -3841,7 +3718,7 @@ void PresolveData::updateRowActivitiesBlock(const INDEX& row, const INDEX& col, 
          else if( (row_INDEX.isLinkingRow() && act_ubndd[row_index] + act_ubndd_chgs[row_index] == 0) ||
                (!row_INDEX.isLinkingRow() && act_ubndd[row_index] == 0) )
          {
-            if( TRACK_ROW(row_INDEX) )
+            if( track_row && tracked_row == row_INDEX )
                   std::cout << "TRACKING_ROW: adjusting activities " << std::endl;
 
             if( !col.isLinkingCol() && row_INDEX.isLinkingRow() )
@@ -3857,7 +3734,7 @@ void PresolveData::updateRowActivitiesBlock(const INDEX& row, const INDEX& col, 
       {
          assert( old_bound != INF_NEG && old_bound != INF_POS );
 
-         if( TRACK_ROW(row_INDEX) )
+         if( track_row && tracked_row == row_INDEX )
             std::cout << "TRACKING_ROW: " << " no changes in ubndd counters - only adjust activities" << std::endl;
 
          /* better bound was found */
@@ -3875,7 +3752,7 @@ void PresolveData::updateRowActivitiesBlock(const INDEX& row, const INDEX& col, 
          }
       }
 
-      if( TRACK_ROW(row_INDEX) )
+      if( track_row && tracked_row == row_INDEX )
       {
          std::cout << "TRACKING_ROW: activities of tracked row have been updated: " << std::endl;
          if( row_INDEX.isLinkingRow() )

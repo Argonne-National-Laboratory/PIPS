@@ -87,9 +87,7 @@ bool StochPresolverSingletonRows::applyPresolving()
 #endif
 
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyNnzcounters());
-   assert(presData.verifyActivities());
+   assert(presData.presDataInSync());
 
    if( removed_rows_local != 0 )
       return true;

@@ -79,9 +79,7 @@ StochPresolverParallelRows::~StochPresolverParallelRows()
 bool StochPresolverParallelRows::applyPresolving()
 {
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyNnzcounters());
-   assert(presData.verifyActivities());
+   assert(presData.presDataInSync());
 
 #ifndef NDEBUG
    if( my_rank == 0 && verbosity > 1 )
@@ -215,9 +213,7 @@ bool StochPresolverParallelRows::applyPresolving()
 #endif
 
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyNnzcounters());
-   assert(presData.verifyActivities());
+   assert(presData.presDataInSync());
 
    if( n_removed_run != 0 )
       return true;

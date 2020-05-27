@@ -26,9 +26,7 @@ StochPresolverSingletonColumns::~StochPresolverSingletonColumns()
 bool StochPresolverSingletonColumns::applyPresolving()
 {
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyNnzcounters());
-   assert(presData.verifyActivities());
+   assert(presData.presDataInSync());
 
    resetArrays();
    presData.startSingletonColumnPresolve();
@@ -149,9 +147,7 @@ bool StochPresolverSingletonColumns::applyPresolving()
 #endif
 
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyNnzcounters());
-   assert(presData.verifyActivities());
+   assert(presData.presDataInSync());
 
    if( removed_cols_run != 0 )
       return true;

@@ -28,7 +28,6 @@ private:
       StochPostsolver* const postsolver;
 
       const double limit_max_bound_accepted;
-      const double eps_bounds_nontight;
 
       const int length_array_outdated_indicators;
       bool* array_outdated_indicators;
@@ -38,7 +37,6 @@ private:
       bool& outdated_activities;
       bool& outdated_obj_vector;
       bool& postsolve_linking_row_propagation_needed;
-
 
       /* counter to indicate how many linking row bounds got changed locally and thus need activity recomputation */
       int linking_rows_need_act_computation;
@@ -97,12 +95,6 @@ private:
       std::queue<INDEX> singleton_rows;
       std::queue<INDEX> singleton_cols;
 
-      /* SimpleVectors indicating which linking rows propagated bounds and thus need to be stored */
-//      SimpleVectorBaseHandle<int> eq_linking_row_propagated_bound;
-//      SimpleVectorBaseHandle<int> ineq_linking_row_propagated_bound;
-//
-//      SimpleVectorBaseHandle<int> linking_var_bound_implied_by_linking_row;
-
       const int my_rank;
       const bool distributed;
 
@@ -111,6 +103,13 @@ private:
 
       // number of children
       const int nChildren;
+
+      /* should we track a row/column through the presolving process - set in StochOptions */
+      const bool track_row;
+      const bool track_col;
+
+      const INDEX tracked_row;
+      const INDEX tracked_col;
 
       // objective offset created by presolving
       double objOffset;
@@ -171,6 +170,7 @@ public :
       bool presDataInSync() const;
 
       /// synchronizing the problem over all mpi processes if necessary
+      // TODO : add a allreduceEverything method that simply calls all the others
       void allreduceLinkingVarBounds();
       void allreduceAndApplyLinkingRowActivities();
       void allreduceAndApplyNnzChanges();
@@ -192,7 +192,6 @@ public :
       void syncPostsolveOfBoundsPropagatedByLinkingRows();
 
       void startBoundTightening();
-      bool rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new );
       bool rowPropagatedBounds( const INDEX& row, const INDEX& col, double ubx, double lbx);
       void endBoundTightening();
 
@@ -227,6 +226,9 @@ public :
 
       bool varBoundImpliedFreeBy( bool upper, const INDEX& col, const INDEX& row);
 private:
+      bool iTrackColumn() const;
+      bool iTrackRow() const;
+
       void adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col, double obj_coeff, double col_coeff );
       void addCoeffColToRow( double coeff, const INDEX& col, const INDEX& row );
 

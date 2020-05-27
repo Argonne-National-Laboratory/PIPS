@@ -41,6 +41,7 @@ private:
    }
 
    void setDefaults() override;
+   void setPresolveDefaults();
    StochOptions();
 
    virtual ~StochOptions() {};
