@@ -112,6 +112,19 @@ void SimpleVectorBase<T>::absminNonZero(T& m, T zero_eps) const
 }
 
 template<typename T>
+int SimpleVectorBase<T>::getNnzs() const
+{
+   int non_zeros = 0;
+   for( int i = 0; i < this->n; i++ )
+   {
+      if( !PIPSisZero(v[i]) )
+         non_zeros++;
+   }
+
+   return non_zeros;
+}
+
+template<typename T>
 void SimpleVectorBase<T>::max( T& m, int& index ) const
 {
    if( this->n == 0 )

@@ -1747,6 +1747,25 @@ void StochVectorBase<T>::removeEntries( const OoqpVectorBase<int>& select )
 }
 
 template<typename T>
+int StochVectorBase<T>::getNnzs() const
+{
+   int non_zeros = 0;
+
+   for( size_t it = 0; it < children.size(); it++ )
+      non_zeros += children[it]->getNnzs();
+
+   if( iAmDistrib )
+      PIPS_MPIgetSumInPlace(non_zeros, mpiComm);
+
+   non_zeros += vec->getNnzs();
+
+   if( vecl )
+      non_zeros += vecl->getNnzs();
+
+   return non_zeros;
+}
+
+template<typename T>
 void StochVectorBase<T>::permuteVec0Entries(const std::vector<unsigned int>& permvec)
 {
    dynamic_cast<SimpleVectorBase<T>*>(vec)->permuteEntries(permvec);

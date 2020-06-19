@@ -79,6 +79,7 @@ Data* StochPresolver::presolve()
 {
    if( my_rank == 0 )
       std::cout << "start stoch presolving" << std::endl;
+   presData->printRowColStats();
 
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
    assert( sorigprob->isRootNodeInSync() );
@@ -140,6 +141,8 @@ Data* StochPresolver::presolve()
 
    if( my_rank == 0 )
       std::cout << "end stoch presolving" << std::endl;
+   presData->printRowColStats();
+
    return finalPresData;
 }
 

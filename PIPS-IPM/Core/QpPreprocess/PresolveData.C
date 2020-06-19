@@ -4147,3 +4147,23 @@ void PresolveData::printVarBoundStatistics(std::ostream& out) const
       std::cout << "_____________________________________________________" << std::endl;
    }
 }
+
+void PresolveData::printRowColStats() const
+{
+   const int nnzs_cols = nnzs_col->onenorm();
+   const int nnzs_A = nnzs_row_A->onenorm();
+   const int nnzs_C = nnzs_row_C->onenorm();
+
+   assert( nnzs_cols == nnzs_A + nnzs_C );
+
+   const int cols = nnzs_col->getNnzs();
+   const int rows_A = nnzs_row_A->getNnzs();
+   const int rows_C = nnzs_row_C->getNnzs();
+
+   if( my_rank == 0 )
+   {
+      std::cout << "Problem Dimensions:" << std::endl;
+      std::cout << nnzs_cols << " non-zeros" << std::endl;
+      std::cout << cols << " cols\t" << rows_A << " rows A\t" << rows_C << " rows C " << std::endl;
+   }
+}

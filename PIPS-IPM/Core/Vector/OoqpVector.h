@@ -59,6 +59,9 @@ public:
   /** Return the one norm of this OoqpVector object. */
   virtual T onenorm() const = 0;
 
+  /** Return number of elements in this vector not considered zero */
+  virtual int getNnzs() const = 0;
+
   /** Multiply the components of this OoqpVector by the components of v. */
   virtual void componentMult( const OoqpVectorBase<T>& v ) = 0;
   /** Divide the components of this OoqpVector by the components of v. */

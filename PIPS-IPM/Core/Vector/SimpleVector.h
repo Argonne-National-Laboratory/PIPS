@@ -70,6 +70,7 @@ public:
   void absmaxVecUpdate(OoqpVectorBase<T>& absmaxvec) const override;
   void absmin( T& m) const override;
   void absminNonZero(T& m, T zero_eps) const override;
+  int getNnzs() const override;
 
   void componentMult( const OoqpVectorBase<T>& v ) override;
   void scalarMult( T num) override;

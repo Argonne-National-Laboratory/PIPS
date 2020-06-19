@@ -163,6 +163,7 @@ public:
    void removeEntries( const OoqpVectorBase<int>& select ) override;
 
    virtual int getSize() const { return this->n; };
+   int getNnzs() const override;
 
    virtual bool isRootNodeInSync() const;
 
@@ -296,6 +297,7 @@ public:
    std::vector<T> gatherStochVector() const override {return std::vector<T>(0);};
 
    int getSize() const override { return 0; };
+   int getNnzs() const override { return 0; };
 
    bool isRootNodeInSync() const override { return true; };
 };
