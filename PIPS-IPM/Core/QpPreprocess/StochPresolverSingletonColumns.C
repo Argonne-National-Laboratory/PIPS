@@ -488,8 +488,6 @@ void StochPresolverSingletonColumns::checkColImpliedFree(const INDEX& col, const
    /* check whether bound tightening found bounds from the variables row that make it implied free */
    ub_implied_free = ub_implied_free || presData.varBoundImpliedFreeBy(true, col, row);
    lb_implied_free = lb_implied_free || presData.varBoundImpliedFreeBy(false, col, row);
-   if( ub_implied_free && lb_implied_free )
-      std::cout << "implied freeeeee" << std::endl;
 }
 
 void StochPresolverSingletonColumns::resetArrays()
