@@ -1802,7 +1802,7 @@ void PresolveData::changeNnzCounterColumn(const INDEX& col, int amount, bool at_
    {
       int& chgs = (*nnzs_col_chgs)[col.getIndex()];
       chgs += amount;
-      assert( 0 <= getNnzsCol(col) + chgs);
+      assert( 0 <= getNnzsCol(col) );
       outdated_nnzs = true;
    }
    else
@@ -2282,16 +2282,11 @@ void PresolveData::removeFreeColumnSingletonInequalityRow( const INDEX& row, con
    if( col.getNode() == -1 )
       outdated_linking_var_bounds = true;
 
+   assert( getNnzsCol(col) == 0 );
    if( col.isLinkingCol() && my_rank == 0 )
-   {
-      assert( getNnzsCol(col) + (*nnzs_col_chgs)[col.getIndex()] == 0 );
       assert( PIPSisZero(getSimpleVecFromColStochVec(*presProb->g, col) + (*objective_vec_chgs)[col.getIndex()]) );
-   }
    else if( !col.isLinkingCol() )
-   {
       assert( PIPSisZero(getSimpleVecFromColStochVec( *presProb->g, col)) );
-      assert( getNnzsCol(col) == 0 );
-   }
 }
 
 void PresolveData::removeFreeColumnSingletonInequalityRowSynced( const INDEX& row, const INDEX& col, double coeff )
@@ -2520,16 +2515,11 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
    if( col.getNode() == -1 )
       outdated_linking_var_bounds = true;
 
+   assert( getNnzsCol(col) == 0 );
    if( col.isLinkingCol() && my_rank == 0 )
-   {
-      assert( getNnzsCol(col) + (*nnzs_col_chgs)[col.getIndex()] == 0 );
       assert( PIPSisZero(getSimpleVecFromColStochVec(*presProb->g, col) + (*objective_vec_chgs)[col.getIndex()]) );
-   }
    else if( !col.isLinkingCol() )
-   {
       assert( PIPSisZero(getSimpleVecFromColStochVec( *presProb->g, col)) );
-      assert( getNnzsCol(col) == 0 );
-   }
 }
 
 /* column col getting substituted with row - must be called simultaneously for linking rows */
