@@ -374,7 +374,6 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          }
          else
             row_propagated = presData.rowPropagatedBounds(row_INDEX, INDEX(COL, node_col, col), lbx_new, ubx_new);
-         //rowPropagatedBoundsNonTight( row_INDEX, INDEX(COL, node_col, col), lbx_new, ubx_new); // TODO: remove
 
          if(row_propagated && (node != -1 || my_rank == 0))
             ++tightenings;

@@ -1529,8 +1529,8 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
 
    const double min_impact_bound_change = feastol;
    // we do not tighten bounds if impact is too low or bound is bigger than threshold_bound_tightening
-   // set lower bound
-   if( PIPSisLT(xupp_new, xlow_new) )
+   /// set upper bound
+   if( PIPSisLT(xupp_new, xupp_old) )
    {
       if( PIPSisLT(std::fabs(xupp_new), limit_max_bound_accepted) && ( xupp_old == INF_POS || PIPSisLE(min_impact_bound_change, xupp_old - xupp_new) ) )
       {
@@ -1544,6 +1544,7 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
          }
       }
    }
+   /// set lower bound
    // if( fabs(ubx) < 1e8 && (PIPSisZero(ixupp) || feastol * 1e3 <= fabs(xupp- ubx) ) )
    if( PIPSisLT( xlow_old, xlow_new ) )
    {
