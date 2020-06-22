@@ -2279,7 +2279,9 @@ void PresolveData::removeFreeColumnSingletonInequalityRow( const INDEX& row, con
    removeRow(row);
 
    /* remove col and mark it for the fix empty columns presolver */
-   ixlow = xlow = xupp = ixupp = 0;
+   ixlow = ixupp = 0.0;
+   xlow = INF_NEG;
+   xupp = INF_POS;
    if( col.getNode() == -1 )
       outdated_linking_var_bounds = true;
 
@@ -2512,7 +2514,9 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
    removeRow( row );
 
    /* remove col and mark it for the fix empty columns presolver */
-   ixlow = xlow = xupp = ixupp = 0;
+   ixlow = ixupp = 0.0;
+   xlow = INF_NEG;
+   xupp = INF_POS;
    if( col.getNode() == -1 )
       outdated_linking_var_bounds = true;
 
