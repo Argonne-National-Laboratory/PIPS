@@ -1023,14 +1023,15 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
    assert( !wasColumnRemoved(col) );
 
    const bool at_root_node = row.isEmpty() ? false : row.getNode() == -1 && col.isLinkingCol();
+
+   #ifndef NDEBUG
    if( col.isLinkingCol() && !at_root_node )
    {
       assert( PIPS_MPIisValueEqual( col.getIndex() ) );
-#ifndef NDEBUG
       const int my_tightening = row.isEmpty() ? 0 : 1;
-#endif
       assert( PIPS_MPIgetSum(my_tightening) == 1);
    }
+#endif
 
    const bool is_upper_bound = (int_values[first_int_val] == 1) ? true : false;
    const int index_stored_row = int_values[first_int_val + 1];
@@ -1151,7 +1152,9 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
       row_storage.axpyAtRowPosNeg(1.0, &gamma, nullptr, &phi, nullptr, -change_dual_row, stored_row );
    }
 
-   assert( PIPSisLE(slack * dual_bound, old_complementarity) );
+   if( !PIPSisLE(slack * dual_bound, old_complementarity) )
+      std::cout << slack << "\t" << dual_bound << "\t" << old_complementarity << "\t > " << slack * dual_bound << std::endl;
+//   assert( PIPSisLE(slack * dual_bound, old_complementarity) );
 
    /* adjust the row dual */
    if( row.inInEqSys() )
