@@ -1574,9 +1574,9 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
    if( postsolver )
    {
       if( lower_bound_changed )
-         postsolver->notifyRowPropagatedBound( row, col, xlow_old, xlow_new, false, getSystemMatrix(row.getSystemType()));
+         postsolver->notifyRowPropagatedBound( row, col, xlow_old, xlow_new, false, getSystemMatrix(row.getSystemType()) );
       if( upper_bound_changed )
-         postsolver->notifyRowPropagatedBound( row, col, xupp_old, xupp_new, true, getSystemMatrix(row.getSystemType()));
+         postsolver->notifyRowPropagatedBound( row, col, xupp_old, xupp_new, true, getSystemMatrix(row.getSystemType()) );
    }
 
    if( (lower_bound_changed || upper_bound_changed) && row.isLinkingRow() && !at_root_node )
@@ -1760,7 +1760,7 @@ void PresolveData::changeNnzCounterRow(const INDEX& row, int amount, bool at_roo
       chgs += amount;
       outdated_nnzs = true;
 
-      assert( 0 <= getNnzsRow(row) + chgs );
+      assert( 0 <= getNnzsRow(row) );
    }
    else
    {
@@ -2734,7 +2734,7 @@ void PresolveData::removeRow( const INDEX& row )
       /* linking rows Bli */
       for(int child = 0; child < nChildren; ++child)
       {
-         if(!nodeIsDummy(child))
+         if( !nodeIsDummy(child) )
          {
             const INDEX col_bli(COL, child, dummy_index);
             removeRowFromMatrix(row, col_bli);
