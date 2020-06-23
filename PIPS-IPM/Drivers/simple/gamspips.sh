@@ -71,6 +71,10 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 mkdir $built_dir
 cd $built_dir
 
+if [ -f ../PIPSIPMpp.opt ]; then
+   cp ../PIPSIPMpp.opt ./
+fi
+
 nblocks=$(echo "8760 * $to * (60/$mins) / $tbsize + ((8760*${to}) % ${tbsize} > 0) + 1" | bc)
 echo "$nblocks"
 

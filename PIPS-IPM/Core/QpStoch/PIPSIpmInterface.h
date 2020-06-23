@@ -832,6 +832,7 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   if( my_rank == 0 )
      std::cout << std::endl << "Residuals after postsolve:" << std::endl;
   postsolvedResids->calcresids(origData, postsolvedVars, true);
+
   printComplementarityResiduals(*postsolvedVars);
 }
 #endif

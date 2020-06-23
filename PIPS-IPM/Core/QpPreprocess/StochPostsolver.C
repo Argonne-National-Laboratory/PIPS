@@ -1016,7 +1016,7 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
    const INDEX& col = indices.at(first_index + 1);
 
    assert( row.isRow() || row.isEmpty() );
-   assert( col.isCol());
+   assert( col.isCol() );
 
    if( row.isRow() )
       assert( !wasRowRemoved(row) );
@@ -1024,7 +1024,7 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
 
    const bool at_root_node = row.isEmpty() ? false : row.getNode() == -1 && col.isLinkingCol();
 
-   #ifndef NDEBUG
+#ifndef NDEBUG
    if( col.isLinkingCol() && !at_root_node )
    {
       assert( PIPS_MPIisValueEqual( col.getIndex() ) );
@@ -1043,29 +1043,28 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
 
    const double curr_x = getSimpleVecFromColStochVec(original_vars.x, col);
 
-   if(is_upper_bound)
+   if( is_upper_bound )
    {
       assert( PIPSisLT(new_bound, old_bound) );
       assert( PIPSisLEFeas(curr_x, new_bound) );
    }
    else
    {
-
       assert( PIPSisLT(old_bound, new_bound) );
       assert( PIPSisLEFeas(new_bound, curr_x) );
    }
 
    double& slack = is_upper_bound ? getSimpleVecFromColStochVec(original_vars.w, col) :
          getSimpleVecFromColStochVec(original_vars.v, col);
-   double& dual_bound = is_upper_bound ? getSimpleVecFromColStochVec(original_vars.phi, col) :
+   double dual_bound = is_upper_bound ? getSimpleVecFromColStochVec(original_vars.phi, col) :
          getSimpleVecFromColStochVec(original_vars.gamma, col);
-
+   if( col.isLinkingCol() )
+      dual_bound += is_upper_bound ? (*phi_changes)[col.getIndex()] : (*gamma_changes)[col.getIndex()];
    /* If the bound was tight all other variables in that row must have been at their respective upper
     * and lower bounds (depending on sings and orientation and upper/lower).
     * This fact will be used to adjust their duals which can be non-zero then since v/w were zero.
     * TODO : assert that
     */
-
 
    // TODO : reintroduce once scaling also scales termination criteria
    //   assert( PIPSisLEFeas(0.0, complementarity) );
@@ -1075,7 +1074,7 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
    /* adjust slack v/w */
    if( std::fabs(old_bound) == INF_POS )
    {
-      slack = 0;
+      slack = 0.0;
    }
    else
    {
@@ -1095,6 +1094,7 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
       /* if only adjusting the slack is sufficent and we do not need dual postsolve - return */
       if( PIPSisZeroFeas( dual_bound * slack ) )
       {
+         assert( PIPS_MPIisValueEqual(1.0) );
          return true;
       }
    }
@@ -1104,25 +1104,48 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
       return true;
 
    /* do dual part of postsolve */
-   const double diff_dual_bound = PIPSisZero(slack) ? - dual_bound : old_complementarity / slack - dual_bound;
-   assert( PIPSisLEFeas(0.0, dual_bound + diff_dual_bound) );
-   assert( PIPSisLEFeas(slack * (dual_bound + diff_dual_bound), old_complementarity) );
+
+   /* adjust column bound dual so that complementary slackness is still as valid as before */
+   const double diff_dual_bound = PIPSisZero(slack) ? - dual_bound : std::fabs( old_complementarity ) / slack - dual_bound;
+   assert( PIPSisLE(0.0, dual_bound + diff_dual_bound) );
+   assert( PIPSisLEFeas(slack * (dual_bound + diff_dual_bound), std::fabs( old_complementarity) ) );
+
+   /* if the change will not introduce a big error into the reduced costs just apply it */
+   if( std::fabs(diff_dual_bound) < postsolve_tol * 1e-1 )
+   {
+      if( col.isLinkingCol() )
+      {
+         double& dual = is_upper_bound ? (*phi_changes)[col.getIndex()] : (*gamma_changes)[col.getIndex()];
+         if( std::fabs(old_bound) == INF_POS )
+            dual = 0.0;
+         else
+            dual += diff_dual_bound;
+      }
+      else
+      {
+         double& dual = is_upper_bound ? getSimpleVecFromColStochVec(original_vars.phi, col)
+               : getSimpleVecFromColStochVec(original_vars.gamma, col);
+         if( std::fabs(old_bound) == INF_POS )
+            dual = 0.0;
+         else
+            dual += diff_dual_bound;
+      }
+      return true;
+   }
 
    /* at this point we want to adjust the dual_bound by diff_dual_bound introducing an error in the reduced costs which we need to compensate */
    const INDEX stored_row(ROW, row.getNode(), index_stored_row, row.getLinking(), EQUALITY_SYSTEM);
    const double coeff = row_storage.getRowCoefficientAtColumn( stored_row, col );
 
-   /* set z/y of corresponding row such that -c_i * delta_z // -a_i * delta_y = error_reduced_costs */
+   /* set z/y of corresponding row such that c_i * delta_z // a_i * delta_y = +- diff_dual_bound */
    assert( !PIPSisZero(coeff) );
    const double change_dual_row = is_upper_bound ? (diff_dual_bound / coeff) : (-diff_dual_bound / coeff);
-//   if(coeff < 1e-13)
-//      std::cout << "Potential numerical issues in postsolve of BoundTightening caused by small coefficient" << std::endl;
+   assert( PIPSisEQ(-coeff * change_dual_row, is_upper_bound ? -diff_dual_bound : diff_dual_bound) );
 
    /* add -dz/dy * row to gamma/phi */
    /* store linking variable changes and allreduce them later except when using a row from D/B0 or D/Bl0 */
    StochVector& gamma = dynamic_cast<StochVector&>(*original_vars.gamma);
    StochVector& phi = dynamic_cast<StochVector&>(*original_vars.phi);
-
 
    /* linking rows not at root - so far we changed the slacks for the variable - missing is dual for the row and resulting corrections */
    if( !at_root_node && row.isLinkingRow() )
@@ -1140,21 +1163,17 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
       return true;
    }
 
-   if( !at_root_node )
+   if( distributed && !at_root_node )
    {
-      row_storage.axpyAtRowPosNeg(1.0, &gamma, &(*gamma_changes), &phi, &(*phi_changes), -change_dual_row, stored_row );
+      row_storage.axpyAtRowPosNeg(1.0, &phi, &(*phi_changes), &gamma, &(*gamma_changes), change_dual_row, stored_row );
       outdated_linking_vars = true;
    }
    else
    {
       assert( PIPS_MPIisValueEqual(change_dual_row) );
       assert( PIPS_MPIisValueEqual(row.getIndex()) );
-      row_storage.axpyAtRowPosNeg(1.0, &gamma, nullptr, &phi, nullptr, -change_dual_row, stored_row );
+      row_storage.axpyAtRowPosNeg(1.0, &phi, nullptr, &gamma, nullptr, change_dual_row, stored_row );
    }
-
-   if( !PIPSisLE(slack * dual_bound, old_complementarity) )
-      std::cout << slack << "\t" << dual_bound << "\t" << old_complementarity << "\t > " << slack * dual_bound << std::endl;
-//   assert( PIPSisLE(slack * dual_bound, old_complementarity) );
 
    /* adjust the row dual */
    if( row.inInEqSys() )
@@ -2715,7 +2734,7 @@ bool StochPostsolver::syncLinkingRowsAfterBoundTightening(sVars& original_vars, 
 
             const INDEX stored_row(ROW, -1, row_stored, true, EQUALITY_SYSTEM);
             /// adjust duals of rows and bounds
-            row_storage.axpyAtRowPosNeg(1.0, &gamma, nullptr, &phi, nullptr, -change_dual_row, stored_row );
+            row_storage.axpyAtRowPosNeg(1.0, &phi, nullptr, &gamma, nullptr, change_dual_row, stored_row );
             getSimpleVecFromRowStochVec(original_vars.y, row_INDEX) += change_dual_row;
          }
       }
@@ -2737,7 +2756,7 @@ bool StochPostsolver::syncLinkingRowsAfterBoundTightening(sVars& original_vars, 
 
             const INDEX stored_row(ROW, -1, row_stored, true, EQUALITY_SYSTEM);
             /// adjust duals of rows and bounds
-            row_storage.axpyAtRowPosNeg(1.0, &gamma, nullptr, &phi, nullptr, -change_dual_row, stored_row );
+            row_storage.axpyAtRowPosNeg(1.0, &phi, nullptr, &gamma, nullptr, change_dual_row, stored_row );
 
             /* adjust the row dual */
             double& z = getSimpleVecFromRowStochVec(original_vars.z, row_INDEX);

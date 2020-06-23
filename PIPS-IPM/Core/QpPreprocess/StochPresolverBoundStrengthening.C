@@ -118,6 +118,8 @@ bool StochPresolverBoundStrengthening::applyPresolving()
    tightenings = PIPS_MPIgetSum(tightenings, MPI_COMM_WORLD);
    if( my_rank == 0 && verbosity > 1 )
       std::cout << "--- After " << iter << " rounds of bound strengthening and " << tightenings << " times of tightening bounds:" << std::endl;
+   if( my_rank == 0 && verbosity == 1 )
+      std::cout << "Tight:\t tightened " << tightenings << std::endl;
    countRowsCols();
    if( my_rank == 0 && verbosity > 1)
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
@@ -375,7 +377,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          else
             row_propagated = presData.rowPropagatedBounds(row_INDEX, INDEX(COL, node_col, col), lbx_new, ubx_new);
 
-         if(row_propagated && (node != -1 || my_rank == 0))
+         if( row_propagated && (node != -1 || my_rank == 0) )
             ++tightenings;
          tightened = tightened || row_propagated;
       }

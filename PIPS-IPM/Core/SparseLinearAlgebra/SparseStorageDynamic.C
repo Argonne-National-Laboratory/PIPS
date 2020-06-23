@@ -824,13 +824,22 @@ void SparseStorageDynamic::axpyWithRowAtPosNeg( double alpha, double * y_pos, do
 
    for(int i = rowptr[row].start; i < rowptr[row].end; ++i)
    {
+      assert( y_pos[jcolM[i]] >= 0 );
+      assert( y_neg[jcolM[i]] >= 0 );
       assert(jcolM[i] < length);
       const double val = alpha * M[i];
+      const double fin_val = y_pos[jcolM[i]] - y_neg[jcolM[i]] + val;
 
-      if( val > 0 )
-         y_pos[jcolM[i]] += val;
+      if( fin_val > 0 )
+      {
+         y_pos[jcolM[i]] = fin_val;
+         y_neg[jcolM[i]] = 0.0;
+      }
       else
-         y_neg[jcolM[i]] -= val;
+      {
+         y_pos[jcolM[i]] = 0.0;
+         y_neg[jcolM[i]] = -fin_val;
+      }
    }
 }
 
