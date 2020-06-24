@@ -1093,10 +1093,7 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
 
       /* if only adjusting the slack is sufficent and we do not need dual postsolve - return */
       if( PIPSisZeroFeas( dual_bound * slack ) )
-      {
-         assert( PIPS_MPIisValueEqual(1.0) );
          return true;
-      }
    }
 
    /* if this is a local linking variable and we did not do the adjustments we're done */
