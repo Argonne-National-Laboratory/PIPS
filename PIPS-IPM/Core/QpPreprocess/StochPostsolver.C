@@ -1169,11 +1169,7 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
       outdated_linking_vars = true;
    }
    else
-   {
-      assert( PIPS_MPIisValueEqual(change_dual_row) );
-      assert( PIPS_MPIisValueEqual(row.getIndex()) );
       row_storage.axpyAtRowPosNeg(1.0, &phi, nullptr, &gamma, nullptr, change_dual_row, stored_row );
-   }
 
    /* adjust the row dual */
    if( row.inInEqSys() )
