@@ -1088,7 +1088,6 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
          assert(PIPSisLE(0, curr_x - new_bound));
          slack = curr_x - old_bound;
       }
-
       assert( PIPSisLT(0.0, slack) );
 
       /* if only adjusting the slack is sufficent and we do not need dual postsolve - return */
