@@ -135,9 +135,6 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
    else if( row.getLinking() )
       assert( PIPS_MPIisValueEqual(row.getIndex()) );
 
-   if( node_col == -1 && col_idx == 643 )
-      std::cout << xlow_new << " " << xupp_new << std::endl;
-
    if( row.getNode() != -1 && node_col == -1 )
    {
       assert( !row.isLinkingRow() );
