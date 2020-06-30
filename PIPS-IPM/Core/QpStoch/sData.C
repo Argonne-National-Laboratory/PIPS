@@ -2295,7 +2295,7 @@ void sData::initDistMarker(int blocksStart, int blocksEnd)
    assert(isSCrowLocal.size() == 0);
    assert(isSCrowMyLocal.size() == 0);
 
-   assert(linkStartBlockIdA.size() > 0 && linkStartBlockIdC.size() > 0);
+   assert(linkStartBlockIdA.size() > 0 || linkStartBlockIdC.size() > 0);
    assert(blocksStart >= 0 && blocksStart < blocksEnd && blocksEnd <= int(linkStartBlockLengthsA.size()));
 
    const int nx0 = getLocalnx();
@@ -2324,6 +2324,7 @@ void sData::initDistMarker(int blocksStart, int blocksEnd)
    // equality linking
    for( int i = nx0 + my0, j = 0; i < nx0 + my0 + myl; i++, j++ )
    {
+      assert( unsigned(j) < linkStartBlockIdA.size() );
       const int block = linkStartBlockIdA[j];
       isSCrowLocal[i] = (block != -1);
       isSCrowMyLocal[i] = (block >= blocksStart && block < blocksEnd);
@@ -2332,6 +2333,7 @@ void sData::initDistMarker(int blocksStart, int blocksEnd)
    // inequality linking
    for( int i = nx0 + my0 + myl, j = 0; i < nx0 + my0 + myl + mzl; i++, j++ )
    {
+      assert( unsigned(j) < linkStartBlockIdC.size() );
       const int block = linkStartBlockIdC[j];
       isSCrowLocal[i] = (block != -1);
       isSCrowMyLocal[i] = (block >= blocksStart && block < blocksEnd);
