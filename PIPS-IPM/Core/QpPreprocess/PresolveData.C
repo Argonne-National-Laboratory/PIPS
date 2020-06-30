@@ -1435,7 +1435,6 @@ void PresolveData::removeSingletonRowSynced(const INDEX& row, const INDEX& col, 
    assert( col.isLinkingCol() );
    assert( row.isEmpty() || !row.isLinkingRow() );
 
-   assert( PIPS_MPIisValueEqual(row.getIndex()) );
    assert( PIPS_MPIisValueEqual(col.getIndex()) );
    assert( PIPS_MPIisValueEqual(xlow_new) );
    assert( PIPS_MPIisValueEqual(xupp_new) );
