@@ -373,7 +373,7 @@ void StochPresolverSingletonRows::removeSingletonLinkingColsSynced()
          }
          else
          {
-            presData.removeSingletonRowSynced(INDEX(), col, best_xlow, best_xupp, NAN);
+            presData.removeSingletonRowSynced( INDEX(EMPTY_INDEX, -2, -1, false, EQUALITY_SYSTEM ), col, best_xlow, best_xupp, NAN);
 
             // if i found a row that is now redundant - remove it as redundant
             if( !buffer_rows_lower[i].isEmpty() )
@@ -400,7 +400,7 @@ void StochPresolverSingletonRows::removeSingletonLinkingColsSynced()
             }
             else
             {
-               presData.removeSingletonRowSynced(INDEX(), col, best_xlow, INF_POS, NAN);
+               presData.removeSingletonRowSynced( INDEX(EMPTY_INDEX, -2, -1, false, INEQUALITY_SYSTEM), col, best_xlow, INF_POS, NAN);
 
                // if i found a row that is now redundant - remove it as redundant
                if( !buffer_rows_lower[i].isEmpty() )
@@ -419,7 +419,7 @@ void StochPresolverSingletonRows::removeSingletonLinkingColsSynced()
             }
             else
             {
-               presData.removeSingletonRowSynced(INDEX(), col, INF_NEG, best_xupp, NAN);
+               presData.removeSingletonRowSynced( INDEX(EMPTY_INDEX, -2, -1, false, INEQUALITY_SYSTEM), col, INF_NEG, best_xupp, NAN);
 
                // if i found a row that is now redundant - remove it as redundant
                if( !buffer_rows_upper[i].isEmpty() )

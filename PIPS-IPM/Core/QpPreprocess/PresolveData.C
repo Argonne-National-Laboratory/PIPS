@@ -1445,7 +1445,6 @@ void PresolveData::removeSingletonRowSynced(const INDEX& row, const INDEX& col, 
       assert( (row.inEqSys() && xlow_new == xupp_new) ||
          (xlow_new == INF_NEG || xupp_new == INF_POS) );
    }
-
    assert( PIPS_MPIgetSum( row.isRow() ? 1 : 0 ) == 1 );
 
    assert( xlow_new != INF_NEG || xupp_new != INF_POS );
@@ -1460,7 +1459,7 @@ void PresolveData::removeSingletonRowSynced(const INDEX& row, const INDEX& col, 
    bool tightened = updateColBounds(col, xlow_new, xupp_new);
 
    /* notify postsolver */
-   if(tightened && postsolver)
+   if( tightened && postsolver )
       postsolver->notifySingletonRowBoundsTightened(row, col, xlow_old, xupp_old, xlow_new, xupp_new, coeff);
 
    /* remove redundant row */
