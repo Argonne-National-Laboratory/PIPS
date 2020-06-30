@@ -366,7 +366,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             /* store found lower bound if better */
             if( lbx_new != INF_NEG )
             {
-               if( (PIPSisLT(xlow[row], lbx_new) || PIPSisZero(ixlow[row])) && PIPSisLT(lbx_new, lb_linking_var[col]) )
+               if( (PIPSisLT(xlow[col], lbx_new) || PIPSisZero(ixlow[col])) && PIPSisLT(lbx_new, lb_linking_var[col]) )
                {
                   local_bound_tightenings = true;
                   lb_linking_var[col] = lbx_new;
