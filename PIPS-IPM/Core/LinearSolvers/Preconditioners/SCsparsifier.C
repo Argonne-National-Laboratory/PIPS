@@ -9,6 +9,7 @@
 #include "SCsparsifier.h"
 #include "pipsdef.h"
 #include "pipsport.h"
+#include "StochOptions.h"
 #include "mpi.h"
 #include <cassert>
 
@@ -33,10 +34,7 @@ SCsparsifier::SCsparsifier(double diagDomBound_, MPI_Comm mpiComm_)
    // use default value?
    if( diagDomBound <= 0.0 )
    {
-      char* var = getenv("PIPS_DIAG_DOM_BOUND");
-      if( var != nullptr )
-         sscanf(var, "%lf", &(diagDomBound));
-
+	  diagDomBound = pips_options::getDoubleParameter("PRECONDITION_DIAGDOM_BOUND");
       if( diagDomBound <= 0.0 )
          diagDomBound = diagDomBoundDefault;
    }

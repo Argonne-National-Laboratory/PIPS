@@ -72,10 +72,19 @@ namespace pips_options
 
       /// LINEAR SOLVERS
       bool_options["PARDISO_FOR_GLOBAL_SC"] = true;
+      bool_options["PARDISO_SPARSE_RHS_LEAF"] = false;
+      /** -1 is choose default */
+      int_options["PARDISO_SYMB_INTERVAL"] = -1;
+      int_options["PARDISO_PIVOT_PERTURBATION"] = -1;
+      int_options["PARDISO_NITERATIVE_REFINS"] = -1;
+      int_options["PARDISO_PIVOT_PERTURBATION_ROOT"] = -1;
+      int_options["PARDISO_NITERATIVE_REFINS_ROOT"] = -1;
 
       /// PRECONDITIONERS
       bool_options["PRECONDITION_DISTRIBUTED"] = true;
       bool_options["PRECONDITION_SPARSE"] = true;
+      /** -1.0 is choose default */
+      double_options["PRECONDITION_DIAGDOM_BOUND"] = -1.0;
 
       /// INTERIOR-POINT ALGORITHM
       bool_options["IP_ACCURACY_REDUCED"] = false;
