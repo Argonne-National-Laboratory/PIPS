@@ -1655,7 +1655,7 @@ void PresolveData::tightenRowBoundsParallelRow(const INDEX& row1, const INDEX& r
    double clow, cupp;
    getRowBounds(row1, clow, cupp);
 
-   assert( PIPSisLT( std::max(clow, clow_new), std::min(cupp, cupp_new) ) );
+   assert( PIPSisLE( std::max(clow, clow_new), std::min(cupp, cupp_new) ) );
    if( clow_new != INF_NEG )
       assert( PIPSisLT( clow, clow_new ) );
    if( cupp_new != INF_POS )
