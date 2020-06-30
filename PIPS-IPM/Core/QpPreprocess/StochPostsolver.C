@@ -1562,8 +1562,11 @@ bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int 
    const double old_bound = lower_bound_changed ? xlow_old : xupp_old;
 #ifndef NDEBUG
    const double new_bound = lower_bound_changed ? xlow_new : xupp_new; // TODO : remove
+   if( lower_bound_changed )
+      assert( PIPSisLT( old_bound, new_bound) );
+   else
+      assert( PIPSisLT( new_bound, old_bound) );
 #endif
-   assert( std::fabs(new_bound) < std::fabs(old_bound) );
 
    double error_in_reduced_costs = 0.0;
    /* adjust bounds slacks and duals so that complementarity condition stays valid*/
