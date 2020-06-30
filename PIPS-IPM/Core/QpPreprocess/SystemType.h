@@ -34,10 +34,13 @@ public:
    INDEX(IndexType index_type, int node, int index, bool linking = false, SystemType system_type = EQUALITY_SYSTEM) :
       index_type(index_type), node(node), index(index), linking(linking), system_type(system_type)
    {
-      if(linking)
-         assert( node == -1 );
-      assert( 0 <= index );
-      assert( -1 <= node );
+      if( index_type != EMPTY_INDEX)
+      {
+         if(linking)
+            assert( node == -1 );
+         assert( 0 <= index );
+         assert( -1 <= node );
+      }
    };
 
    bool operator==(const INDEX& i) const {
