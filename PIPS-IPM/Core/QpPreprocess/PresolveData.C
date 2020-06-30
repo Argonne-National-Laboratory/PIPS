@@ -2176,18 +2176,18 @@ void PresolveData::removeRedundantRow( const INDEX& row )
 
       if(iclow)
       {
-         assert(min_ubndd == 0);
-         assert(PIPSisLEFeas(lhs, min_act));
+         /// a singleton row with linking var entry or a redundant row
+         assert(min_ubndd <= 1);
+
+         if( min_ubndd == 0 )
+            assert(PIPSisLEFeas(lhs, min_act));
       }
       if(icupp)
       {
-         if( !max_ubndd == 0 )
-         {
-            std::cout << max_ubndd << std::endl;
-            writeRowLocalToStreamDense(std::cout, row);
-         }
-         assert(max_ubndd == 0);
-         assert(PIPSisLEFeas(max_act, rhs));
+         assert(max_ubndd <= 1);
+
+         if( max_ubndd == 0 )
+            assert(PIPSisLEFeas(max_act, rhs));
       }
 #endif
 
