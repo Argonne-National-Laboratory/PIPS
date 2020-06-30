@@ -2164,27 +2164,6 @@ void PresolveData::removeRedundantRow( const INDEX& row )
       const int iclow = row.inEqSys() ? 1 : getSimpleVecFromRowStochVec(*presProb->iclow, row);
       const int icupp = row.inEqSys() ? 1 : getSimpleVecFromRowStochVec(*presProb->icupp, row);
 
-#ifndef NDEBUG
-      double max_act = 0;
-      double min_act = 0;
-
-      int max_ubndd = 0;
-      int min_ubndd = 0;
-
-      getRowActivities(row, max_act, min_act, max_ubndd, min_ubndd);
-
-      if(iclow)
-      {
-         assert(min_ubndd == 0);
-         assert(PIPSisLEFeas(lhs, min_act));
-      }
-      if(icupp)
-      {
-         assert(max_ubndd == 0);
-         assert(PIPSisLEFeas(max_act, rhs));
-      }
-#endif
-
       assert( PIPSisLE(0.0, iclow) );
       assert( PIPSisLE(0.0, icupp) );
       assert( PIPSisLT(0.0, iclow + icupp) );
