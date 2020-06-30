@@ -14,7 +14,7 @@
 #include <cassert>
 
 /**
- * The getInstanceMethod must be specified in this BaseClasse.
+ * The getInstanceMethod must be specified in this BaseClass.
  * Defines default options for StochPIPS.
  */
 

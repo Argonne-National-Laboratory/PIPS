@@ -82,5 +82,9 @@ namespace pips_options
       bool_options["IP_PRINT_TIMESTAMP"] = false;
       bool_options["IP_STEPLENGTH_CONSERVATIVE"] = false;
 
+      /// SCHUR COMPLEMENT COMPUTATION
+      bool_options["SC_COMPUTE_BLOCKWISE"] = false;
+
+
    }
 }
