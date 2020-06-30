@@ -367,6 +367,8 @@ void StochPresolverSingletonRows::removeSingletonLinkingColsSynced()
             assert( buffer_coeffs_lower[i] == buffer_coeffs_upper[i] );
 
             const INDEX& row = buffer_rows_lower[i];
+            if( row.inEqSys() )
+               assert( best_xlow == best_xupp );
             presData.removeSingletonRowSynced(row, col, best_xlow, best_xupp, buffer_coeffs_upper[i]);
          }
          else
