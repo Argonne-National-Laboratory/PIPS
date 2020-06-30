@@ -173,29 +173,35 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
             presData.removeRedundantRow(row);
          else
          {
-            if( PIPSisLT(buffer_xlows[col_idx], xlow_new) )
+            if( xlow_new != INF_NEG )
             {
-               if( !buffer_rows_lower[col_idx].isEmpty() )
-                  presData.removeRedundantRow(buffer_rows_lower[col_idx]);
+               if( PIPSisLT(buffer_xlows[col_idx], xlow_new) )
+               {
+                  if( !buffer_rows_lower[col_idx].isEmpty() )
+                     presData.removeRedundantRow(buffer_rows_lower[col_idx]);
 
-               buffer_rows_lower[col_idx] = row;
-               buffer_coeffs_lower[col_idx] = coeff;
-               buffer_xlows[col_idx] = xlow_new;
+                  buffer_rows_lower[col_idx] = row;
+                  buffer_coeffs_lower[col_idx] = coeff;
+                  buffer_xlows[col_idx] = xlow_new;
+               }
+               else
+                  presData.removeRedundantRow(row);
             }
-            else
-               presData.removeRedundantRow(row);
 
-            if( PIPSisLT(xupp_new, buffer_xupps[col_idx]) )
+            if( xupp_new != INF_POS )
             {
-               if( !buffer_rows_upper[col_idx].isEmpty() )
-                  presData.removeRedundantRow(buffer_rows_upper[col_idx]);
+               if( PIPSisLT(xupp_new, buffer_xupps[col_idx]) )
+               {
+                  if( !buffer_rows_upper[col_idx].isEmpty() )
+                     presData.removeRedundantRow(buffer_rows_upper[col_idx]);
 
-               buffer_rows_upper[col_idx] = row;
-               buffer_coeffs_upper[col_idx] = coeff;
-               buffer_xupps[col_idx] = xupp_new;
+                  buffer_rows_upper[col_idx] = row;
+                  buffer_coeffs_upper[col_idx] = coeff;
+                  buffer_xupps[col_idx] = xupp_new;
+               }
+               else
+                  presData.removeRedundantRow(row);
             }
-            else
-               presData.removeRedundantRow(row);
          }
       }
       return true;
