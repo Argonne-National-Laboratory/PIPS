@@ -2158,7 +2158,7 @@ void PresolveData::removeRedundantRow( const INDEX& row )
 
    if(postsolver)
    {
-      assert(!wasRowRemoved( row ));
+      assert( !wasRowRemoved( row ) );
 
       const double rhs = row.inEqSys() ? getSimpleVecFromRowStochVec(*presProb->bA, row) : getSimpleVecFromRowStochVec(*presProb->bu, row);
       const double lhs = row.inEqSys() ? rhs : getSimpleVecFromRowStochVec(*presProb->bl, row);
@@ -2176,18 +2176,13 @@ void PresolveData::removeRedundantRow( const INDEX& row )
 
       if(iclow)
       {
-         /// a singleton row with linking var entry or a redundant row
-         assert(min_ubndd <= 1);
-
-         if( min_ubndd == 0 )
-            assert(PIPSisLEFeas(lhs, min_act));
+         assert(min_ubndd == 0);
+         assert(PIPSisLEFeas(lhs, min_act));
       }
       if(icupp)
       {
-         assert(max_ubndd <= 1);
-
-         if( max_ubndd == 0 )
-            assert(PIPSisLEFeas(max_act, rhs));
+         assert(max_ubndd == 0);
+         assert(PIPSisLEFeas(max_act, rhs));
       }
 #endif
 
