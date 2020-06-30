@@ -1019,7 +1019,9 @@ std::vector<unsigned int> sData::get0VarsRightPermutation(const std::vector<int>
 std::vector<unsigned int> sData::getAscending2LinkPermutation(std::vector<int>& linkStartBlockId, size_t nBlocks)
 {
    const size_t size = linkStartBlockId.size();
-   assert(size > 0);
+
+   if( size == 0 )
+      return std::vector<unsigned int>();
 
    std::vector<unsigned int> permvec(size, 0);
    std::vector<int> w(nBlocks + 1, 0);
