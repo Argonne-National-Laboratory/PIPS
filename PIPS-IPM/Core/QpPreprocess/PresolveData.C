@@ -1399,7 +1399,6 @@ void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double
       assert( PIPS_MPIisValueEqual(row.getIndex()) );
    if( col.isLinkingCol() )
       assert( row.getNode() == -1 );
-
    assert( getNnzsRow(row) == 1 );
 
    if( !col.isEmpty() )

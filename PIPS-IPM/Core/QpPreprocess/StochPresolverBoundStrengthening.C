@@ -355,7 +355,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             if( ubx_new != INF_POS )
             {
                /* we store upper bound inverted so that MPI communication can simple do a min over all entries */
-               if( (PIPSisLT(ubx_new, xupp[col]) || PIPSisZero(ixupp[col])) && PIPSisLT(ub_linking_var[col], -ubx_new) )
+               if( (PIPSisLT(ubx_new, xupp[col]) || PIPSisZero(ixupp[col]) ) && PIPSisLT(ub_linking_var[col], -ubx_new) )
                {
                   local_bound_tightenings = true;
                   ub_linking_var[col] = -ubx_new;
@@ -366,7 +366,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             /* store found lower bound if better */
             if( lbx_new != INF_NEG )
             {
-               if( (PIPSisLT(xlow[col], lbx_new) || PIPSisZero(ixlow[col])) && PIPSisLT(lbx_new, lb_linking_var[col]) )
+               if( (PIPSisLT(xlow[col], lbx_new) || PIPSisZero(ixlow[col]) ) && PIPSisLT(lbx_new, lb_linking_var[col]) )
                {
                   local_bound_tightenings = true;
                   lb_linking_var[col] = lbx_new;
