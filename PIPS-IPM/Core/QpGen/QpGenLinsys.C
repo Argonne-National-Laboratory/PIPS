@@ -468,28 +468,6 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    bicg_resnorm = normr;
    bicg_relresnorm = bicg_resnorm / n2b;
 
-#ifdef TIMING
-#ifndef NDEBUG
-   double nmin;
-   double tolmin;
-
-   MPI_Allreduce(&normr, &nmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-   MPI_Allreduce(&tolb, &tolmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-
-   if( normr != nmin )
-   {
-      cout << "rtwonorm not consistent " << normr << " " << nmin << "\n";
-      MPI_Abort(MPI_COMM_WORLD, 1);
-
-   }
-   if( tolb != tolmin )
-   {
-      cout << "tolb not consistent " << tolb << " " << tolmin << "\n";
-      MPI_Abort(MPI_COMM_WORLD, 1);
-   }
-#endif
-#endif
-
    //quick return if solve is accurate enough
    if( normr <= tolb )
    {
