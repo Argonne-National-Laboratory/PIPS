@@ -23,7 +23,7 @@ class Observer
       Subject *subj = nullptr;
 
    public:
-      virtual ~Observer() {};
+      virtual ~Observer();
 
       bool hasSubject() const
       {
@@ -34,7 +34,7 @@ class Observer
       const Subject* getSubject() const;
       void removeSubject();
 
-      virtual void update() = 0;
+      virtual void notifyFromSubject() = 0;
 };
 
 class Subject
