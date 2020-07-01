@@ -9,19 +9,18 @@
 #define PIPS_IPM_CORE_ABSTRACT_OBSERVER_H_
 
 #include <list>
+#include <string>
 /**
  * Abstract base classes for status based observer pattern - contains Subject and Observer
- * state is part of the subject and whenever it changes all observers get notified
+ * Observer can query Subject for ints, doubles, and bools defined via a std::string
  */
 
-template<class T>
 class Subject;
 
-template<class T>
 class Observer
 {
    private:
-      Subject<T> *subj = nullptr;
+      Subject *subj = nullptr;
 
    public:
       virtual ~Observer() {};
@@ -31,66 +30,29 @@ class Observer
          return subj != nullptr;
       };
 
-      void setSubject(Subject<T> *subject);
+      void setSubject(Subject *subject);
+      const Subject* getSubject() const;
       void removeSubject();
 
       virtual void update() = 0;
-
 };
 
-template<class T>
 class Subject
 {
    private:
-      std::list<Observer<T>*> observers;
-      T state;
+      std::list<Observer*> observers;
 
    public:
-      void registerObserver(Observer<T>* observer)
-      {
-         observers.push_back(observer);
-      }
+      virtual ~Subject() {};
 
-      void unregisterObserver(Observer<T>* observer)
-      {
-         observers.remove(observer);
-      }
+      void registerObserver(Observer* observer);
+      void unregisterObserver(Observer* observer);
 
-      const T& getState()
-      {
-         return state;
-      }
+      virtual int getIntValue(const std::string& s) = 0;
+      virtual double getDoubleValue(const std::string& s) = 0;
+      virtual bool getBoolValue(const std::string& s) = 0;
 
-      void setState(const T& s);
+      void notifyObservers();
 };
-
-template<class T>
-void Observer<T>::setSubject(Subject<T>* subject)
-{
-   if( subj != nullptr )
-      subj->unregisterObserver(this);
-   subj = subject;
-
-   subject->registerObserver(this);
-};
-
-template<class T>
-void Observer<T>::removeSubject()
-{
-   if( subj != nullptr )
-      subj->unregisterObserver(this);
-}
-
-template<class T>
-void Subject<T>::setState(const T& s)
-{
-      if( s != state )
-      {
-         state = s;
-
-         for( Observer<T>* o : observers )
-            o->update();
-      }
-}
 
 #endif /* PIPS_IPM_CORE_ABSTRACT_OBSERVER_H_ */

@@ -8,6 +8,7 @@
 #include "LinearSystem.h"
 #include "DoubleMatrixHandle.h"
 #include "OoqpVector.h"
+#include "Observer.h"
 
 class Data;
 class QpGenData;
@@ -31,8 +32,18 @@ class LinearAlgebraPackage;
  * @ingroup QpGen 
  */
 
-class QpGenLinsys : public LinearSystem {
+class QpGenLinsys : public LinearSystem, public Subject {
 protected:
+  /** observer pattern for convergence status of BiCGStab when calling solve */
+  int bicg_conv_flag;
+  int bicg_niterations;
+
+  double bicg_resnorm;
+  double bicg_relresnorm;
+
+  int getIntValue(const std::string& s) override;
+  double getDoubleValue(const std::string& s) override;
+  bool getBoolValue(const std::string& s) override;
 
   /** stores a critical diagonal matrix as a vector */
   OoqpVector* nomegaInv;
