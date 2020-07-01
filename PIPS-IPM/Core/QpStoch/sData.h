@@ -172,10 +172,14 @@ public:
 
   static std::vector<int> get2LinkLengthsVec(const std::vector<int>& linkStartBlocks, size_t nBlocks);
 
+  /* a two link must be in two blocks directly after one another */
   bool useLinkStructure;
+  /* number of entries in each linking column */
   std::vector<int> linkVarsNnz;
+  /* which blocks do the individual two-links start in */
   std::vector<int> linkStartBlockIdA;
   std::vector<int> linkStartBlockIdC;
+  /* how many two-links start in block i */
   std::vector<int> linkStartBlockLengthsA;
   std::vector<int> linkStartBlockLengthsC;
   std::vector<unsigned int> linkVarsPermutation;
