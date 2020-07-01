@@ -28,7 +28,7 @@ extern int gOuterBiCGIter;
 extern int gOuterBiCGFails;
 
 
-int QpGenLinsys::getIntValue(const std::string& s)
+int QpGenLinsys::getIntValue(const std::string& s) const
 {
    if( s.compare("BICG_NITERATIONS") == 0 )
       return bicg_niterations;
@@ -39,7 +39,7 @@ int QpGenLinsys::getIntValue(const std::string& s)
    }
 }
 
-bool QpGenLinsys::getBoolValue(const std::string& s)
+bool QpGenLinsys::getBoolValue(const std::string& s) const
 {
    if( s.compare("BICG_CONVERGED") == 0 )
       return bicg_conv_flag == 0;
@@ -58,7 +58,7 @@ bool QpGenLinsys::getBoolValue(const std::string& s)
    }
 }
 
-double QpGenLinsys::getDoubleValue(const std::string& s)
+double QpGenLinsys::getDoubleValue(const std::string& s) const
 {
    if( s.compare("BICG_RESNORM") == 0 )
       return bicg_resnorm;
@@ -418,6 +418,9 @@ void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
     // BiCGStab
     ///////////////////////////////////////////////////////////////
     solveCompressedBiCGStab(stepx,stepy,stepz,prob);
+    /* notify observers about result of BiCGStab */
+    notifyObservers();
+
   }
   stepy.negate();
   stepz.negate();
@@ -498,8 +501,6 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
          std::cout << "outer BiCGStab skipped: " << normr << " <= " << tolb <<  std::endl;
 
       bicg_conv_flag = 0;
-      notifyObservers();
-
       return;
    }
 

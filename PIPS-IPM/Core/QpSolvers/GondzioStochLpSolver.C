@@ -122,6 +122,9 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    // initialization of (x,y,z) and factorization routine.
    sys = factory->makeLinsys(prob);
 
+   // register as observer for the BiCGStab solves
+   registerBiCGStabOvserver(sys);
+
    stochFactory->iterateStarted();
    this->start(factory, iterate, prob, resid, step);
    stochFactory->iterateEnded();

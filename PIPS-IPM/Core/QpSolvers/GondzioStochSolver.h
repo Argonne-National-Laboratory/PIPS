@@ -9,7 +9,7 @@
 #define PIPS_IPM_GONDZIOSTOCHSOLVER_H
 
 #include "GondzioSolver.h"
-
+#include "Observer.h"
 
 class Data;
 class Variables;
@@ -22,7 +22,7 @@ const unsigned int max_linesearch_points = 50;
  * Mehrotra's original predictor-corrector algorithm.
  * @ingroup QpSolvers
  */
-class GondzioStochSolver : public GondzioSolver
+class GondzioStochSolver : public GondzioSolver, public Observer
 {
 private:
   // returns Gondzio weight for corrector step
@@ -43,6 +43,13 @@ protected:
   const double max_alpha_small_correctors;
 
   int NumberSmallCorrectors;
+
+  /* observer stuff for checking convergence of BiCGStab */
+  bool bicgstab_converged;
+  double norm_bigcstab_res;
+
+  void registerBiCGStabOvserver(LinearSystem* sys);
+
 public:
 
   GondzioStochSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10,
@@ -52,6 +59,7 @@ public:
 
   virtual int solve( Data *prob, Variables *iterate, Residuals * resid );
 
+  void notifyFromSubject() override;
 };
 
 #endif /* PIPS_IPM_GONDZIOSTOCHSOLVER_H */

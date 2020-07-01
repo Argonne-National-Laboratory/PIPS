@@ -23,7 +23,7 @@ class Observer
       Subject *subj = nullptr;
 
    public:
-      virtual ~Observer() {};
+      virtual ~Observer();
 
       bool hasSubject() const
       {
@@ -34,7 +34,7 @@ class Observer
       const Subject* getSubject() const;
       void removeSubject();
 
-      virtual void update() = 0;
+      virtual void notifyFromSubject() = 0;
 };
 
 class Subject
@@ -48,9 +48,9 @@ class Subject
       void registerObserver(Observer* observer);
       void unregisterObserver(Observer* observer);
 
-      virtual int getIntValue(const std::string& s) = 0;
-      virtual double getDoubleValue(const std::string& s) = 0;
-      virtual bool getBoolValue(const std::string& s) = 0;
+      virtual int getIntValue(const std::string& s) const = 0;
+      virtual double getDoubleValue(const std::string& s) const = 0;
+      virtual bool getBoolValue(const std::string& s) const = 0;
 
       void notifyObservers();
 };

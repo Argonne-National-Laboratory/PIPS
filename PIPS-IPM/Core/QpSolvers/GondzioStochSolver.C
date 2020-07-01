@@ -40,6 +40,7 @@ using namespace std;
 #include "mpi.h"
 #include "QpGenVars.h"
 #include "QpGenResiduals.h"
+#include "QpGenLinsys.h"
 
 extern int gOoqpPrintLevel;
 extern double g_iterNumber;
@@ -160,6 +161,9 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
    // initialization of (x,y,z) and factorization routine.
    sys = factory->makeLinsys(prob);
+
+   // register as observer for the BiCGStab solves
+   registerBiCGStabOvserver(sys);
 
    stochFactory->iterateStarted();
    this->start(factory, iterate, prob, resid, step);
@@ -352,6 +356,22 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
    return status_code;
 }
 
+void GondzioStochSolver::registerBiCGStabOvserver(LinearSystem* sys)
+{
+   /* every linsys handed to the GondzioStoch should be observable */
+   assert( dynamic_cast<Subject*>(sys) );
+   setSubject( dynamic_cast<Subject*>(sys) );
+}
+
+void GondzioStochSolver::notifyFromSubject()
+{
+   const Subject& subj = *getSubject();
+
+   if( !subj.getBoolValue("BICG_CONVERGED") )
+   {
+      PIPSdebugMessage("BiGCStab had troubles converging\n");
+   }
+}
 
 GondzioStochSolver::~GondzioStochSolver()
 {
