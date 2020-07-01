@@ -72,6 +72,7 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   }
 
   usePrecondDist = pips_options::getBoolParameter("PRECONDITION_DISTRIBUTED");
+  computeBlockwiseSC = pips_options::getBoolParameter("SC_COMPUTE_BLOCKWISE");
 
   // use sparse KKT if link structure is present
   hasSparseKkt = prob_->exploitingLinkStructure();
@@ -122,6 +123,7 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
   }
 
   usePrecondDist = pips_options::getBoolParameter("PRECONDITION_DISTRIBUTED");
+  computeBlockwiseSC = pips_options::getBoolParameter("SC_COMPUTE_BLOCKWISE");
 
   // use sparse KKT if (enough) 2 links are present
   hasSparseKkt = prob_->exploitingLinkStructure();
@@ -1285,20 +1287,24 @@ void sLinsysRoot::addTermToSchurCompl(sData* prob, size_t childindex)
    ipIterations = ipStartFound ? static_cast<int>(g_iterNumber) : -1;
 
    assert(childindex < prob->children.size());
-#ifdef PARDISO_BLOCKSC
-   children[childindex]->addTermToSchurComplBlocked(prob->children[childindex], hasSparseKkt, *kkt);
-#else
-   if( hasSparseKkt )
+
+   if( computeBlockwiseSC )
    {
-      SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
-      children[childindex]->addTermToSparseSchurCompl(prob->children[childindex], kkts);
+	   children[childindex]->addTermToSchurComplBlocked(prob->children[childindex], hasSparseKkt, *kkt);
    }
    else
    {
-      DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
-      children[childindex]->addTermToDenseSchurCompl(prob->children[childindex], kktd);
+	   if( hasSparseKkt )
+	   {
+		  SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
+		  children[childindex]->addTermToSparseSchurCompl(prob->children[childindex], kkts);
+	   }
+	   else
+	   {
+		  DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
+		  children[childindex]->addTermToDenseSchurCompl(prob->children[childindex], kktd);
+	   }
    }
-#endif
 }
 
 void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,

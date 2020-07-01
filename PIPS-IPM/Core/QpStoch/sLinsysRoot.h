@@ -118,6 +118,7 @@ class sLinsysRoot : public sLinsys {
   int childrenProperEnd;   // end of non-dummy children range (not included)
   bool hasSparseKkt;
   bool usePrecondDist;
+  bool computeBlockwiseSC;
 
  private:
   void initProperChildrenRange();

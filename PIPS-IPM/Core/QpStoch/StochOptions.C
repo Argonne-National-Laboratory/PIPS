@@ -72,15 +72,25 @@ namespace pips_options
 
       /// LINEAR SOLVERS
       bool_options["PARDISO_FOR_GLOBAL_SC"] = true;
+      bool_options["PARDISO_SPARSE_RHS_LEAF"] = false;
+      /** -1 is choose default */
+      int_options["PARDISO_SYMB_INTERVAL"] = -1;
+      int_options["PARDISO_PIVOT_PERTURBATION"] = -1;
+      int_options["PARDISO_NITERATIVE_REFINS"] = -1;
+      int_options["PARDISO_PIVOT_PERTURBATION_ROOT"] = -1;
+      int_options["PARDISO_NITERATIVE_REFINS_ROOT"] = -1;
 
       /// PRECONDITIONERS
       bool_options["PRECONDITION_DISTRIBUTED"] = true;
       bool_options["PRECONDITION_SPARSE"] = true;
+      /** -1.0 is choose default */
+      double_options["PRECONDITION_DIAGDOM_BOUND"] = -1.0;
 
       /// INTERIOR-POINT ALGORITHM
       bool_options["IP_ACCURACY_REDUCED"] = false;
       bool_options["IP_PRINT_TIMESTAMP"] = false;
       bool_options["IP_STEPLENGTH_CONSERVATIVE"] = false;
+
       /** should additional corrector steps for small complementarity pairs be applied */
       bool_options["IP_GONDZIO_ADDITIONAL_CORRECTORS_SMALL_VARS"] = true;
       /** how many additional steps should be applied at most (in addition to the still existing gondzio corrector limit) */
@@ -89,5 +99,8 @@ namespace pips_options
       int_options["IP_GONDZIO_FIRST_ITER_SMALL_CORRECTORS"] = 15;
       /** alpha must be lower equal to this value for the IPM to try and apply small corrector steps */
       double_options["IP_GONDZIO_MAX_ALPHA_SMALL_CORRECTORS"] = 0.8;
+
+      /// SCHUR COMPLEMENT COMPUTATION
+      bool_options["SC_COMPUTE_BLOCKWISE"] = false;
    }
 }
