@@ -15,7 +15,7 @@
 #include "Singleton.h"
 
 /**
- * Abstract base class for options class.
+ * abstract base class for options class.
  */
 
 enum OptionType

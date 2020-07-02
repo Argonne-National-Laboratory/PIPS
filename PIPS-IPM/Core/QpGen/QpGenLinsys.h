@@ -71,9 +71,17 @@ protected:
   /** Work vectors for iterative refinement of the XYZ linear system */
   OoqpVector *sol, *res, *resx, *resy, *resz;
   /** Work vectors for BiCGStab */
-  OoqpVector *sol2, *res2, *res3, *res4, *res5;
+  OoqpVector *sol2, *sol3, *res2, *res3, *res4, *res5;
 
-  bool printStatistics;
+  /// parameters for the bicg solve
+  const bool outer_bicg_print_statistics;
+
+  const double outer_bicg_eps;
+
+  const int outer_bicg_max_iter;
+  const int outer_bicg_max_normr_divergences;
+  const int outer_bicg_max_stagnations;
+
   int ipIterations;
 
 public:
