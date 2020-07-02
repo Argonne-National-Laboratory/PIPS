@@ -5,7 +5,6 @@
  *      Author: Daniel Rehfeldt
  */
 
-
 #include "pipsdef.h"
 #include "GondzioStochSolver.h"
 #include "Variables.h"
@@ -54,7 +53,7 @@ GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, u
     max_additional_correctors( pips_options::getIntParameter("IP_GONDZIO_ADDITIONAL_CORRECTORS_MAX") ),
     first_iter_small_correctors( pips_options::getIntParameter("IP_GONDZIO_FIRST_ITER_SMALL_CORRECTORS") ),
     max_alpha_small_correctors( pips_options::getDoubleParameter("IP_GONDZIO_MAX_ALPHA_SMALL_CORRECTORS") ),
-    NumberSmallCorrectors(0), bicgstab_converged(true), norm_bigcstab_res_rel(0.0)
+    NumberSmallCorrectors(0), bicgstab_converged(true), bigcstab_norm_res_rel(0.0)
 {
    assert(max_additional_correctors > 0);
    assert(first_iter_small_correctors >= 0);
@@ -202,20 +201,26 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
       sys->factor(prob, iterate);
       sys->solve(prob, iterate, resid, step);
-      if( !bicgstab_converged )
-      {
-         if( my_rank == 0 ) std::cout << "Affine step failed" << std::endl;
-         PIPSdebugMessage("Affine step computation in BiCGStab failed");
-         // TODO : not sure what to do now
-         alpha = 1.0;
-      }
-      else
-         alpha = iterate->stepbound(step);
-
       step->negate();
 
-      // calculate centering parameter
-      muaff = iterate->mustep(step, alpha);
+      if( !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
+      {
+         PIPSdebugMessage("Affine step computation in BiCGStab failed");
+         // TODO : try to improve accuracy in preconditioner
+
+         // go on, discard the affine step and try a pure centering step
+         alpha = 1.0;
+         // calculate centering parameter
+         muaff = iterate->mu();
+      }
+      else
+      {
+         alpha = iterate->stepbound(step);
+
+         // calculate centering parameter
+         muaff = iterate->mustep(step, alpha);
+      }
+
       sigma = pow(muaff / mu, tsig);
 
       if( gOoqpPrintLevel >= 10 )
@@ -233,13 +238,14 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       // form right hand side of linear system:
       corrector_resid->set_r3_xz_alpha(step, -sigma * mu);
       sys->solve(prob, iterate, corrector_resid, corrector_step);
-      if( !bicgstab_converged )
+      corrector_step->negate();
+      if( !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
       {
          if( my_rank == 0 ) std::cout << "1st corrector step failed" << std::endl;
          PIPSdebugMessage("1st corrector step computation in BiCGStab failed");
-         // TODO : not sure what to do now
+
+         // TODO : discard that step and refactorize - we cannot do anything here
       }
-      corrector_step->negate();
 
       // calculate weighted predictor-corrector step
       double weight_candidate = -1.0;
@@ -265,7 +271,6 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       // enter the Gondzio correction loop:
       while( NumberGondzioCorrections < maximum_correctors && NumberSmallCorrectors < max_additional_correctors && PIPSisLT(alpha, 1.0) )
       {
-
          // copy current variables into corrector_step
          corrector_step->copy(iterate);
 
@@ -289,10 +294,11 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
          // solve for corrector direction
          sys->solve(prob, iterate, corrector_resid, corrector_step);	// corrector_step is now delta_m
-         if( !bicgstab_converged )
+         if( !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
          {
             PIPSdebugMessage("Gondzio corrector step computation in BiCGStab failed - break corrector loop");
             do_small_correctors_aggressively = true;
+
             // exit corrector loop
             break;
          }
@@ -390,7 +396,7 @@ void GondzioStochSolver::notifyFromSubject()
    const Subject& subj = *getSubject();
 
    bicgstab_converged = subj.getBoolValue("BICG_CONVERGED");
-   norm_bigcstab_res_rel = subj.getDoubleValue("BICG_RELRESNORM");
+   bigcstab_norm_res_rel = subj.getDoubleValue("BICG_RELRESNORM");
 
    if( !bicgstab_converged )
       PIPSdebugMessage("BiGCStab had troubles converging\n");

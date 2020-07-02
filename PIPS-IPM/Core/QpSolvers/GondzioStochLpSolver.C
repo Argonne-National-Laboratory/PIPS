@@ -166,27 +166,26 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       step->negate();
 
-      if( !bicgstab_converged )
+      if( !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
       {
          if( my_rank == 0 ) std::cout << "Affine step failed" << std::endl;
          PIPSdebugMessage("Affine step computation in BiCGStab failed");
-         // TODO : not sure what to do now
+         // TODO : try to improve accuracy in preconditioner
 
          alpha_dual = 1.0;
          alpha_pri = 1.0;
-
          // calculate centering parameter
          muaff = iterate->mu();
-         sigma = muaff / 2.0;
       }
       else
       {
          iterate->stepbound_pd(step, alpha_pri, alpha_dual);
+
          // calculate centering parameter
          muaff = iterate->mustep_pd(step, alpha_pri, alpha_dual);
-         sigma = pow(muaff / mu, tsig);
       }
 
+      sigma = pow(muaff / mu, tsig);
       assert(!PIPSisZero(mu));
 
       if( gOoqpPrintLevel >= 10 )
@@ -207,13 +206,14 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
          corrector_resid->set_r3_xz_alpha(step, -sigma * mu);
 
       sys->solve(prob, iterate, corrector_resid, corrector_step);
-      if( !bicgstab_converged )
+      corrector_step->negate();
+      if( !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
       {
          if( my_rank == 0 ) std::cout << "1st corrector step failed" << std::endl;
          PIPSdebugMessage("1st corrector step computation in BiCGStab failed");
-         // TODO : not sure what to do now
+
+         // TODO : discard that step and refactorize - we cannot do anything here
       }
-      corrector_step->negate();
 
       // calculate weighted predictor-corrector step
       double weight_primal_candidate, weight_dual_candidate = -1.0;
@@ -266,11 +266,12 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
          // solve for corrector direction
          sys->solve(prob, iterate, corrector_resid, corrector_step); // corrector_step is now delta_m
-         if( !bicgstab_converged )
+         if( !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
          {
             PIPSdebugMessage("Gondzio corrector step computation in BiCGStab failed - break corrector loop");
-            // exit corrector loop use small correctors in next run aggresively
             do_small_correctors_aggressively = true;
+
+            // exit corrector loop
             break;
          }
 
