@@ -177,16 +177,17 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
          // calculate centering parameter
          muaff = iterate->mu();
+         sigma = muaff / 2.0;
       }
       else
       {
          iterate->stepbound_pd(step, alpha_pri, alpha_dual);
          // calculate centering parameter
          muaff = iterate->mustep_pd(step, alpha_pri, alpha_dual);
+         sigma = pow(muaff / mu, tsig);
       }
 
       assert(!PIPSisZero(mu));
-      sigma = pow(muaff / mu, tsig);
 
       if( gOoqpPrintLevel >= 10 )
       {
