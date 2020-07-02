@@ -111,12 +111,15 @@ void GondzioStochLpSolver::calculateAlphaPDWeightCandidate(Variables *iterate, V
 
 int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resid )
 {
-   double mu;
+   const int my_rank = PIPS_MPIgetRank(MPI_COMM_WORLD);
+
+   double mu, muaff;
    int status_code;
    double sigma = 1.0;
    double alpha_pri = 1.0, alpha_dual = 1.0;
    QpGenStoch* stochFactory = reinterpret_cast<QpGenStoch*>(factory);
    g_iterNumber = 0.0;
+   bool do_small_correctors_aggressively = false;
 
    dnorm = prob->datanorm();
    // initialization of (x,y,z) and factorization routine.
@@ -160,12 +163,27 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       sys->factor(prob, iterate);
       sys->solve(prob, iterate, resid, step);
+
       step->negate();
 
-      iterate->stepbound_pd(step, alpha_pri, alpha_dual);
+      if( !bicgstab_converged )
+      {
+         if( my_rank == 0 ) std::cout << "Affine step failed" << std::endl;
+         PIPSdebugMessage("Affine step computation in BiCGStab failed");
+         // TODO : not sure what to do now
 
-      // calculate centering parameter
-      const double muaff = iterate->mustep_pd(step, alpha_pri, alpha_dual);
+         alpha_dual = 1.0;
+         alpha_pri = 1.0;
+
+         // calculate centering parameter
+         muaff = iterate->mu();
+      }
+      else
+      {
+         iterate->stepbound_pd(step, alpha_pri, alpha_dual);
+         // calculate centering parameter
+         muaff = iterate->mustep_pd(step, alpha_pri, alpha_dual);
+      }
 
       assert(!PIPSisZero(mu));
       sigma = pow(muaff / mu, tsig);
@@ -182,9 +200,18 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       corrector_resid->clear_r1r2();
 
       // form right hand side of linear system:
-      corrector_resid->set_r3_xz_alpha(step, -sigma * mu);
+      if( !bicgstab_converged )
+         corrector_resid->set_r3_xz_alpha(step, 0.0);
+      else
+         corrector_resid->set_r3_xz_alpha(step, -sigma * mu);
 
       sys->solve(prob, iterate, corrector_resid, corrector_step);
+      if( !bicgstab_converged )
+      {
+         if( my_rank == 0 ) std::cout << "1st corrector step failed" << std::endl;
+         PIPSdebugMessage("1st corrector step computation in BiCGStab failed");
+         // TODO : not sure what to do now
+      }
       corrector_step->negate();
 
       // calculate weighted predictor-corrector step
@@ -208,7 +235,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       NumberGondzioCorrections = 0;
       NumberSmallCorrectors = 0;
-      bool do_small_pairs_correction = false;
+      bool do_small_pairs_correction = do_small_correctors_aggressively;
 
       // enter the Gondzio correction loop:
       while( NumberGondzioCorrections < maximum_correctors
@@ -238,6 +265,13 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
          // solve for corrector direction
          sys->solve(prob, iterate, corrector_resid, corrector_step); // corrector_step is now delta_m
+         if( !bicgstab_converged )
+         {
+            PIPSdebugMessage("Gondzio corrector step computation in BiCGStab failed - break corrector loop");
+            // exit corrector loop use small correctors in next run aggresively
+            do_small_correctors_aggressively = true;
+            break;
+         }
 
          // calculate weighted predictor-corrector step
          calculateAlphaPDWeightCandidate(iterate, step, corrector_step,
@@ -309,7 +343,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
             {
                // try and center small pairs
                do_small_pairs_correction = true;
-               if( PIPS_MPIgetRank(MPI_COMM_WORLD) == 0 )
+               if( my_rank == 0 )
                {
                   std::cout << "Switching to small push " << std::endl;
                   std::cout << "Alpha when switching: " << alpha_pri << " " << alpha_dual << std::endl;

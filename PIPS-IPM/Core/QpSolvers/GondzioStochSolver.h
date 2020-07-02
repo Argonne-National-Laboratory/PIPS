@@ -46,7 +46,7 @@ protected:
 
   /* observer stuff for checking convergence of BiCGStab */
   bool bicgstab_converged;
-  double norm_bigcstab_res;
+  double norm_bigcstab_res_rel;
 
   void registerBiCGStabOvserver(LinearSystem* sys);
 
