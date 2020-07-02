@@ -20,48 +20,48 @@
 
 namespace pips_options
 {
-   void setOptions(std::string opt_file);
-   int getIntParameter(std::string identifier);
-   double getDoubleParameter(std::string identifier);
-   bool getBoolParameter(std::string identifier);
+   void setOptions(const std::string& opt_file);
+   int getIntParameter(const std::string& identifier);
+   double getDoubleParameter(const std::string& identifier);
+   bool getBoolParameter(const std::string& identifier);
 
-class StochOptions : public Options
-{
-
-private:
-   friend void pips_options::setOptions(std::string opt_file);
-   friend int pips_options::getIntParameter(std::string identifier);
-   friend double pips_options::getDoubleParameter(std::string identifier);
-   friend bool pips_options::getBoolParameter(std::string identifier);
-
-   static StochOptions& getInstance()
+   class StochOptions : public Options
    {
-      static StochOptions opt;
-      return opt;
-   }
 
-   void setDefaults() override;
-   StochOptions();
+   private:
+      friend void pips_options::setOptions(const std::string& opt_file);
+      friend int pips_options::getIntParameter(const std::string& identifier);
+      friend double pips_options::getDoubleParameter(const std::string& identifier);
+      friend bool pips_options::getBoolParameter(const std::string& identifier);
 
-   virtual ~StochOptions() {};
-};
+      static StochOptions& getInstance()
+      {
+         static StochOptions opt;
+         return opt;
+      }
 
-   inline void setOptions(std::string opt_file)
+      void setDefaults() override;
+      StochOptions();
+
+      virtual ~StochOptions() {};
+   };
+
+   inline void setOptions(const std::string& opt_file)
    {
       return StochOptions::getInstance().fillOptionsFromFile(opt_file);
    }
 
-   inline int getIntParameter(std::string identifier)
+   inline int getIntParameter(const std::string& identifier)
    {
       return StochOptions::getInstance().getIntParam(identifier);
    }
 
-   inline bool getBoolParameter(std::string identifier)
+   inline bool getBoolParameter(const std::string& identifier)
    {
       return StochOptions::getInstance().getBoolParam(identifier);
    }
 
-   inline double getDoubleParameter(std::string identifier)
+   inline double getDoubleParameter(const std::string& identifier)
    {
       return StochOptions::getInstance().getDoubleParam(identifier);
    }

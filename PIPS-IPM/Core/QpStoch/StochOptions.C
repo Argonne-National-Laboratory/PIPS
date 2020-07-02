@@ -1,3 +1,10 @@
+/*
+ * StochOptions.C
+ *
+ *  Created on: 03.04.2020
+ *      Author: bzfkempk
+ */
+
 #include "StochOptions.h"
 #include <limits>
 

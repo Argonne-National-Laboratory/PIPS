@@ -39,7 +39,7 @@ endif(HAVE_PARDISO)
 set(solvers ${solvers} LinearSolvers/Preconditioners/SCsparsifier.C)
 
 add_library(ooqpgensparse 
-  QpGen/QpGenVars.C QpGen/QpGenData.C QpGen/QpGenResiduals.C QpGen/QpGen.C QpGen/QpGenLinsys.C #QpGen
+  QpGen/QpGenVars.C QpGen/QpGenData.C QpGen/QpGenResiduals.C QpGen/QpGen.C QpGen/QpGenLinsys.C QpGen/QpGenOptions.C #QpGen
   QpGen/QpGenSparseSeq.C QpGen/QpGenSparseLinsys.C #QpGenSparse
   Readers/MpsReader.C Readers/hash.C #Readers
   ${solvers})

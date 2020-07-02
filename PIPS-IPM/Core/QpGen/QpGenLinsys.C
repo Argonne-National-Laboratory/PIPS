@@ -16,12 +16,12 @@
 #include "QpGen.h"
 #include "mpi.h"
 #include "pipsport.h"
+#include "QpGenOptions.h"
+
 #include <limits>
 #include <vector>
 #include <algorithm>
-
 #include <fstream>
-using namespace std;
 
 extern int gOuterSolve;
 extern int gOuterBiCGIter;
@@ -134,11 +134,15 @@ static bool isZero(double val, int& flag)
    return false;
 }
 
-QpGenLinsys::QpGenLinsys( QpGen * factory_,
-			  QpGenData * prob,
-			  LinearAlgebraPackage * la ) 
-: bicg_conv_flag(-2), bicg_niterations(-1), bicg_resnorm(0.0), bicg_relresnorm(0.0),
-  factory( factory_), rhs(nullptr), dd(nullptr), dq(nullptr), useRefs(0)
+QpGenLinsys::QpGenLinsys( QpGen * factory_, QpGenData * prob, LinearAlgebraPackage * la ) :
+  bicg_conv_flag(-2), bicg_niterations(-1), bicg_resnorm(0.0), bicg_relresnorm(0.0),
+  factory( factory_), rhs(nullptr), dd(nullptr), dq(nullptr), useRefs(0),
+  outer_bicg_print_statistics(qpgen_options::getBoolParameter("OUTER_BICG_PRINT_STATISTICS")),
+  outer_bicg_eps(qpgen_options::getDoubleParameter("OUTER_BICG_EPSILON")),
+  outer_bicg_max_iter(qpgen_options::getIntParameter("OUTER_BICG_MAX_ITER")),
+  outer_bicg_max_normr_divergences(qpgen_options::getIntParameter("OUTER_BICG_MAX_NORMR_DIVERGENCES")),
+  outer_bicg_max_stagnations(qpgen_options::getIntParameter("OUTER_BICG_MAX_STAGNATIONS")),
+  ipIterations(-2)
 {
 
   nx = prob->nx; my = prob->my; mz = prob->mz;
@@ -181,39 +185,21 @@ QpGenLinsys::QpGenLinsys( QpGen * factory_,
     sol = res = resx = resy = resz = nullptr;
     sol2 = res2 = res3 = res4 = res5 = nullptr;
   }
-
-  printStatistics = false;
-
-  // todo user parameter!
-  char* var = getenv("PIPS_PRINT_STATISTICS");
-  if( var != nullptr )
-  {
-     int print = -1;
-     sscanf(var, "%d", &print);
-     if( print == 0 )
-        printStatistics = false;
-     else if( print == 1 )
-        printStatistics = true;
-  }
-  ipIterations = -2;
 }
 
 QpGenLinsys::QpGenLinsys()
- : bicg_conv_flag(-2), bicg_niterations(-1), bicg_resnorm(0.0), bicg_relresnorm(0.0), factory( nullptr), rhs(nullptr), dd(nullptr), dq(nullptr), useRefs(0),
-   sol(nullptr), res(nullptr), resx(nullptr), resy(nullptr), resz(nullptr),
-   sol2(nullptr), res2(nullptr), res3(nullptr), res4(nullptr), res5(nullptr), printStatistics(false), ipIterations(-2)
+ : bicg_conv_flag(-2), bicg_niterations(-1), bicg_resnorm(0.0), bicg_relresnorm(0.0), nomegaInv(nullptr), factory(nullptr),
+   rhs(nullptr), nx(-1), my(-1), mz(-1), dd(nullptr), dq(nullptr), ixupp(nullptr), icupp(nullptr), ixlow(nullptr), iclow(nullptr),
+   nxupp(-1), nxlow(-1), mcupp(-1), mclow(-1),
+   useRefs(0), sol(nullptr), res(nullptr), resx(nullptr), resy(nullptr), resz(nullptr),
+   sol2(nullptr), res2(nullptr), res3(nullptr), res4(nullptr), res5(nullptr),
+   outer_bicg_print_statistics(qpgen_options::getBoolParameter("OUTER_BICG_PRINT_STATISTICS")),
+   outer_bicg_eps(qpgen_options::getDoubleParameter("OUTER_BICG_EPSILON")),
+   outer_bicg_max_iter(qpgen_options::getIntParameter("OUTER_BICG_MAX_ITER")),
+   outer_bicg_max_normr_divergences(qpgen_options::getIntParameter("OUTER_BICG_MAX_NORMR_DIVERGENCES")),
+   outer_bicg_max_stagnations(qpgen_options::getIntParameter("OUTER_BICG_MAX_STAGNATIONS")),
+   ipIterations(-2)
 {
-   // todo user parameter!
-   char* var = getenv("PIPS_PRINT_STATISTICS");
-   if( var != nullptr )
-   {
-      int print = -1;
-      sscanf(var, "%d", &print);
-      if( print == 0 )
-         printStatistics = false;
-      else if( print == 1 )
-         printStatistics = true;
-   }
 }
 
 QpGenLinsys::~QpGenLinsys()
@@ -254,9 +240,7 @@ void QpGenLinsys::factor(Data * /* prob_in */, Variables *vars_in)
   nomegaInv->negate();
 
   if( mclow + mcupp > 0 ) this->putZDiagonal( *nomegaInv );
- 
 }
-
 
 void QpGenLinsys::computeDiagonals( OoqpVector& dd_, OoqpVector& omega,
 				    OoqpVector& t,  OoqpVector& lambda,
@@ -438,13 +422,11 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    OoqpVector &r0 = *res2, &dx = *sol2, &v = *res3, &t = *res4, &p = *res5;
    OoqpVector &x = *sol, &r = *res, &b = *rhs;
 
+   // TODO : control from the outside as well
    const double tol = biCGStabGetTolerance(ipIterations);
-   const double eps = 1e-15;
+
    const double n2b = b.twonorm();
-   const double tolb = max(n2b * tol, eps);
-   const int maxit = 75;
-   const int normrDivLimit = 4; // todo user parameter
-   const int stagsLimit = 4;
+   const double tolb = max(n2b * tol, outer_bicg_eps);
 
    gOuterBiCGIter = 0;
    bicg_niterations = 0;
@@ -480,7 +462,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
       return;
    }
 
-   if( printStatistics )
+   if( outer_bicg_print_statistics )
    {
       const double infb = b.infnorm();
       const double glbinfnorm = matXYZinfnorm(data, stepx, stepy, stepz);
@@ -507,7 +489,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    // todo save x_best and use it to check for stagnation and rollback!
 
    //main loop
-   for( bicg_niterations = 0; bicg_niterations  < maxit; bicg_niterations ++ )
+   for( bicg_niterations = 0; bicg_niterations  < outer_bicg_max_iter; bicg_niterations ++ )
    {
       assert(bicg_conv_flag == -1);
       const double rho1 = rho;
@@ -548,7 +530,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 
          alpha = rho / rtv;
 
-         if( (std::fabs(alpha) * dx.twonorm()) <= eps * x.twonorm() )
+         if( (std::fabs(alpha) * dx.twonorm()) <= outer_bicg_eps * x.twonorm() )
             nstags++;
          else
             nstags = 0;
@@ -561,7 +543,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
          //check for convergence
          normr = r.twonorm();
 
-         if( normr <= tolb || nstags >= stagsLimit )
+         if( normr <= tolb || nstags >= outer_bicg_max_stagnations )
          {
             //compute the actual residual
             OoqpVector& res = dx; //use dx
@@ -594,7 +576,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 
          omega = t.dotProductWith(r) / tt;
 
-         if( (std::fabs(omega) * dx.twonorm()) <= eps * x.twonorm() )
+         if( (std::fabs(omega) * dx.twonorm()) <= outer_bicg_eps * x.twonorm() )
             nstags++;
          else
             nstags = 0;
@@ -606,7 +588,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
          //check for convergence
          normr = r.twonorm();
 
-         if( normr <= tolb || nstags >= stagsLimit )
+         if( normr <= tolb || nstags >= outer_bicg_max_stagnations )
          {
             //compute the actual residual
             OoqpVector& res = dx; //use dx
@@ -633,7 +615,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
             }
 
             // todo rollback to normr_min iterate!
-            if( normrNDiv > normrDivLimit )
+            if( normrNDiv > outer_bicg_max_normr_divergences )
             {
                bicg_conv_flag = 5;
                break;
@@ -649,7 +631,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 #endif
       } //~end of scoping
 
-      if( nstags >= stagsLimit )
+      if( nstags >= outer_bicg_max_stagnations )
       {
          bicg_conv_flag = 3;
          break;
@@ -774,7 +756,7 @@ void QpGenLinsys::solveCompressedIterRefin(OoqpVector& stepx,
       //		 << "rhs.nrm xyz: " << bnorm << endl;
 #endif      
       
-      if(resNorm/bnorm<1e-9)
+      if( resNorm / bnorm < 1e-9)
 	break;
 
     } while(true);
