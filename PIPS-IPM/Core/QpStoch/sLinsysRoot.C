@@ -59,16 +59,17 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
     if(gOuterSolve==2) {
       //BiCGStab; additional vectors needed
       sol2 = factory_->tree->newRhs();
+      sol3 = factory_->tree->newRhs();
       res2 = factory_->tree->newRhs();
       res3 = factory_->tree->newRhs();
       res4 = factory_->tree->newRhs();
       res5 = factory_->tree->newRhs();
     } else {
-      sol2 = res2 = res3 = res4 = res5 = nullptr;
+      sol2 = sol3 = res2 = res3 = res4 = res5 = nullptr;
     }
   } else {
     sol  = res  = resx = resy = resz = nullptr;
-    sol2 = res2 = res3 = res4 = res5 = nullptr;
+    sol2 = sol3 = res2 = res3 = res4 = res5 = nullptr;
   }
 
   usePrecondDist = pips_options::getBoolParameter("PRECONDITION_DISTRIBUTED");
@@ -110,16 +111,17 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
     if(gOuterSolve==2) {
       //BiCGStab; additional vectors needed
       sol2 = factory_->tree->newRhs();
+      sol3 = factory_->tree->newRhs();
       res2 = factory_->tree->newRhs();
       res3 = factory_->tree->newRhs();
       res4 = factory_->tree->newRhs();
       res5 = factory_->tree->newRhs();
     } else {
-      sol2 = res2 = res3 = res4 = res5 = nullptr;
+      sol2 = sol3 = res2 = res3 = res4 = res5 = nullptr;
     }
   } else {
       sol  = res  = resx = resy = resz = nullptr;
-      sol2 = res2 = res3 = res4 = res5 = nullptr;
+      sol2 = sol3 = res2 = res3 = res4 = res5 = nullptr;
   }
 
   usePrecondDist = pips_options::getBoolParameter("PRECONDITION_DISTRIBUTED");
