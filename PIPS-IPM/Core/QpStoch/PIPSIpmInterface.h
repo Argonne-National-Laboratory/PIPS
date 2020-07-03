@@ -355,7 +355,8 @@ double PIPSIpmInterface<FORMULATION,SOLVER>::getObjective() {
 
 
 template<typename FORMULATION, typename SOLVER>
-double PIPSIpmInterface<FORMULATION,SOLVER>::getFirstStageObjective() const {
+double PIPSIpmInterface<FORMULATION,SOLVER>::getFirstStageObjective() const
+{
   OoqpVector& x = *(dynamic_cast<StochVector&>(*vars->x).vec);
   OoqpVector& c = *(dynamic_cast<StochVector&>(*data->g).vec);
   return c.dotProductWith(x);

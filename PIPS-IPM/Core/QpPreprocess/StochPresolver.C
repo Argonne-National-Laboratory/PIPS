@@ -82,7 +82,7 @@ Data* StochPresolver::presolve()
    assert( sorigprob->isRootNodeInSync() );
    assert( presData->getPresProb().isRootNodeInSync() );
 
-   if( print_problem)
+   if( print_problem )
       sorigprob->writeToStreamDense(std::cout);
 
    /* initialize model clean up (necessary presolver) */
