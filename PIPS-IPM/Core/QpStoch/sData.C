@@ -1618,8 +1618,14 @@ void sData::activateLinkStructureExploitation()
 {
    if( useLinkStructure )
       return;
-
    useLinkStructure = true;
+
+   /* don't attempt to use linking structure when there actually is no linking constraints */
+   if( stochNode->myl() == 0 && stochNode->mzl() == 0 )
+   {
+      useLinkStructure = false;
+      return;
+   }
 
    const int nx0 = getLocalnx();
    const int myrank = PIPS_MPIgetRank(MPI_COMM_WORLD);
