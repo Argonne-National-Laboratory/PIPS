@@ -339,7 +339,7 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
   //put A and C block in the augmented system as At and Ct in the lower triangular part
   //
 
-//  if( nA > 0 || nC > 0 )
+  if( nA > 0 || nC > 0 || nF > 0 || nG > 0 )
   {
     const bool putA = A.numberOfNonZeros() > 0;
     const bool putC = C.numberOfNonZeros() > 0;
