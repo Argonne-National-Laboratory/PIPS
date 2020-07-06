@@ -30,7 +30,7 @@ int gInnerBiCGIter=0;
 int gInnerBiCGFails=0;
 
 //number of iterative refinements in the 2nd stage sparse systems
-int gInnerStg2solve=3;
+//int gInnerStg2solve=3; not used
 
 Solver::Solver() : itsMonitors(0), status(0), startStrategy(0), dnorm(0.0),
 		   mutol(1.e-6), artol(1.e-4), phi(0.0), maxit(0), mu_history(0), rnorm_history(0),
