@@ -204,7 +204,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       // if we are not in a refactorization - check convergence of bicgstab
       if( !refactorized &&
-            !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
+            !bicgstab_converged && bigcstab_norm_res_rel * 1e2 > resid->residualNorm() / dnorm )
       {
          PIPSdebugMessage("1st corrector step computation in BiCGStab failed");
          // TODO : use preconditioner more conservatively
@@ -268,7 +268,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
          // solve for corrector direction
          sys->solve(prob, iterate, corrector_resid, corrector_step); // corrector_step is now delta_m
 
-         if( !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
+         if( !bicgstab_converged && bigcstab_norm_res_rel * 1e2 > resid->residualNorm() / dnorm )
          {
             PIPSdebugMessage("Gondzio corrector step computation in BiCGStab failed - break corrector loop");
 
