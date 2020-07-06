@@ -20,7 +20,6 @@ namespace pips_options
    // todo maybe split this up into several submethods?
    void StochOptions::setDefaults()
    {
-      // TODO
       /* default bool values */
       bool_options["dummy"] = false;
       bool_options["POSTSOLVE"] = true;
