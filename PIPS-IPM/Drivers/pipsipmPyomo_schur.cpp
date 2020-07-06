@@ -13,9 +13,6 @@
 #include <string>
 #include <sstream>
 
-using namespace std;
-extern int gInnerSCsolve;
-
 int main(int argc, char ** argv) {
   MPI_Init(&argc, &argv);
   int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
@@ -46,7 +43,7 @@ int main(int argc, char ** argv) {
   PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*s);
 
   pips_options::setIntParameter("OUTER_SOLVE", outerSolve);
-  gInnerSCsolve=innerSolve;
+  pips_options::setIntParameter("INNER_SC_SOLVE", innerSolve);
 
   if(mype==0) cout <<  "PIPSIpmInterface created" << endl;
   delete s;

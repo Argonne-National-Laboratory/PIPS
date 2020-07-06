@@ -75,6 +75,7 @@ protected:
 
   /// error absorbtion in linear system outer level
   const int outerSolve;
+  const int innerSCSolve;
 
   /// parameters for the bicg solve
   const bool outer_bicg_print_statistics;

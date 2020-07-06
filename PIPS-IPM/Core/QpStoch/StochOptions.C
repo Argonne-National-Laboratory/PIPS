@@ -102,7 +102,5 @@ namespace pips_options
 
       /// SCHUR COMPLEMENT COMPUTATION
       bool_options["SC_COMPUTE_BLOCKWISE"] = false;
-
-
    }
 }

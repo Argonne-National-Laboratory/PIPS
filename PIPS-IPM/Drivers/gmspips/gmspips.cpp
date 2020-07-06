@@ -20,11 +20,6 @@
 #include <iostream>
 #include <fstream>
 
-#if defined(GMS_PIPS)
-extern int gInnerSCsolve;
-#endif
-
-
 extern "C" typedef int (*FNNZ)(void* user_data, int id, int* nnz);
 
 /* Row-major format */
@@ -389,24 +384,18 @@ int main(int argc, char ** argv)
 #if defined(LINKCONSTR)
       cout << "Using version with linking constraint." << endl;
 #else
-      cout << "Using version without linking constraint." << endl;
+      std::cout << "Using version without linking constraint." << std::endl;
 #endif
    if( gmsRank == 0 )
-      cout << "Using a total of " << size << " MPI processes." << endl;
+      std::cout << "Using a total of " << size << " MPI processes." << std::endl;
 
 #if defined(GMS_PIPS)
    pips_options::setIntParameter("OUTER_SOLVE", 2);
    if( gmsRank == 0 )
       std::cout << "using outer BICGSTAB" << std::endl;
 
-#ifdef INNER_BICGSTAB
-   gInnerSCsolve=2;
-
-   if( gmsRank == 0 )
+   if( gmsRank == 0 && pips_options::getIntParameter("INNER_SC_SOLVE") == 2 )
       cout << "using inner BICGSTAB" << endl;
-#else
-   gInnerSCsolve=0;
-#endif
 
    std::vector<double> primalSolVec;
    std::vector<double> dualSolEqVec;

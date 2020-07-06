@@ -29,13 +29,6 @@ int gOuterBiCGIter=0;
 int gInnerBiCGIter=0;
 int gInnerBiCGFails=0;
 
-//controls the type of error absortion/correction when solving
-//with the dense Schur complement
-// - 0: no error correction
-// - 1: iter. refin.
-// - 2: BiCGStab
-int gInnerSCsolve=0;
-
 //number of iterative refinements in the 2nd stage sparse systems
 int gInnerStg2solve=3;
 

@@ -17,6 +17,8 @@ namespace qpgen_options
 
    void QpGenOptions::setDefaults()
    {
+      /// SOLVER CONTROLS
+
       /// ERROR ABSORBTION / ITERATIVE REFINEMENT
       // controls the type of error absorbtion at the outer level of the linear system
       // - 0:no error absortion (OOQP works just fine)
@@ -25,6 +27,13 @@ namespace qpgen_options
       // the dense Schur complement
       // - 2:BiCGStab with the factorization as preconditioner
       int_options["OUTER_SOLVE"] = 0;
+      // controls the type of error absortion/correction at the inner level when solving
+      //with the dense Schur complement
+      // - 0: no error correction
+      // - 1: iter. refin.
+      // - 2: BiCGStab
+      int_options["INNER_SC_SOLVE"] = 0;
+
 
       /// OUTER BIGCSTAB
       double_options["OUTER_BICG_EPSILON"] = 1e-15;

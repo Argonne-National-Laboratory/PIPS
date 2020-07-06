@@ -29,7 +29,6 @@
 #ifdef STOCH_TESTING
 extern double g_iterNumber;
 #endif
-extern int gInnerSCsolve;
 extern int gInnerBiCGIter;
 extern int gInnerBiCGFails;
 
@@ -431,14 +430,14 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   ///////////////////////////////////////////////////////////////////////
   // r contains all the stuff -> solve for it
   ///////////////////////////////////////////////////////////////////////
-  if(gInnerSCsolve==0) {
+  if( innerSCSolve == 0 ) {
     // Option 1. - solve with the factors
     solver->Dsolve(r);
-  } else if(gInnerSCsolve==1) {
+  } else if( innerSCSolve == 1 ) {
     // Option 2 - solve with the factors and perform iter. ref.
     solveWithIterRef(prob, r);
   } else {
-    assert(gInnerSCsolve==2);
+    assert( innerSCSolve == 2 );
     // Option 3 - use the factors as preconditioner and apply BiCGStab
     solveWithBiCGStab(prob, r);
   }
@@ -459,7 +458,7 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
     b3.componentDiv(*zDiag);
   }
 #ifdef TIMING
-  if(myRank==0 && gInnerSCsolve>=1)
+  if( myRank == 0 && innerSCSolve >= 1 )
     cout << "Root - Refin times: child=" << tchild_total << " root=" << troot_total
 	 << " comm=" << tcomm_total << " total=" << MPI_Wtime()-t_start << endl;
 #endif
@@ -521,14 +520,14 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   // we do not need the last locmz elements of r
   SimpleVector rshort(&r[0], locnx+locmy+locmyl+locmzl);
 
-  if(gInnerSCsolve==0) {
+  if( innerSCSolve == 0 ) {
     // Option 1. - solve with the factors
     solver->Dsolve(rshort);
-  } else if(gInnerSCsolve==1) {
+  } else if( innerSCSolve == 1 ) {
     // Option 2 - solve with the factors and perform iter. ref.
     solveWithIterRef(prob, rshort);
   } else {
-    assert(gInnerSCsolve==2);
+    assert( innerSCSolve == 2 );
     // Option 3 - use the factors as preconditioner and apply BiCGStab
     solveWithBiCGStab(prob, rshort);
   }
@@ -571,7 +570,7 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   }
 
 #ifdef TIMING
-  if(myRank==0 && gInnerSCsolve>=1)
+  if( myRank == 0 && innerSCSolve >= 1 )
     cout << "Root - Refin times: child=" << tchild_total << " root=" << troot_total
 	 << " comm=" << tcomm_total << " total=" << MPI_Wtime()-t_start << endl;
 #endif

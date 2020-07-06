@@ -13,9 +13,6 @@
 #include <string>
 #include <sstream>
 
-using namespace std;
-extern int gInnerSCsolve;
-
 #ifdef TIMING_FLOPS
 extern "C" {
     void HPM_Init(void);
@@ -61,7 +58,7 @@ int main(int argc, char ** argv) {
   PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*s);
 
   pips_options::setIntParameter("OUTER_SOLVE", outerSolve);
-  gInnerSCsolve=innerSolve;
+  pips_options::setIntParameter("INNER_SC_SOLVE", innerSolve);
 
   if(mype==0) cout <<  "PIPSIpmInterface created" << endl;
   delete s;
