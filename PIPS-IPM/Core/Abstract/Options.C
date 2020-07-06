@@ -8,6 +8,12 @@
 #include <cstdlib>
 #endif
 
+/// initialize static options storages
+std::map<std::string, double> Options::double_options;
+std::map<std::string, int> Options::int_options;
+std::map<std::string, bool> Options::bool_options;
+
+
 int Options::getIntParam(const std::string& identifier) const
 {
    const std::map<std::string, int>::const_iterator& it = int_options.find(identifier);

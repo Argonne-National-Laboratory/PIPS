@@ -12,6 +12,8 @@ namespace pips_options
 {
    StochOptions::StochOptions()
    {
+      /* initialize QpGenOptions */
+      QpGenOptions::getInstance();
       setDefaults();
    }
 

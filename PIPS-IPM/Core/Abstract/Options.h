@@ -31,10 +31,11 @@ private:
    virtual void setDefaults() = 0;
 
 protected:
+   // not thread safe when modified..
    // TODO : there is no hash_map in C++03 I think
-   std::map<std::string, double> double_options;
-   std::map<std::string, int> int_options;
-   std::map<std::string, bool> bool_options;
+   static std::map<std::string, double> double_options;
+   static std::map<std::string, int> int_options;
+   static std::map<std::string, bool> bool_options;
 
    Options() {};
    virtual ~Options() {};
