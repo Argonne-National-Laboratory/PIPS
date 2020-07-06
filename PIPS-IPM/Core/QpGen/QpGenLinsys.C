@@ -23,7 +23,6 @@
 #include <algorithm>
 #include <fstream>
 
-extern int gOuterSolve;
 extern int gOuterBiCGIter;
 extern int gOuterBiCGFails;
 
@@ -137,6 +136,7 @@ static bool isZero(double val, int& flag)
 QpGenLinsys::QpGenLinsys( QpGen * factory_, QpGenData * prob, LinearAlgebraPackage * la ) :
   bicg_conv_flag(-2), bicg_niterations(-1), bicg_resnorm(0.0), bicg_relresnorm(0.0),
   factory( factory_), rhs(nullptr), dd(nullptr), dq(nullptr), useRefs(0),
+  outerSolve(qpgen_options::getIntParameter("OUTER_SOLVE")),
   outer_bicg_print_statistics(qpgen_options::getBoolParameter("OUTER_BICG_PRINT_STATISTICS")),
   outer_bicg_eps(qpgen_options::getDoubleParameter("OUTER_BICG_EPSILON")),
   outer_bicg_max_iter(qpgen_options::getIntParameter("OUTER_BICG_MAX_ITER")),
@@ -165,7 +165,7 @@ QpGenLinsys::QpGenLinsys( QpGen * factory_, QpGenData * prob, LinearAlgebraPacka
   nomegaInv   = la->newVector( mz );
   rhs         = la->newVector( len_x );
 
-  if( gOuterSolve )
+  if( outerSolve )
   {
     //for iterative refinement or BICGStab
     sol  = la->newVector( len_x );
@@ -174,7 +174,7 @@ QpGenLinsys::QpGenLinsys( QpGen * factory_, QpGenData * prob, LinearAlgebraPacka
     resy = la->newVector( my );
     resz = la->newVector( mz );
 
-    if( gOuterSolve == 2 )
+    if( outerSolve == 2 )
     {
       //BiCGStab; additional vectors needed
       sol2 = la->newVector( len_x );
@@ -202,6 +202,7 @@ QpGenLinsys::QpGenLinsys()
    nxupp(-1), nxlow(-1), mcupp(-1), mclow(-1),
    useRefs(0), sol(nullptr), res(nullptr), resx(nullptr), resy(nullptr), resz(nullptr),
    sol2(nullptr), sol3(nullptr), res2(nullptr), res3(nullptr), res4(nullptr), res5(nullptr),
+   outerSolve(qpgen_options::getIntParameter("OUTER_SOLVE")),
    outer_bicg_print_statistics(qpgen_options::getBoolParameter("OUTER_BICG_PRINT_STATISTICS")),
    outer_bicg_eps(qpgen_options::getDoubleParameter("OUTER_BICG_EPSILON")),
    outer_bicg_max_iter(qpgen_options::getIntParameter("OUTER_BICG_MAX_ITER")),
@@ -393,13 +394,13 @@ void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
 {
   stepz.axzpy( -1.0, *nomegaInv, steps );
  
-  if(gOuterSolve==1) {
+  if( outerSolve == 1 ) {
     ///////////////////////////////////////////////////////////////
     // Iterative refinement
     ///////////////////////////////////////////////////////////////
     solveCompressedIterRefin(stepx,stepy,stepz,prob);
 
-  } else if(gOuterSolve==0) {
+  } else if( outerSolve == 0 ) {
     ///////////////////////////////////////////////////////////////
     // Default solve - Schur complement based decomposition
     ///////////////////////////////////////////////////////////////
@@ -408,7 +409,7 @@ void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
     this->separateVars( stepx, stepy, stepz, *rhs );
 
   } else {
-    assert(gOuterSolve==2);
+    assert( outerSolve == 2 );
     ///////////////////////////////////////////////////////////////
     // BiCGStab
     ///////////////////////////////////////////////////////////////

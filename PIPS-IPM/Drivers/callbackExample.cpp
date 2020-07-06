@@ -11,7 +11,6 @@
 
 #define LINKING_CONS 1
 
-extern int gOuterSolve;
 extern int gInnerSCsolve;
 
 extern "C" typedef int (*FNNZ)(void* user_data, int id, int* nnz);
@@ -574,7 +573,6 @@ int main(int argc, char ** argv) {
      cout << "Using a total of " << size << " MPI processes." << endl;
 
   /* use BiCGStab for outer solve */
-  gOuterSolve = 2;
   gInnerSCsolve = 0;
 #if defined(WITH_MUMPS_LEAF)
   PIPSIpmInterface<sFactoryAugMumpsLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, SCALER_EQUI_STOCH, PRESOLVER_NONE);

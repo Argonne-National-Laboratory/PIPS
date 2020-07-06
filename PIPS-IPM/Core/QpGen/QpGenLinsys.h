@@ -73,6 +73,9 @@ protected:
   /** Work vectors for BiCGStab */
   OoqpVector *sol2, *sol3, *res2, *res3, *res4, *res5;
 
+  /// error absorbtion in linear system outer level
+  const int outerSolve;
+
   /// parameters for the bicg solve
   const bool outer_bicg_print_statistics;
 

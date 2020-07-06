@@ -29,14 +29,6 @@ int gOuterBiCGIter=0;
 int gInnerBiCGIter=0;
 int gInnerBiCGFails=0;
 
-//controls the type of error absortion at the outer level
-// - 0:no error absortion (OOQP works just fine)
-// - 1:iterative refinement (used when error absortion is 
-// also done at a lower level, for example in the solve with 
-// the dense Schur complement
-// - 2:BiCGStab with the factorization as preconditioner
-int gOuterSolve=0; 
-
 //controls the type of error absortion/correction when solving
 //with the dense Schur complement
 // - 0: no error correction

@@ -18,7 +18,6 @@
 extern double g_iterNumber;
 #endif
 extern int gInnerSCsolve;
-extern int gOuterSolve;
 
 sLinsysRootAugComm2::sLinsysRootAugComm2(sFactory * factory_, sData * prob_)
   : sLinsysRootComm2(factory_, prob_), CtDC(nullptr)

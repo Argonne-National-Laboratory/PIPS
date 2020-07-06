@@ -53,6 +53,21 @@ bool Options::getBoolParam(const std::string& identifier) const
    }
 }
 
+void Options::setIntParam(const std::string& param, int value)
+{
+   int_options[param] = value;
+}
+
+void Options::setBoolParam(const std::string& param, int value)
+{
+   bool_options[param] = value;
+}
+
+void Options::setDoubleParam(const std::string& param, int value)
+{
+   double_options[param] = value;
+}
+
 void Options::fillOptionsFromFile(const std::string& filename)
 {
    std::ifstream params;

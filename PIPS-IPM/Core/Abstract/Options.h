@@ -47,6 +47,10 @@ protected:
    int getIntParam(const std::string& identifier) const;
    double getDoubleParam(const std::string& identifier) const;
    bool getBoolParam(const std::string& identifier) const;
+
+   void setIntParam(const std::string& param, int value);
+   void setBoolParam(const std::string& param, int value);
+   void setDoubleParam(const std::string& param, int value);
 };
 
 #endif /* PIPS_IPM_CORE_ABSTRACT_OPTIONS_H_ */

@@ -19,12 +19,8 @@
 
 #include <iostream>
 #include <fstream>
-using namespace std;
-
-#define BICGSTAB
 
 #if defined(GMS_PIPS)
-extern int gOuterSolve;
 extern int gInnerSCsolve;
 #endif
 
@@ -399,13 +395,9 @@ int main(int argc, char ** argv)
       cout << "Using a total of " << size << " MPI processes." << endl;
 
 #if defined(GMS_PIPS)
-#ifdef BICGSTAB
+   pips_options::setIntParameter("OUTER_SOLVE", 2);
    if( gmsRank == 0 )
-      cout << "using outer BICGSTAB" << endl;
-   gOuterSolve=2;
-#else
-   gOuterSolve=0;
-#endif
+      std::cout << "using outer BICGSTAB" << std::endl;
 
 #ifdef INNER_BICGSTAB
    gInnerSCsolve=2;
