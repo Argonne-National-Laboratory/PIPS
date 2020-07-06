@@ -12,9 +12,10 @@
 #include "Residuals.h"
 #include "LinearSystem.h"
 #include "OoqpStartStrategy.h"
+#include "Options.h"
+
 #include <cmath>
 #include <limits>
-
 #include "mpi.h"
 
 bool ipStartFound = false;
@@ -37,12 +38,34 @@ Solver::Solver() : itsMonitors(0), status(0), startStrategy(0), dnorm(0.0),
 {
   // define parameters associated with the step length heuristic
 
-  steplength_factor = 0.99999999;
-  gamma_f = 0.99;
+  if( base_options::getBoolParameter("IP_STEPLENGTH_CONSERVATIVE") )
+  {
+     steplength_factor = 0.99;
+     gamma_f = 0.95;
+  }
+  else
+  {
+     steplength_factor = 0.99999999;
+     gamma_f = 0.99;
+  }
   gamma_a = 1.0 / (1.0 - gamma_f);
 
-  printTimeStamp = false;
-  startTime = 0.0;
+  if( base_options::getBoolParameter("IP_ACCURACY_REDUCED")  )
+  {
+    artol = 1.e-3;
+    mutol = 1.e-5;
+  }
+  else
+  {
+    artol = 1.e-4;
+     mutol = 1.e-6;
+  }
+
+  if( base_options::getBoolParameter("IP_PRINT_TIMESTAMP") )
+  {
+     printTimeStamp = true;
+     startTime = MPI_Wtime();
+  }
 }
 
 void Solver::start( ProblemFormulation * formulation,

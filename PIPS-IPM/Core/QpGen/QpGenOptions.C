@@ -12,6 +12,9 @@ namespace qpgen_options
 {
    QpGenOptions::QpGenOptions()
    {
+      /* initializes base class options first ny calling base class default constructor */
+      Options::getInstance();
+      /* override with own set of options */
       setDefaults();
    }
 
