@@ -234,29 +234,6 @@ int main(int argc, char ** argv)
       setParams(scaler_type, stepDiffLp, presolve, printsol, argv[i - 1]);
 
    blocks = (GMSPIPSBlockData_t**) calloc(numBlocks,sizeof(GMSPIPSBlockData_t*));
-#if 0 // todo : is this still needed?
-   int nBlock0 = 0;
-   cout << "Start reading data from GDX and preparing the blocks" << endl;
-   for (int blk=0; blk<numBlocks; blk++)
-   {
-      int rc;
-      blocks[blk] = (GMSPIPSBlockData_t*) malloc(sizeof(GMSPIPSBlockData_t));
-      if ( !allGDX )
-      {
-         char fname[256];
-         sprintf(fname,"%s%d.gdx", argv[2], blk);
-         rc = readBlock(numBlocks,blk,0,1,fname,(4==argc)? argv[3]:NULL,blocks[blk]);
-      }
-      else
-         rc = readBlock(numBlocks,blk,0,1,argv[2],(4==argc)? argv[3]:NULL,blocks[blk]);
-      if ( 0==blk )
-         nBlock0 = blocks[blk]->n0;
-      else
-         assert(nBlock0 == blocks[blk]->n0);
-      assert(0==rc);
-   }
-   cout << "Done reading data from GDX and preparing the blocks" << endl;
-#endif
 
    FNNZ fsni   = &fsizeni   ;
    FNNZ fsmA   = &fsizemA   ;
