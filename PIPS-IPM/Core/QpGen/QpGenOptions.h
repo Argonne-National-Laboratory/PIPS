@@ -25,7 +25,7 @@ namespace qpgen_options
    double getDoubleParameter(const std::string& identifier);
    bool getBoolParameter(const std::string& identifier);
 
-   class QpGenOptions : public Options
+   class QpGenOptions : public base_options::Options
    {
 
       protected :

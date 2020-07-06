@@ -12,8 +12,10 @@ namespace pips_options
 {
    StochOptions::StochOptions()
    {
-      /* initialize QpGenOptions */
+      /* initialize base class options first (QpGenOptions) */
       QpGenOptions::getInstance();
+
+      /* now override with own set of options */
       setDefaults();
    }
 
@@ -110,5 +112,31 @@ namespace pips_options
 
       /// SCHUR COMPLEMENT COMPUTATION
       bool_options["SC_COMPUTE_BLOCKWISE"] = false;
+
+      /// SOLVER CONTROLS
+
+      /// ERROR ABSORBTION / ITERATIVE REFINEMENT
+      // controls the type of error absorbtion at the outer level of the linear system
+      // - 0:no error absortion (OOQP works just fine)
+      // - 1:iterative refinement (used when error absortion is
+      // also done at a lower level, for example in the solve with
+      // the dense Schur complement
+      // - 2:BiCGStab with the factorization as preconditioner
+      int_options["OUTER_SOLVE"] = 0;
+      // controls the type of error absortion/correction at the inner level when solving
+      //with the dense Schur complement
+      // - 0: no error correction
+      // - 1: iter. refin.
+      // - 2: BiCGStab
+      int_options["INNER_SC_SOLVE"] = 0;
+
+      /// OUTER BIGCSTAB
+      double_options["OUTER_BICG_EPSILON"] = 1e-15;
+
+      bool_options["OUTER_BICG_PRINT_STATISTICS"] = false;
+
+      int_options["OUTER_BICG_MAX_ITER"] = 75;
+      int_options["OUTER_BICG_MAX_NORMR_DIVERGENCES"] = 4;
+      int_options["OUTER_BICG_MAX_STAGNATIONS"] = 4;
    }
 }
