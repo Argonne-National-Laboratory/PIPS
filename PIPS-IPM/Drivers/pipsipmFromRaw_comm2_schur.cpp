@@ -10,12 +10,9 @@
 #include "sFactoryAugComm2SchurLeaf.h"
 #include "MehrotraStochSolver.h"
 
+
 #include <string>
 #include <sstream>
-
-using namespace std;
-extern int gOuterSolve;
-extern int gInnerSCsolve;
 
 int main(int argc, char ** argv) {
   MPI_Init(&argc, &argv);
@@ -45,8 +42,9 @@ int main(int argc, char ** argv) {
   rawInput* s = new rawInput(datarootname,nscen);
   if(mype==0) cout <<  " raw input created from " << datarootname<< endl;
   PIPSIpmInterface<sFactoryAugComm2SchurLeaf, MehrotraStochSolver> pipsIpm(*s);
-  gOuterSolve=outerSolve;
-  gInnerSCsolve=innerSolve;
+
+  pips_options::setIntParameter("OUTER_SOLVE", outerSolve);
+  pips_options::setIntParameter("INNER_SC_SOLVE", innerSolve);
 
   if(mype==0) cout <<  "PIPSIpmInterface created" << endl;
   delete s;

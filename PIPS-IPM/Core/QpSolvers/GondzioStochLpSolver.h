@@ -10,8 +10,6 @@
 
 #include "GondzioStochSolver.h"
 
-
-
 class Data;
 class Variables;
 class ProblemFormulation;

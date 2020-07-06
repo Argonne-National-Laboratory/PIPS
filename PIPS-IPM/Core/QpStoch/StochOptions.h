@@ -21,6 +21,10 @@
 namespace pips_options
 {
    void setOptions(const std::string& opt_file);
+   void setIntParameter(const std::string& identifier, int value);
+   void setDoubleParameter(const std::string& identifier, double value);
+   void setBoolParameter(const std::string& identifier, bool value);
+
    int getIntParameter(const std::string& identifier);
    double getDoubleParameter(const std::string& identifier);
    bool getBoolParameter(const std::string& identifier);
@@ -29,6 +33,9 @@ namespace pips_options
    {
 
    private:
+      friend void setIntParameter(const std::string& identifier, int value);
+      friend void setDoubleParameter(const std::string& identifier, double value);
+      friend void setBoolParameter(const std::string& identifier, bool value);
       friend void pips_options::setOptions(const std::string& opt_file);
       friend int pips_options::getIntParameter(const std::string& identifier);
       friend double pips_options::getDoubleParameter(const std::string& identifier);
@@ -49,6 +56,21 @@ namespace pips_options
    inline void setOptions(const std::string& opt_file)
    {
       return StochOptions::getInstance().fillOptionsFromFile(opt_file);
+   }
+
+   inline void setIntParameter(const std::string& identifier, int value)
+   {
+      StochOptions::getInstance().setIntParam(identifier, value);
+   }
+
+   inline void setDoubleParameter(const std::string& identifier, double value)
+   {
+      StochOptions::getInstance().setIntParam(identifier, value);
+   }
+
+   inline void setBoolParameter(const std::string& identifier, bool value)
+   {
+      StochOptions::getInstance().setIntParam(identifier, value);
    }
 
    inline int getIntParameter(const std::string& identifier)

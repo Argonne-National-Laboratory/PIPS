@@ -23,7 +23,6 @@ double g_scenNum;
 
 extern double g_iterNumber;
 extern bool ipStartFound;
-extern int gOuterSolve;
 
 sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   : sLinsys(factory_, prob_), iAmDistrib(0), sparseKktBuffer(nullptr)
@@ -49,14 +48,14 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
 
   precondSC = SCsparsifier(-1.0, mpiComm);
 
-  if(gOuterSolve) {
+  if( outerSolve ) {
     // stuff for iterative refimenent and BiCG
     sol  = factory_->tree->newRhs();
     res  = factory_->tree->newRhs();
     resx = factory_->tree->newPrimalVector();
     resy = factory_->tree->newDualYVector();
     resz = factory_->tree->newDualZVector();
-    if(gOuterSolve==2) {
+    if( outerSolve == 2 ) {
       //BiCGStab; additional vectors needed
       sol2 = factory_->tree->newRhs();
       sol3 = factory_->tree->newRhs();
@@ -101,14 +100,14 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
 
   precondSC = SCsparsifier(-1.0, mpiComm);
 
-  if(gOuterSolve) {
+  if( outerSolve ) {
       // stuff for iterative refimenent and BiCG 
       sol  = factory_->tree->newRhs();
       res  = factory_->tree->newRhs();
       resx = factory_->tree->newPrimalVector();
       resy = factory_->tree->newDualYVector();
       resz = factory_->tree->newDualZVector();
-    if(gOuterSolve==2) {
+    if( outerSolve == 2 ) {
       //BiCGStab; additional vectors needed
       sol2 = factory_->tree->newRhs();
       sol3 = factory_->tree->newRhs();

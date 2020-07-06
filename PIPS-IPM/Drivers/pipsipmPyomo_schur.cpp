@@ -13,10 +13,6 @@
 #include <string>
 #include <sstream>
 
-using namespace std;
-extern int gOuterSolve;
-extern int gInnerSCsolve;
-
 int main(int argc, char ** argv) {
   MPI_Init(&argc, &argv);
   int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
@@ -45,8 +41,9 @@ int main(int argc, char ** argv) {
   PyomoInput* s = new PyomoInput(datarootname,nscen);
   if(mype==0) cout <<  "Pyomo input created from " << datarootname<< endl;
   PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*s);
-  gOuterSolve=outerSolve;
-  gInnerSCsolve=innerSolve;
+
+  pips_options::setIntParameter("OUTER_SOLVE", outerSolve);
+  pips_options::setIntParameter("INNER_SC_SOLVE", innerSolve);
 
   if(mype==0) cout <<  "PIPSIpmInterface created" << endl;
   delete s;

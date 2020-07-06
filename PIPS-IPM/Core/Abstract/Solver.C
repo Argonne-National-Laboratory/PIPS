@@ -29,23 +29,8 @@ int gOuterBiCGIter=0;
 int gInnerBiCGIter=0;
 int gInnerBiCGFails=0;
 
-//controls the type of error absortion at the outer level
-// - 0:no error absortion (OOQP works just fine)
-// - 1:iterative refinement (used when error absortion is 
-// also done at a lower level, for example in the solve with 
-// the dense Schur complement
-// - 2:BiCGStab with the factorization as preconditioner
-int gOuterSolve=0; 
-
-//controls the type of error absortion/correction when solving
-//with the dense Schur complement
-// - 0: no error correction
-// - 1: iter. refin.
-// - 2: BiCGStab
-int gInnerSCsolve=0;
-
 //number of iterative refinements in the 2nd stage sparse systems
-int gInnerStg2solve=3;
+//int gInnerStg2solve=3; not used
 
 Solver::Solver() : itsMonitors(0), status(0), startStrategy(0), dnorm(0.0),
 		   mutol(1.e-6), artol(1.e-4), phi(0.0), maxit(0), mu_history(0), rnorm_history(0),

@@ -20,8 +20,6 @@ extern double g_iterNumber;
 extern double g_scenNum;
 #endif
 
-extern int gOuterSolve;
-
 sLinsysRootComm2::sLinsysRootComm2(sFactory * factory_, sData * prob_)
   : sLinsysRoot(factory_, prob_)
 {}
@@ -39,7 +37,7 @@ sLinsysRootComm2::~sLinsysRootComm2()
 { }
 
 //this variable is just reset in this file; children will default to the "safe" linear solver
-extern int gLackOfAccuracy;
+//extern int gLackOfAccuracy; unused
 
 void sLinsysRootComm2::factor2(sData *prob, Variables *vars)
 {
