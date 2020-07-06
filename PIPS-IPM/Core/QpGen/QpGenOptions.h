@@ -15,7 +15,7 @@
 
 /**
  * The getInstanceMethod must be specified in this BaseClass.
- * Defines default options for StochPIPS.
+ * Defines default options for QpgenPIPS.
  */
 
 namespace qpgen_options

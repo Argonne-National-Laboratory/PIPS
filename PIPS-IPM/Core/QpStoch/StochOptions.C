@@ -12,6 +12,8 @@ namespace pips_options
 {
    StochOptions::StochOptions()
    {
+      /* initialize QpGenOptions */
+      QpGenOptions::getInstance();
       setDefaults();
    }
 
@@ -46,7 +48,7 @@ namespace pips_options
       bool_options["PRESOLVE_PARALLEL_ROWS"] = true;
       bool_options["PRESOLVE_COLUMN_FIXATION"] = true;
       bool_options["PRESOLVE_SINGLETON_ROWS"] = true;
-      bool_options["PRESOLVE_SINGLETON_COLUMNS"] = false;
+      bool_options["PRESOLVE_SINGLETON_COLUMNS"] = true;
 
       /// BOUND STRENGTHENING
       /** limit for rounds of bound strengthening per call of presolver */

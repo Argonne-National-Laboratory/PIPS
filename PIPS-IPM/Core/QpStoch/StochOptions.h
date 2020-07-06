@@ -8,7 +8,7 @@
 #ifndef PIPS_IPM_CORE_QPSTOCH_STOCHOPTIONS_H_
 #define PIPS_IPM_CORE_QPSTOCH_STOCHOPTIONS_H_
 
-#include "Options.h"
+#include "QpGenOptions.h"
 #include "pipsport.h"
 
 #include <cassert>
@@ -25,7 +25,7 @@ namespace pips_options
    double getDoubleParameter(const std::string& identifier);
    bool getBoolParameter(const std::string& identifier);
 
-   class StochOptions : public Options
+   class StochOptions : public qpgen_options::QpGenOptions
    {
 
    private:
