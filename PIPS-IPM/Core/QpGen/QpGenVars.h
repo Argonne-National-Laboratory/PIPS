@@ -172,7 +172,10 @@ public:
   virtual void copy(Variables *b);
 
   virtual double onenorm();
+
   virtual double infnorm();
+
+  void setToZero() override;
 };
 
 /** Indicates what type is the blocking variable in the step length

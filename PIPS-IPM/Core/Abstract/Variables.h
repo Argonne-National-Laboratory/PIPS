@@ -149,6 +149,9 @@ public:
   /** compute the inf-norm of the variables */
   virtual double infnorm() = 0;
 
+  /** set variables to zero */
+  virtual void setToZero() = 0;
+
   virtual ~Variables() {};
 };
 

@@ -950,6 +950,26 @@ double QpGenVars::infnorm()
   return norm;
 }
 
+void QpGenVars::setToZero()
+{
+   x->setToZero();
+   s->setToZero();
+   y->setToZero();
+   z->setToZero();
+
+   v->setToZero();
+   gamma->setToZero();
+
+   w->setToZero();
+   phi->setToZero();
+
+   t->setToZero();
+   lambda->setToZero();
+
+   u->setToZero();
+   pi->setToZero();
+}
+
 QpGenVars::~QpGenVars()
 {
 }

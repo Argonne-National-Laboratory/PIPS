@@ -151,12 +151,13 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
    int done;
    double mu, muaff;
-   double alpha_target, alpha_enhanced, rmin, rmax;
+   double alpha_target, alpha_enhanced;
    int status_code;
    double alpha = 1, sigma = 1;
    QpGenStoch* stochFactory = reinterpret_cast<QpGenStoch*>(factory);
    g_iterNumber = 0.0;
    bool do_small_correctors_aggressively = false;
+   bool refactorized = false;
 
    dnorm = prob->datanorm();
 
@@ -196,6 +197,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
          this->doMonitor(prob, iterate, resid, alpha, sigma, iter, mu,
                status_code, 0);
       }
+
       // *** Predictor step ***
       resid->set_r3_xz_alpha(iterate, 0.0);
 
@@ -203,24 +205,24 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       sys->solve(prob, iterate, resid, step);
       step->negate();
 
-      if( !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
+      // if we are not in a refactorization - check convergence of bicgstab
+      if( !refactorized &&
+            !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
       {
          PIPSdebugMessage("Affine step computation in BiCGStab failed");
-         // TODO : try to improve accuracy in preconditioner
+         // TODO : improve accuracy in preconditioner
 
          // go on, discard the affine step and try a pure centering step
-         alpha = 1.0;
-         // calculate centering parameter
-         muaff = iterate->mu();
-      }
-      else
-      {
-         alpha = iterate->stepbound(step);
-
-         // calculate centering parameter
-         muaff = iterate->mustep(step, alpha);
+         step->setToZero();
+         do_small_correctors_aggressively = true;
       }
 
+      alpha = iterate->stepbound(step);
+
+      // calculate centering parameter
+      muaff = iterate->mustep(step, alpha);
+
+      assert( !PIPSisZero(mu) );
       sigma = pow(muaff / mu, tsig);
 
       if( gOoqpPrintLevel >= 10 )
@@ -237,20 +239,31 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
       // form right hand side of linear system:
       corrector_resid->set_r3_xz_alpha(step, -sigma * mu);
+
       sys->solve(prob, iterate, corrector_resid, corrector_step);
       corrector_step->negate();
-      if( !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
-      {
-         if( my_rank == 0 ) std::cout << "1st corrector step failed" << std::endl;
-         PIPSdebugMessage("1st corrector step computation in BiCGStab failed");
 
-         // TODO : discard that step and refactorize - we cannot do anything here
+      // if we are not in a refactorization - check convergence of bicgstab
+      if( !refactorized
+            && !bicgstab_converged
+            && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
+      {
+         PIPSdebugMessage("1st corrector step computation in BiCGStab failed");
+         do_small_correctors_aggressively = true;
+
+         // TODO : use preconditioner more conservatively
+         if( my_rank == 0 )
+            std::cout << "refactorizing since lin solves failed" << std::endl;
+         refactorized = true;
+         continue;
       }
 
       // calculate weighted predictor-corrector step
       double weight_candidate = -1.0;
       const double alpha_predictor = alpha;
+
       calculateAlphaWeightCandidate(iterate, step, corrector_step, alpha_predictor, alpha, weight_candidate);
+
       assert(weight_candidate >= 0.0 && weight_candidate <= 1.0);
 
       step->saxpy(corrector_step, weight_candidate);
@@ -260,8 +273,8 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       corrector_resid->clear_r1r2();
 
       // calculate the target box:
-      rmin = sigma * mu * beta_min;
-      rmax = sigma * mu * beta_max;
+      const double rmin = sigma * mu * beta_min;
+      const double rmax = sigma * mu * beta_max;
 
       NumberGondzioCorrections = 0;
 
@@ -269,7 +282,9 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       bool do_small_pairs_correction = do_small_correctors_aggressively;
 
       // enter the Gondzio correction loop:
-      while( NumberGondzioCorrections < maximum_correctors && NumberSmallCorrectors < max_additional_correctors && PIPSisLT(alpha, 1.0) )
+      while( NumberGondzioCorrections < maximum_correctors
+            && NumberSmallCorrectors < max_additional_correctors
+            && PIPSisLT(alpha, 1.0) )
       {
          // copy current variables into corrector_step
          corrector_step->copy(iterate);
@@ -294,13 +309,20 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
          // solve for corrector direction
          sys->solve(prob, iterate, corrector_resid, corrector_step);	// corrector_step is now delta_m
+
          if( !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
          {
             PIPSdebugMessage("Gondzio corrector step computation in BiCGStab failed - break corrector loop");
-            do_small_correctors_aggressively = true;
 
-            // exit corrector loop
-            break;
+            if( !do_small_pairs_correction )
+            {
+               do_small_correctors_aggressively = true;
+               do_small_pairs_correction = true;
+               continue;
+            }
+            else
+               // exit corrector loop if small correctors have already been tried
+               break;
          }
 
          // calculate weighted predictor-corrector step
@@ -341,7 +363,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
                do_small_pairs_correction = true;
                if( my_rank == 0 )
                {
-                  std::cout << "Switching to small push " << std::endl;
+                  std::cout << "Small corrector " << std::endl;
                   std::cout << "Alpha when switching: " << alpha << std::endl;
                }
             }
@@ -364,13 +386,13 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       // alpha = 0.995 * iterate->stepbound( step );
 
       // actually take the step (at last!) and calculate the new mu
-
       iterate->saxpy(step, alpha);
       mu = iterate->mu();
 
       if( 0 == my_rank )
          std::cout << "final alpha: " << alpha << " mu: " << mu <<   std::endl;
 
+      refactorized = false;
       stochFactory->iterateEnded();
    }
    while( !done );
