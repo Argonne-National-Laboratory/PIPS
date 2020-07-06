@@ -501,9 +501,6 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    int nstags = 0;
    double rho = 1., omega = 1., alpha;
 
-
-   // todo save x_best and use it to check for stagnation and rollback!
-
    //main loop
    for( bicg_niterations = 0; bicg_niterations  < outer_bicg_max_iter; bicg_niterations ++ )
    {
