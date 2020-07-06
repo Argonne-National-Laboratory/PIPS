@@ -76,8 +76,6 @@ namespace base_options
    {
       return Options::getInstance().getDoubleParam(identifier);
    }
-
-
 }
 
 #endif /* PIPS_IPM_CORE_ABSTRACT_OPTIONS_H_ */

@@ -23,8 +23,6 @@ namespace base_options
       bool_options["IP_STEPLENGTH_CONSERVATIVE"] = false;
    }
 
-
-
    int Options::getIntParam(const std::string& identifier) const
    {
       const std::map<std::string, int>::const_iterator& it = int_options.find(identifier);
