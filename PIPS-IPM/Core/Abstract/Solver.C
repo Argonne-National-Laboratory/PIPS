@@ -12,7 +12,6 @@
 #include "Residuals.h"
 #include "LinearSystem.h"
 #include "OoqpStartStrategy.h"
-#include "StochOptions.h"
 #include <cmath>
 #include <limits>
 
