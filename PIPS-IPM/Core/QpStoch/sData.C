@@ -1620,15 +1620,18 @@ void sData::activateLinkStructureExploitation()
       return;
    useLinkStructure = true;
 
+   const int myrank = PIPS_MPIgetRank(MPI_COMM_WORLD);
+
    /* don't attempt to use linking structure when there actually is no linking constraints */
    if( stochNode->myl() == 0 && stochNode->mzl() == 0 )
    {
       useLinkStructure = false;
+      if( myrank == 0 )
+         std::cout << "no linking constraints so no linking structure found" << std::endl;
       return;
    }
 
    const int nx0 = getLocalnx();
-   const int myrank = PIPS_MPIgetRank(MPI_COMM_WORLD);
 
    const StochGenMatrix& Astoch = dynamic_cast<const StochGenMatrix&>(*A);
    const StochGenMatrix& Cstoch = dynamic_cast<const StochGenMatrix&>(*C);
