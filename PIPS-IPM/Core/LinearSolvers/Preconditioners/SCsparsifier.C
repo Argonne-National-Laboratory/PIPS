@@ -46,7 +46,9 @@ SCsparsifier::decreaseDiagDomBound(bool& success)
 {
 	const size_t positionUpperBound = sizeof(diagDomBounds) / sizeof(diagDomBounds[0]);
 
-	if( diagDomBoundsPosition < positionUpperBound )
+	assert(positionUpperBound > 0);
+
+	if( diagDomBoundsPosition < positionUpperBound - 1 )
 	{
 		diagDomBoundsPosition++;
 		printf("\n SCsparsifier switched to sparsify factor %f (less aggressive) \n", diagDomBounds[diagDomBoundsPosition]);
