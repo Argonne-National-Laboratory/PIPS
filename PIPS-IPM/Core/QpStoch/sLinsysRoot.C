@@ -46,7 +46,7 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
      std::cout << "Rank 0: children created" << std::endl;
 #endif
 
-  precondSC = SCsparsifier(-1.0, mpiComm);
+  precondSC = SCsparsifier(mpiComm);
 
   if( outerSolve ) {
     // stuff for iterative refimenent and BiCG
@@ -98,7 +98,7 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
 
   createChildren(prob_);
 
-  precondSC = SCsparsifier(-1.0, mpiComm);
+  precondSC = SCsparsifier(mpiComm);
 
   if( outerSolve ) {
       // stuff for iterative refimenent and BiCG 
