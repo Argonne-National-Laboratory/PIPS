@@ -24,6 +24,7 @@
 
 #include "sData.h"
 #include "sVars.h"
+#include "sLinsysRoot.h"
 
 #include <cstring>
 #include <iostream>
@@ -171,7 +172,9 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
             !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
       {
          PIPSdebugMessage("Affine step computation in BiCGStab failed");
-         // TODO : improve accuracy in preconditioner
+
+         bool success = false;
+         dynamic_cast<sLinsysRoot*>(sys)->precondSC.decreaseDiagDomBound(success);
 
          step->setToZero();
          do_small_correctors_aggressively = true;
@@ -207,9 +210,11 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
             !bicgstab_converged && bigcstab_norm_res_rel * 1e2 > resid->residualNorm() / dnorm )
       {
          PIPSdebugMessage("1st corrector step computation in BiCGStab failed");
-         // TODO : use preconditioner more conservatively
-         do_small_correctors_aggressively = true;
 
+         bool success = false;
+         dynamic_cast<sLinsysRoot*>(sys)->precondSC.decreaseDiagDomBound(success);
+
+         do_small_correctors_aggressively = true;
          if( my_rank == 0 )
             std::cout << "refactorizing since lin solves failed" << std::endl;
          refactorized = true;
