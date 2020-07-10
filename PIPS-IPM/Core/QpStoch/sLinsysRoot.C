@@ -987,6 +987,7 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    // add B_0, F_0, G_0 and diagonals (all scattered)
    this->finalizeKKTdist(prob);
 
+   precondSC.updateDiagDomBound();
    precondSC.unmarkDominatedSCdistLocals(*prob, kkts);
 
    // compute row lengths

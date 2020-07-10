@@ -50,11 +50,15 @@ class SCsparsifier
       // deletes dominated Schur complement entries and converts matrix to Fortran format
       void getSparsifiedSC_fortran(const sData& prob, SparseSymMatrix& sc);
 
+      // updates the bound according the convergence history of BICGStab
+      // todo this method should be removed and increaseDiagDomBound/decreaseDiagDomBound should be used instead
+      // by the solver
+      void updateDiagDomBound();
+
    private:
 
       MPI_Comm mpiComm;
 
-      void updateDiagDomBound();
       std::vector<double> getDomDiagDist(const sData& prob, SparseSymMatrix& sc) const;
 
 };
