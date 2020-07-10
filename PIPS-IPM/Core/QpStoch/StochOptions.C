@@ -41,7 +41,7 @@ namespace pips_options
 
       /// STOCH PRESOLVER
       /** limit for max rounds to apply all presolvers */
-      int_options["PRESOLVE_MAX_ROUNDS"] = 3;
+      int_options["PRESOLVE_MAX_ROUNDS"] = 2;
       /** should the problem be written to std::cout before and after presolve */
       bool_options["PRESOLVE_PRINT_PROBLEM"] = false;
       /** should the presolved problem be written out in MPS format */
