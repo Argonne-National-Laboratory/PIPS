@@ -93,8 +93,6 @@ namespace pips_options
       /// PRECONDITIONERS
       bool_options["PRECONDITION_DISTRIBUTED"] = true;
       bool_options["PRECONDITION_SPARSE"] = true;
-      /** -1.0 is choose default */
-      double_options["PRECONDITION_DIAGDOM_BOUND"] = -1.0;
 
       /// INTERIOR-POINT ALGORITHM
       bool_options["IP_ACCURACY_REDUCED"] = false;
