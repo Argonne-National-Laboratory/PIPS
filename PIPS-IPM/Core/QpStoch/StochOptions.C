@@ -57,7 +57,6 @@ namespace pips_options
       bool_options["PRESOLVE_COLUMN_FIXATION"] = true;
       bool_options["PRESOLVE_SINGLETON_ROWS"] = true;
       bool_options["PRESOLVE_SINGLETON_COLUMNS"] = false;
-      bool_options["PRESOLVE_DUAL_FIXING"] = true;
 
       /// BOUND STRENGTHENING
       /** limit for rounds of bound strengthening per call of presolver */

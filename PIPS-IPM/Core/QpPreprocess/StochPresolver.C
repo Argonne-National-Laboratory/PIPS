@@ -32,15 +32,12 @@
 #include "sTreeCallbacks.h"
 #include "DoubleMatrixTypes.h"
 #include "StochPostsolver.h"
-
 #include "StochPresolverBoundStrengthening.h"
 #include "StochPresolverModelCleanup.h"
 #include "StochPresolverColumnFixation.h"
 #include "StochPresolverSingletonRows.h"
 #include "StochPresolverSingletonColumns.h"
 #include "StochPresolverParallelRows.h"
-#include "StochPresolverDualFixing.h"
-
 #include "pipschecks.h"
 #include "pipsport.h"
 
@@ -63,9 +60,6 @@ StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = nullpt
 
    if( pips_options::getBoolParameter("PRESOLVE_PARALLEL_ROWS") )
       presolvers.push_back( new StochPresolverParallelRows(*presData, *sorigprob) );
-
-   if( pips_options::getBoolParameter("PRESOLVE_DUAL_FIXING") )
-      presolvers.push_back( new StochPresolverDualFixing(*presData, *sorigprob) );
 
    if( pips_options::getBoolParameter("PRESOLVE_BOUND_STRENGTHENING") )
       presolvers.push_back( new StochPresolverBoundStrengthening(*presData, *sorigprob) );
