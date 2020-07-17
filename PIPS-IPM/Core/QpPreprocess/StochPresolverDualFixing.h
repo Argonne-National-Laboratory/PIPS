@@ -25,6 +25,9 @@ class StochPresolverDualFixing : public StochPresolverBase
 
 
       int applyDualFixingNode(int node);
+
+      int applyDualFixingRoot();
+      int applyDualFixingNonRoot(int node);
 };
 
 

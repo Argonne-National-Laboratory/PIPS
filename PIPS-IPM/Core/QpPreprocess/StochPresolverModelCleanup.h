@@ -10,7 +10,7 @@
 
 #include "StochPresolverBase.h"
 #include "pipsport.h"
-
+// TODO In redundant row detection remove redundant upper/lower row bounds ?
 class StochPresolverModelCleanup : public StochPresolverBase
 {
    public:
