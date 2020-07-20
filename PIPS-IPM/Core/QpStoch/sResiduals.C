@@ -114,6 +114,15 @@ sResiduals::sResiduals( const sResiduals& res ) : QpGenResiduals( res )
    }
 }
 
+sResiduals::sResiduals( const sResiduals& res, OoqpVectorHandle ixlow_, OoqpVectorHandle ixupp_,
+      OoqpVectorHandle iclow_, OoqpVectorHandle icupp_ ) : sResiduals(res)
+{
+   ixlow = ixlow_;
+   ixupp = ixupp_;
+   iclow = iclow_;
+   icupp = icupp_;
+}
+
 
 void sResiduals::AddChild(sResiduals* child)
 {

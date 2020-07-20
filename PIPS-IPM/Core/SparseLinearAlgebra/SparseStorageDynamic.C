@@ -747,12 +747,12 @@ void SparseStorageDynamic::rebuildSpareStructure(int guaranteed_spare)
 
    assert( (len - len_free) * spareRatio + m * guaranteed_spare < std::numeric_limits<int>::max() );
 
-   const int size_for_spare = static_cast<int>((len - len_free) * spareRatio) + m * guaranteed_spare;
+   const int size_for_spare = static_cast<int>((len - len_free) * (1.0 + spareRatio) ) + m * guaranteed_spare;
 
    while( size_for_spare > len_free )
       extendStorageValues();
 
-   /* shit entries and restore the sparse storage pattern with spareRatio */
+   /* shift entries and restore the sparse storage pattern with spareRatio */
 
    /* copies of current arrays */
    const std::vector<double> M_copy(M, M + len);
@@ -805,6 +805,7 @@ double SparseStorageDynamic::rowTimesVec( const double* vec, int length, int row
 
 void SparseStorageDynamic::axpyWithRowAt( double alpha, double* y, int length, int row) const
 {
+   assert(y);
    assert(0 <= row && row < m);
    assert(length == n);
 
@@ -815,6 +816,32 @@ void SparseStorageDynamic::axpyWithRowAt( double alpha, double* y, int length, i
    }
 }
 
+void SparseStorageDynamic::axpyWithRowAtPosNeg( double alpha, double * y_pos, double* y_neg, int length, int row) const
+{
+   assert(y_pos);
+   assert(0 <= row && row < m);
+   assert(length == n);
+
+   for(int i = rowptr[row].start; i < rowptr[row].end; ++i)
+   {
+      assert( y_pos[jcolM[i]] >= 0 );
+      assert( y_neg[jcolM[i]] >= 0 );
+      assert(jcolM[i] < length);
+      const double val = alpha * M[i];
+      const double fin_val = y_pos[jcolM[i]] - y_neg[jcolM[i]] + val;
+
+      if( fin_val > 0 )
+      {
+         y_pos[jcolM[i]] = fin_val;
+         y_neg[jcolM[i]] = 0.0;
+      }
+      else
+      {
+         y_pos[jcolM[i]] = 0.0;
+         y_neg[jcolM[i]] = -fin_val;
+      }
+   }
+}
 
 void SparseStorageDynamic::getRowMinVec(const double* colScaleVec, double* vec) const
 {

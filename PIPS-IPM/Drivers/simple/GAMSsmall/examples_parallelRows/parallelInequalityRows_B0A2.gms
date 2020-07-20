@@ -1,4 +1,4 @@
-* ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=parallelEqualityAndInequalityRow_B0A2 -PRESOLVE=true
+* ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=parallelInequalityRows_B0A2 -PRESOLVE=true
 
 Set i rows    / i1*i17 /
 * subset of linking rows
@@ -34,17 +34,17 @@ i14  1     1     1                  1                             1
 Table C(i,j)
     j1    j2    j3     j4    j5    j6    j7    j8    j9   j10   j11   j12   j13
 i1  -1
-i2         2    -1     2
+i2         1     1    -2
 i3               1  
-i4        -4           1
+i4        -4    -4     8
 i5         1                  1
 i6   1           1     1            1     
 i7                                        1
-i8        10    20                             20    30    40
+i8        10    10                             20    30    40
 i9   1     1     1     1                              1
-i10                                          -0.5  -0.5  -0.5
-i11     0.25        0.25                      0.5  -0.5     1
-i12             -1                              1  -0.5     1
+i10                                           0.5   0.5   0.5
+i11                                             1     1     1
+i12        1     1                              2     3     4
 i13                                                                           1
 i14                                                                     1     
 i15                                                                           1
@@ -128,7 +128,7 @@ $ifthen %METHOD%==PIPS
 
 
 *For creation of gdx files:
-$ echo jacobian parallelEqualityAndInequalityRow_B0A2.gdx > convertd.opt
+$ echo jacobian parallelInequalityRows_B0A2.gdx > convertd.opt
   option lp=convertd;
   m.optfile = 1;
   solve m use lp min z;

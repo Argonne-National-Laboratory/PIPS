@@ -699,7 +699,7 @@ void sLinsysRootAug::addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, 
          }
       }
 
-      assert(pHt == krowHt[i + 1] || jcolHt[pHt] >= endCol); // asserts that no entry of Ht has been missed
+      assert(pHt == krowHt[i + 1] || jcolHt[pHt] + nHtOffsetCols >= endCol); // asserts that no entry of Ht has been missed
    }
 }
 
@@ -1559,9 +1559,8 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
        double val = dQ[p];
        dKkt[i][j] += val;
        dKkt[j][i] += val;
- #ifdef DENSE_USE_HALF
-       assert(0 && "Q not supported");
- #endif
+
+       assert(0 && "non-empty Q currently not supported");
      }
    }
 
@@ -1598,14 +1597,8 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
        {
           j = jcolCtDC[p];
 
-#ifdef DENSE_USE_HALF
           if( j <= i )
              dKkt[i][j] -= dCtDC[p];
-#else
-          dKkt[i][j] -= dCtDC[p];
-#endif
-
-            //printf("%d %d %f\n", i,j,dCtDC[p]);
         }
      }
    } //~end if locmz>0
@@ -1615,7 +1608,6 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
    if(locmy>0)
    {
      SparseGenMatrix& A = prob->getLocalB(); // yes, B
- #ifdef DENSE_USE_HALF
      const double* dA = A.M();
      const int* krowA = A.krowM();
      const int* jcolA = A.jcolM();
@@ -1630,9 +1622,6 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
          dKkt[iKkt][j] += dA[p];
        }
      }
- #else
-     kktd->symAtPutSubmatrix( locnx, 0, A, 0, 0, locmy, locnx, 1);
- #endif
    }
    //prob->getLocalB().getStorageRef().dump("stage1eqmat2.dump");
 
@@ -1655,9 +1644,6 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
 
          const double val = dF[p];
          dKkt[iKkt][j] += val;
- #ifndef DENSE_USE_HALF
-         dKkt[j][iKkt] += val;
- #endif
        }
      }
    }
@@ -1685,9 +1671,6 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
 
          const double val = dG[p];
          dKkt[iKkt][j] += val;
- #ifndef DENSE_USE_HALF
-         dKkt[j][iKkt] += val;
- #endif
        }
      }
    }

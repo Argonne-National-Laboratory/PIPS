@@ -82,7 +82,7 @@ $ifthen %METHOD%==PIPS
 
 
 *For creation of gdx files:
-$ echo jacobian exampleAC_singletonRow3.gdx > convertd.opt
+$ echo jacobian exampleAC_singletonRow3_singletonLinkingRow.gdx > convertd.opt
   option lp=convertd;
   m.optfile = 1;
   solve m use lp min z;

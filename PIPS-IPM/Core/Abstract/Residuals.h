@@ -40,7 +40,7 @@ public:
 
   /** calculate residuals, their norms, and duality/complementarity
    * gap, given a problem and variable set.  */
-  virtual void calcresids(Data *problem, Variables *vars) = 0;
+  virtual void calcresids(Data *problem, Variables *vars, bool print_resids = false) = 0;
 
   /** Modify the "complementarity" component of the residuals, by
    * adding the pairwise products of the complementary variables plus

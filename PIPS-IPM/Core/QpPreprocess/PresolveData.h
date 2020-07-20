@@ -27,6 +27,8 @@ private:
 
       StochPostsolver* const postsolver;
 
+      const double limit_max_bound_accepted;
+
       const int length_array_outdated_indicators;
       bool* array_outdated_indicators;
       bool& outdated_lhsrhs;
@@ -35,7 +37,6 @@ private:
       bool& outdated_activities;
       bool& outdated_obj_vector;
       bool& postsolve_linking_row_propagation_needed;
-
 
       /* counter to indicate how many linking row bounds got changed locally and thus need activity recomputation */
       int linking_rows_need_act_computation;
@@ -94,17 +95,21 @@ private:
       std::queue<INDEX> singleton_rows;
       std::queue<INDEX> singleton_cols;
 
-      /* SimpleVectors indicating which linking rows propagated bounds and thus need to be stored */
-//      SimpleVectorBaseHandle<int> eq_linking_row_propagated_bound;
-//      SimpleVectorBaseHandle<int> ineq_linking_row_propagated_bound;
-//
-//      SimpleVectorBaseHandle<int> linking_var_bound_implied_by_linking_row;
-
       const int my_rank;
       const bool distributed;
 
+      const double INF_NEG;
+      const double INF_POS;
+
       // number of children
       const int nChildren;
+
+      /* should we track a row/column through the presolving process - set in StochOptions */
+      const bool track_row;
+      const bool track_col;
+
+      const INDEX tracked_row;
+      const INDEX tracked_col;
 
       // objective offset created by presolving
       double objOffset;
@@ -124,6 +129,11 @@ private:
       /* storing biggest and smallest absolute nonzero-coefficient in system matrix (including objective vector) */
       StochVectorHandle absmin_col;
       StochVectorHandle absmax_col;
+
+      bool in_bound_tightening;
+      std::vector<int> store_linking_row_boundTightening_A;
+      std::vector<int> store_linking_row_boundTightening_C;
+
 public :
 
       PresolveData(const sData* sorigprob, StochPostsolver* postsolver);
@@ -135,6 +145,10 @@ public :
       int getNChildren() const { return nChildren; };
 
       void getRowActivities( const INDEX& row, double& max_act, double& min_act, int& max_ubndd, int& min_ubndd) const;
+      void getRowBounds( const INDEX& row, double& lhs, double& rhs) const;
+      void getColBounds( const INDEX& col, double& xlow, double& xupp) const;
+
+
       double getRowCoeff( const INDEX& row, const INDEX& col ) const;
 
       const StochVectorBase<int>& getNnzsRow(SystemType system_type) const { return (system_type == EQUALITY_SYSTEM) ? *nnzs_row_A : *nnzs_row_C; }
@@ -160,6 +174,7 @@ public :
       bool presDataInSync() const;
 
       /// synchronizing the problem over all mpi processes if necessary
+      // TODO : add a allreduceEverything method that simply calls all the others
       void allreduceLinkingVarBounds();
       void allreduceAndApplyLinkingRowActivities();
       void allreduceAndApplyNnzChanges();
@@ -171,15 +186,20 @@ public :
       bool wasRowRemoved( const INDEX& row ) const;
 
       /// interface methods called from the presolvers when they detect a possible modification
+      void startColumnFixation();
       void fixColumn( const INDEX& col, double value);
       void fixEmptyColumn( const INDEX& col, double val);
 
       void removeSingletonRow(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff);
+      void removeSingletonRowSynced(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff);
 
       void syncPostsolveOfBoundsPropagatedByLinkingRows();
-      bool rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new );
-      bool rowPropagatedBounds( const INDEX& row, const INDEX& col, double ubx, double lbx);
 
+      void startBoundTightening();
+      bool rowPropagatedBounds( const INDEX& row, const INDEX& col, double ubx, double lbx);
+      void endBoundTightening();
+
+      void startParallelRowPresolve();
       void substituteVariableNearlyParallelRows(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar,
          double translation, double parallelity );
       void tightenBoundsNearlyParallelRows( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double xlow_new, double xupp_new, double scalar,
@@ -187,11 +207,14 @@ public :
 
       void removeRedundantParallelRow( const INDEX& rm_row, const INDEX& par_row );
       void removeRedundantRow( const INDEX& row );
-      void fixColumnInequalitySingleton( const INDEX& col, double value, double coeff );
+
+      void startSingletonColumnPresolve();
+      void fixColumnInequalitySingleton( const INDEX& col, const INDEX& row, double value, double coeff );
       void removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col);
       void removeImpliedFreeColumnSingletonEqualityRowSynced( const INDEX& row, const INDEX& col );
 
-      void removeFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double lhsrhs, double coeff );
+      void removeFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double coeff );
+      void removeFreeColumnSingletonInequalityRowSynced( const INDEX& row, const INDEX& col, double coeff );
 
       void tightenRowBoundsParallelRow( const INDEX& row_tightened, const INDEX& row_tightening, double clow_new, double cupp_new, double factor );
 
@@ -207,11 +230,39 @@ public :
 
       bool varBoundImpliedFreeBy( bool upper, const INDEX& col, const INDEX& row);
 private:
+      bool iTrackColumn() const;
+      bool iTrackRow() const;
+
+      void setRowBounds( const INDEX& row, double clow, double cupp);
+      bool updateColBounds( const INDEX& col, double xlow, double xupp);
+
+      void setRowUpperBound( const INDEX& row, double rhs )
+      {
+         row.inEqSys() ? setRowBounds( row, rhs, rhs ) : setRowBounds( row, INF_NEG, rhs );
+      }
+
+      void setRowLowerBound( const INDEX& row, double lhs )
+      {
+         row.inEqSys() ? setRowBounds( row, lhs, lhs ) : setRowBounds( row, lhs, INF_POS );
+      }
+
+      bool updateColLowerBound( const INDEX& col, double xlow )
+      {
+         return updateColBounds( col, xlow, INF_POS );
+      }
+
+      bool updateColUpperBound( const INDEX& col, double xupp )
+      {
+         return updateColBounds( col, INF_NEG, xupp );
+      }
+
       void adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col, double obj_coeff, double col_coeff );
       void addCoeffColToRow( double coeff, const INDEX& col, const INDEX& row );
 
       INDEX getRowMarkedAsImplyingColumnBound(const INDEX& col, bool upper_bound);
       void markRowAsImplyingColumnBound(const INDEX& col, const INDEX& row, bool upper_bound);
+
+      void markColumnRemoved( const INDEX& col );
 
       void varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower_implied, const INDEX& col, const INDEX& row) const;
 
@@ -237,16 +288,10 @@ private:
 
       long resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node);
 
-      void adjustMatrixRhsLhsBy(const INDEX& row, double value);
+      void adjustMatrixRhsLhsBy( const INDEX& row, double value, bool at_root );
       /// methods for modifying the problem
-      void adjustRowActivityFromDeletion(const INDEX& row, const INDEX& col, double coeff);
+      void adjustRowActivityFromDeletion( const INDEX& row, const INDEX& col, double coeff );
       /// set bounds if new bound is better than old bound
-      bool updateUpperBoundVariable( const INDEX& col, double xupp_new)
-      { return updateBoundsVariable( col, INF_NEG_PRES, xupp_new ); };
-      bool updateLowerBoundVariable( const INDEX& col, double xlow_new)
-      { return updateBoundsVariable( col, xlow_new, INF_POS_PRES); };
-
-      bool updateBoundsVariable( const INDEX& col, double xlow_new, double xupp_new );
       void updateRowActivities( const INDEX& col, double xlow_new, double xupp_new, double xlow_old, double xupp_old);
 
       void updateRowActivitiesBlock( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double xlow_old, double xupp_old);
@@ -294,11 +339,11 @@ private:
       void checkBoundsInfeasible(const INDEX& col, double xlow_new, double xupp_new) const;
 public:
       void writeRowLocalToStreamDense(std::ostream& out, const INDEX& row) const;
+      void printRowColStats() const;
 private:
       void writeMatrixRowToStreamDense(std::ostream& out, const SparseGenMatrix& mat, int node, int row, const SimpleVector& ixupp, const SimpleVector& xupp,
             const SimpleVector& ixlow, const SimpleVector& xlow) const;
       void printVarBoundStatistics(std::ostream& out) const;
-
 };
 
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_PRESOLVEDATA_H_ */

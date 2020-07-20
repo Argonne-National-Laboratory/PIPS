@@ -143,6 +143,15 @@ sVars::sVars(const sVars& vars) : QpGenVars(vars)
   }
 }
 
+sVars::sVars(const sVars& vars, OoqpVectorHandle ixlow_, OoqpVectorHandle ixupp_,
+      OoqpVectorHandle iclow_, OoqpVectorHandle icupp_) : sVars(vars)
+{
+   ixlow = ixlow_;
+   ixupp = ixupp_;
+   iclow = iclow_;
+   icupp = icupp_;
+}
+
 sVars::~sVars()
 { 
   for (size_t c = 0; c < children.size(); c++)
@@ -217,4 +226,89 @@ void sVars::sync()
   }
   //stochNode->syncDualZVector(dynamic_cast<StochVector&>(*));
 
+}
+
+bool sVars::isRootNodeInSync() const
+{
+   bool in_sync = true;
+   const int my_rank = PIPS_MPIgetRank( MPI_COMM_WORLD );
+   if( !dynamic_cast<const StochVector&>(*x).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "x not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*s).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "s not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*y).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "y not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*z).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "z not in sync" << std::endl;
+      in_sync = false;
+   }
+
+   if( !dynamic_cast<const StochVector&>(*v).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "v not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*gamma).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "gamma not in sync" << std::endl;
+      in_sync = false;
+   }
+
+   if( !dynamic_cast<const StochVector&>(*w).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "w not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*phi).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "phi not in sync" << std::endl;
+      in_sync = false;
+   }
+
+   if( !dynamic_cast<const StochVector&>(*t).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "t not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*lambda).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "lambda not in sync" << std::endl;
+      in_sync = false;
+   }
+
+   if( !dynamic_cast<const StochVector&>(*u).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "u not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*pi).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "pi not in sync" << std::endl;
+      in_sync = false;
+   }
+
+   MPI_Barrier(MPI_COMM_WORLD);
+   return in_sync;
 }

@@ -24,38 +24,6 @@ const double pips_eps0 = 1e-40;
 
 static const double feastol = 1.0e-6; // was 1.0e-6
 static const double infinity = 1.0e30;
-static const double eps_bounds_nontight = 1.0e-8;
-
-static const double INF_NEG_PRES = -std::numeric_limits<double>::infinity();
-static const double INF_POS_PRES = std::numeric_limits<double>::infinity();
-
-/** all presolve/postsolve constants and settings */
-// TODO : many of these need adjustments/ have to be thought about
-
-/// BOUND STRENGTHENING
-/** limit for rounds of bound strengthening */
-static const int PRESOLVE_BOUND_STR_MAX_ITER = 1;
-/** min entry to devide by in order to derive a bound */
-static const double PRESOLVE_BOUND_STR_NUMERIC_LIMIT_ENTRY = 1e-7;
-/** max activity to be devided */
-static const double PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY = std::numeric_limits<double>::max();
-/** max bounds proposed from bounds strengthening presolver */
-static const double PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS = 1e12;
-/// COLUMN FIXATION
-/** limit on the possible impact a column can have on the problem */
-static const double PRESOLVE_COLUMN_FIXATION_MAX_FIXING_IMPACT = 1.0e-12; // for variable fixing
-/// MODEL CLEANUP
-/** limit for the size of a matrix entry below which it will be removed from the problem */
-static const double PRESOLVE_MODEL_CLEANUP_MIN_MATRIX_ENTRY = 1.0e-10;//1.0e-10; // for model cleanup // was 1.0e-10
-/** max for the matrix entry when the impact of entry times (bux-blx) is considered */
-static const double PRESOLVE_MODEL_CLEANUP_MAX_MATRIX_ENTRY_IMPACT = 1.0e-3; // was 1.0e-3
-/** difference in orders between feastol and the impact of entry times (bux-blx) for an entry to get removed */
-static const double PRESOLVE_MODEL_CLEANUP_MATRIX_ENTRY_IMPACT_FEASDIST = 1.0e-2;  // for model cleanup // was 1.0e-2
-/// PARALLEL ROWS
-/** tolerance for comparing two double values in two different rows and for them being considered equal */
-static const double PRESOLVE_PARALLEL_ROWS_TOL_COMPARE_ENTRIES = 1.0e-8;
-/// PRESOLVE DATA
-static const double PRESOLVE_MAX_BOUND_ACCEPTED = 1e10;
 
 static inline double relativeDiff(double val1, double val2)
 {
@@ -165,7 +133,7 @@ inline int PIPSgetnOMPthreads()
 }
 
 
-inline bool PIPS_MPIiAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
+inline bool PIPS_MPIiAmSpecial(int iAmDistrib, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    bool iAmSpecial = true;
 
@@ -181,12 +149,12 @@ inline bool PIPS_MPIiAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
    return iAmSpecial;
 }
 
-inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
+inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    return PIPS_MPIiAmSpecial(iAmDistrib, mpiComm);
 }
 
-inline bool PIPS_MPIgetDistributed(MPI_Comm comm)
+inline bool PIPS_MPIgetDistributed(MPI_Comm comm = MPI_COMM_WORLD)
 {
    int world_size;
    MPI_Comm_size(comm, &world_size);
@@ -197,7 +165,7 @@ inline bool PIPS_MPIgetDistributed(MPI_Comm comm)
       return false;
 }
 
-void inline PIPS_MPIabortInfeasible(MPI_Comm comm, std::string message, std::string file, std::string function)
+void inline PIPS_MPIabortInfeasible(std::string message, std::string file, std::string function, MPI_Comm comm = MPI_COMM_WORLD)
 {
    std::cerr << "Infesibility detected in " << file << " function " << function << "!" << std::endl;
    std::cerr << "Message: " << message << std::endl;
@@ -344,18 +312,70 @@ MPI_Datatype get_mpi_datatype(T* arg) {
 }
 
 template <typename T>
-MPI_Datatype get_mpi_datatype(const T* arg) {
+MPI_Datatype get_mpi_datatype(const T* const arg) {
    return get_mpi_datatype_t<T>::value;
 }
 
-inline int PIPS_MPIgetRank(MPI_Comm mpiComm)
+template <typename T>
+struct get_mpi_locdatatype_t;
+
+template <>
+struct get_mpi_locdatatype_t<float> {
+      static constexpr MPI_Datatype value = MPI_FLOAT_INT;
+};
+
+template <>
+struct get_mpi_locdatatype_t<double> {
+      static constexpr MPI_Datatype value = MPI_DOUBLE_INT;
+};
+
+template <>
+struct get_mpi_locdatatype_t<long> {
+      static constexpr MPI_Datatype value = MPI_LONG_INT;
+};
+
+template <>
+struct get_mpi_locdatatype_t<int> {
+      static constexpr MPI_Datatype value = MPI_2INT;
+};
+
+template <>
+struct get_mpi_locdatatype_t<short> {
+      static constexpr MPI_Datatype value = MPI_SHORT_INT;
+};
+
+template <>
+struct get_mpi_locdatatype_t<long double> {
+      static constexpr MPI_Datatype value = MPI_LONG_DOUBLE_INT;
+};
+
+template <typename T>
+MPI_Datatype get_mpi_locdatatype(const T& arg)
+{
+   return get_mpi_locdatatype_t<T>::value;
+}
+
+template <typename T>
+MPI_Datatype get_mpi_locdatatype(const T* const arg)
+{
+   return get_mpi_locdatatype_t<T>::value;
+}
+
+template <typename T>
+MPI_Datatype get_mpi_locdatatype(T* arg)
+{
+   return get_mpi_locdatatype_t<T>::value;
+}
+
+
+inline int PIPS_MPIgetRank(MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    int myrank;
    MPI_Comm_rank(mpiComm, &myrank);
    return myrank;
 }
 
-inline int PIPS_MPIgetSize(MPI_Comm mpiComm)
+inline int PIPS_MPIgetSize(MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    int mysize;
    MPI_Comm_size(mpiComm, &mysize);
@@ -363,16 +383,87 @@ inline int PIPS_MPIgetSize(MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline bool PIPS_MPIisValueEqual(const T& val, MPI_Comm mpiComm)
+inline std::vector<std::pair<T, int>> PIPS_MPIminlocArray(const T* localmin, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
-   // todo make one vec and + - val
-   const int max = PIPS_MPIgetMax(val, MPI_COMM_WORLD);;
-   const int min = PIPS_MPIgetMin(val, MPI_COMM_WORLD);
-   return (max == min);
+   if( length <= 0 )
+      return std::vector<std::pair<T, int>>();
+
+   const int my_rank = PIPS_MPIgetRank(mpiComm);
+   std::vector<std::pair<T,int>> pairs(length);
+
+   for(unsigned int i = 0; i < pairs.size(); ++i)
+   {
+      pairs[i].first = localmin[i];
+      pairs[i].second = my_rank;
+   }
+
+   MPI_Allreduce(MPI_IN_PLACE, &pairs[0], length, get_mpi_locdatatype(localmin), MPI_MINLOC, mpiComm);
+
+   return pairs;
 }
 
 template <typename T>
-inline T PIPS_MPIgetMin(const T& localmin, MPI_Comm mpiComm)
+inline std::vector<std::pair<T, int>> PIPS_MPIminlocArray(const std::vector<T>& localmin, MPI_Comm mpiComm = MPI_COMM_WORLD)
+{
+   if( localmin.size() == 0 )
+      return std::vector<std::pair<T, int>>();
+
+   const int my_rank = PIPS_MPIgetRank(mpiComm);
+   std::vector<std::pair<T,int>> pairs(localmin.size());
+
+   for(unsigned int i = 0; i < pairs.size(); ++i)
+   {
+      pairs[i].first = localmin[i];
+      pairs[i].second = my_rank;
+   }
+
+   MPI_Allreduce(MPI_IN_PLACE, &pairs[0], localmin.size(), get_mpi_locdatatype(localmin[0]), MPI_MINLOC, mpiComm);
+
+   return pairs;
+}
+
+template <typename T>
+inline std::vector<std::pair<T, int>> PIPS_MPImaxlocArray(const T* localmax, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
+{
+   if( length <= 0 )
+      return std::vector<std::pair<T, int>>();
+
+   const int my_rank = PIPS_MPIgetRank(mpiComm);
+   std::vector<std::pair<T,int>> pairs(length);
+
+   for(unsigned int i = 0; i < pairs.size(); ++i)
+   {
+      pairs[i].first = localmax[i];
+      pairs[i].second = my_rank;
+   }
+
+   MPI_Allreduce(MPI_IN_PLACE, &pairs[0], length, get_mpi_locdatatype(localmax), MPI_MAXLOC, mpiComm);
+
+   return pairs;
+}
+
+template <typename T>
+inline std::vector<std::pair<T, int>> PIPS_MPImaxlocArray(const std::vector<T>& localmax, MPI_Comm mpiComm = MPI_COMM_WORLD)
+{
+   if( localmax.size() == 0 )
+      return std::vector<std::pair<T, int>>();
+
+   const int my_rank = PIPS_MPIgetRank(mpiComm);
+   std::vector<std::pair<T,int>> pairs(localmax.size());
+
+   for(unsigned int i = 0; i < pairs.size(); ++i)
+   {
+      pairs[i].first = localmax[i];
+      pairs[i].second = my_rank;
+   }
+
+   MPI_Allreduce(MPI_IN_PLACE, &pairs[0], localmax.size(), get_mpi_locdatatype(localmax[0]), MPI_MAXLOC, mpiComm);
+
+   return pairs;
+}
+
+template <typename T>
+inline T PIPS_MPIgetMin(const T& localmin, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    T globalmin = 0.0;
    MPI_Allreduce(&localmin, &globalmin, 1, get_mpi_datatype(localmin), MPI_MIN, mpiComm);
@@ -381,7 +472,7 @@ inline T PIPS_MPIgetMin(const T& localmin, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline T PIPS_MPIgetMax(const T& localmax, MPI_Comm mpiComm)
+inline T PIPS_MPIgetMax(const T& localmax, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    T globalmax = 0.0;
    MPI_Allreduce(&localmax, &globalmax, 1, get_mpi_datatype(localmax), MPI_MAX, mpiComm);
@@ -390,19 +481,28 @@ inline T PIPS_MPIgetMax(const T& localmax, MPI_Comm mpiComm)
 }
 
 template <typename T>
-void PIPS_MPIgetMaxInPlace(T& max, MPI_Comm mpiComm)
+void PIPS_MPIgetMaxInPlace(T& max, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    MPI_Allreduce(MPI_IN_PLACE, &max, 1, get_mpi_datatype(max), MPI_MAX, mpiComm);
 }
 
 template <typename T>
-void PIPS_MPIgetMinInPlace(T& min, MPI_Comm mpiComm)
+void PIPS_MPIgetMinInPlace(T& min, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    MPI_Allreduce(MPI_IN_PLACE, &min, 1, get_mpi_datatype(min), MPI_MIN, mpiComm);
 }
 
 template <typename T>
-inline void PIPS_MPImaxArrayInPlace(T* localmax, int length, MPI_Comm mpiComm)
+inline bool PIPS_MPIisValueEqual(const T& val, MPI_Comm mpiComm = MPI_COMM_WORLD)
+{
+   // todo make one vec and + - val
+   const int max = PIPS_MPIgetMax(val, MPI_COMM_WORLD);;
+   const int min = PIPS_MPIgetMin(val, MPI_COMM_WORLD);
+   return (max == min);
+}
+
+template <typename T>
+inline void PIPS_MPImaxArrayInPlace(T* localmax, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(length >= 0);
    if(length == 0)
@@ -412,7 +512,7 @@ inline void PIPS_MPImaxArrayInPlace(T* localmax, int length, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPImaxArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
+inline void PIPS_MPImaxArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    if(elements.size() == 0)
       return;
@@ -421,7 +521,7 @@ inline void PIPS_MPImaxArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIminArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
+inline void PIPS_MPIminArrayInPlace(T* elements, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(length >= 0);
    if(length == 0)
@@ -431,7 +531,7 @@ inline void PIPS_MPIminArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIminArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
+inline void PIPS_MPIminArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    if(elements.size() == 0)
       return;
@@ -440,7 +540,7 @@ inline void PIPS_MPIminArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline T PIPS_MPIgetSum(const T& localsummand, MPI_Comm mpiComm)
+inline T PIPS_MPIgetSum(const T& localsummand, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    T sum;
    MPI_Allreduce(&localsummand, &sum, 1, get_mpi_datatype(localsummand), MPI_SUM, mpiComm);
@@ -449,13 +549,13 @@ inline T PIPS_MPIgetSum(const T& localsummand, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIgetLogicOrInPlace(T& localval, MPI_Comm mpiComm)
+inline void PIPS_MPIgetLogicOrInPlace(T& localval, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    MPI_Allreduce(MPI_IN_PLACE, &localval, 1, get_mpi_datatype(localval), MPI_LOR, mpiComm);
 }
 
 template <typename T>
-inline T PIPS_MPIgetLogicOr(const T& localval, MPI_Comm mpiComm)
+inline T PIPS_MPIgetLogicOr(const T& localval, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    T lor;
    MPI_Allreduce(&localval, &lor, 1, get_mpi_datatype(localval), MPI_LOR, mpiComm);
@@ -464,7 +564,22 @@ inline T PIPS_MPIgetLogicOr(const T& localval, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIlogicOrArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
+inline void PIPS_MPIgetLogicAndInPlace(T& localval, MPI_Comm mpiComm = MPI_COMM_WORLD)
+{
+   MPI_Allreduce(MPI_IN_PLACE, &localval, 1, get_mpi_datatype(localval), MPI_LAND, mpiComm);
+}
+
+template <typename T>
+inline T PIPS_MPIgetLogicAnd(const T& localval, MPI_Comm mpiComm = MPI_COMM_WORLD)
+{
+   T land;
+   MPI_Allreduce(&localval, &land, 1, get_mpi_datatype(localval), MPI_LAND, mpiComm);
+
+   return land;
+}
+
+template <typename T>
+inline void PIPS_MPIlogicOrArrayInPlace(T* elements, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert( length >= 0 );
    if(length == 0)
@@ -474,7 +589,7 @@ inline void PIPS_MPIlogicOrArrayInPlace(T* elements, int length, MPI_Comm mpiCom
 }
 
 template <typename T>
-inline void PIPS_MPIlogicOrArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
+inline void PIPS_MPIlogicOrArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    if(elements.size() == 0)
       return;
@@ -483,14 +598,14 @@ inline void PIPS_MPIlogicOrArrayInPlace(std::vector<T>& elements, MPI_Comm mpiCo
 }
 
 template <typename T>
-inline void PIPS_MPIgetSumInPlace(T& sum, MPI_Comm mpiComm)
+inline void PIPS_MPIgetSumInPlace(T& sum, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    MPI_Allreduce(MPI_IN_PLACE, &sum, 1, get_mpi_datatype(sum), MPI_SUM, mpiComm);
 }
 
 template <typename T>
 
-inline void PIPS_MPIsumArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
+inline void PIPS_MPIsumArrayInPlace(T* elements, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(length >= 0);
 
@@ -501,7 +616,7 @@ inline void PIPS_MPIsumArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIsumArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
+inline void PIPS_MPIsumArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    if( elements.size() == 0 )
       return;
@@ -510,7 +625,7 @@ inline void PIPS_MPIsumArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIsumArray(const T* source, T* dest, int length, MPI_Comm mpiComm )
+inline void PIPS_MPIsumArray(const T* source, T* dest, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(length >= 0);
 
@@ -521,7 +636,7 @@ inline void PIPS_MPIsumArray(const T* source, T* dest, int length, MPI_Comm mpiC
 }
 
 template <typename T>
-inline void PIPS_MPImaxArray(const T* source, T* dest, int length, MPI_Comm mpiComm)
+inline void PIPS_MPImaxArray(const T* source, T* dest, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(length >= 0);
    if(length == 0)
@@ -530,14 +645,34 @@ inline void PIPS_MPImaxArray(const T* source, T* dest, int length, MPI_Comm mpiC
 }
 
 template <typename T>
-inline void PIPS_MPIgatherv(const T* sendbuf, int sendcnt, T* recvbuf, int* recvcnts, const int* recvoffsets, int root, MPI_Comm mpiComm)
+inline void PIPS_MPImaxArray(const std::vector<T>& source, std::vector<T>& dest, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
-   assert(sendcnt >= 0);
-   MPI_Gatherv(sendbuf, sendcnt, get_mpi_datatype(sendbuf), recvbuf, recvcnts, recvoffsets, get_mpi_datatype(recvbuf), root, mpiComm);
+   assert(source.size() <= dest.size() );
+   if(source.size() == 0)
+      return;
+
+   MPI_Allreduce(&source[0], &dest[0], source.size(), get_mpi_datatype(&source[0]), MPI_MAX, mpiComm);
 }
 
 template <typename T>
-inline void PIPS_MPIallgather( const T* sendbuf, int sendcnt, T* recvbuf, int recvcnt, MPI_Comm mpiComm)
+inline void PIPS_MPIminArray(const std::vector<T>& source, std::vector<T>& dest, MPI_Comm mpiComm = MPI_COMM_WORLD)
+{
+   assert(source.size() <= dest.size() );
+   if(source.size() == 0)
+      return;
+
+   MPI_Allreduce(&source[0], &dest[0], source.size(), get_mpi_datatype(&source[0]), MPI_MIN, mpiComm = MPI_COMM_WORLD);
+}
+
+template <typename T>
+inline void PIPS_MPIgatherv(const T* sendbuf, int sendcnt, T* recvbuf, int* recvcnts, const int* recvoffsets, int root, MPI_Comm mpiComm = MPI_COMM_WORLD)
+{
+   assert(sendcnt >= 0);
+   MPI_Gatherv(sendbuf, sendcnt, get_mpi_datatype(sendbuf), recvbuf, recvcnts, recvoffsets, get_mpi_datatype(recvbuf), root, mpiComm = MPI_COMM_WORLD);
+}
+
+template <typename T>
+inline void PIPS_MPIallgather( const T* sendbuf, int sendcnt, T* recvbuf, int recvcnt, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(sendcnt >= 0);
    assert(recvcnt >= 0);

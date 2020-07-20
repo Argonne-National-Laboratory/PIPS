@@ -1,4 +1,4 @@
-* ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=parallelInEqualityRows_B0A2 -PRESOLVE=true
+* ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=parallelEqualityAndInequalityRow_B0A2 -PRESOLVE=true
 
 Set i rows    / i1*i17 /
 * subset of linking rows
@@ -10,7 +10,7 @@ parameter g(j) obj coefficients / j1 1, j2 1, j3 1, j4 1, j5 1, j6 1, j7 1, j8 1
           cupp(i) c right hand side   / i1 0, i2 100, i3 100, i4 100, i5 100, i6 100, i7 100, i8 1000, i9 100, i10 100, i11 100, i12 100, i13 100, i14 100, i15 100, i16 100, i17 100 /
 
 
-* in this example the parallel row presolver should detect two parallel equality rows - one in B0 and one in B2 and delete them from the system
+* in this example the parallel row presolver should detect 3 redundant inequality rows
 Table A(i,j)
     j1    j2    j3     j4    j5    j6    j7    j8    j9   j10   j11   j12   j13
 i1        -1   0.5    -1 
@@ -34,17 +34,17 @@ i14  1     1     1                  1                             1
 Table C(i,j)
     j1    j2    j3     j4    j5    j6    j7    j8    j9   j10   j11   j12   j13
 i1  -1
-i2         1     1    -2
+i2         2    -1     2
 i3               1  
-i4        -4    -4     8
+i4        -4           1
 i5         1                  1
 i6   1           1     1            1     
 i7                                        1
-i8        10    10                             20    30    40
+i8        10    20                             20    30    40
 i9   1     1     1     1                              1
-i10                                           0.5   0.5   0.5
-i11                                             1     1     1
-i12        1     1                              2     3     4
+i10                                          -0.5  -0.5  -0.5
+i11     0.25        0.25                      0.5  -0.5     1
+i12             -1                              1  -0.5     1
 i13                                                                           1
 i14                                                                     1     
 i15                                                                           1
@@ -128,7 +128,7 @@ $ifthen %METHOD%==PIPS
 
 
 *For creation of gdx files:
-$ echo jacobian parallelInEqualityRows_B0A2.gdx > convertd.opt
+$ echo jacobian parallelEqualityAndInequalityRow_B0A2.gdx > convertd.opt
   option lp=convertd;
   m.optfile = 1;
   solve m use lp min z;

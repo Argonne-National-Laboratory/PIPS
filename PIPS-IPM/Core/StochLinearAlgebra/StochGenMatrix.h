@@ -231,8 +231,8 @@ public:
   virtual double localRowTimesVec( const StochVector& vec, int child, int row, bool linking ) const;
 
   /* y += alpha * RowAt(child, row, linking) */
-  virtual void axpyWithRowAt( double alpha, StochVector& y, int child, int row, bool linking) const;
-
+  virtual void axpyWithRowAt( double alpha, StochVector* y, SimpleVector* y_linking, int child, int row, bool linking) const;
+  virtual void axpyWithRowAtPosNeg( double alpha, StochVector* y_pos, SimpleVector* y_link_pos, StochVector* y_neg, SimpleVector* y_link_neg, int child, int row, bool linking ) const;
 };
 
 
@@ -383,7 +383,7 @@ public:
 
   std::vector<int> get2LinkStartBlocks() const override { return std::vector<int>(); };
 
-  void updateKLinkVarsCount(std::vector<int>& linkCount) const  override{};
+  void updateKLinkVarsCount(std::vector<int>& linkCount) const override {};
   void updateKLinkConsCount(std::vector<int>& linkCount) const override {};
 
   void permuteLinkingVars(const std::vector<unsigned int>& permvec) override {};
@@ -393,6 +393,9 @@ public:
 
   int appendRow( const StochGenMatrix& matrix_row, int child, int row, bool linking ) override { assert("CANNOT APPEND ROW TO DUMMY MATRIX"); return -1; };
   double localRowTimesVec( const StochVector& vec, int child, int row, bool linking ) const override { assert("CANNOT MULTIPLY ROW WITH DUMMY MATRIX"); return -1; };
+
+  void axpyWithRowAt( double alpha, StochVector* y, SimpleVector* y_linking, int child, int row, bool linking) const override {};
+  void axpyWithRowAtPosNeg( double alpha, StochVector* y_pos, SimpleVector* y_link_pos, StochVector* y_neg, SimpleVector* y_link_neg, int child, int row, bool linking ) const override {};
 };
 
 

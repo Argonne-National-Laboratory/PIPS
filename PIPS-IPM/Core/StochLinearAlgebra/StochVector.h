@@ -99,6 +99,7 @@ public:
    void componentMult( const OoqpVectorBase<T>& v ) override;
    void componentDiv ( const OoqpVectorBase<T>& v ) override;
    bool componentEqual( const OoqpVectorBase<T>& v , T tol) const override;
+   bool componentNotEqual( const T val, T const tol ) const override;
 
    void scalarMult( T num ) override;
    void writeToStream(std::ostream& out) const override;
@@ -162,6 +163,7 @@ public:
    void removeEntries( const OoqpVectorBase<int>& select ) override;
 
    virtual int getSize() const { return this->n; };
+   int getNnzs() const override;
 
    virtual bool isRootNodeInSync() const;
 
@@ -233,6 +235,7 @@ public:
    void componentDiv ( const OoqpVectorBase<T>& v ) override {};
    bool componentEqual( const OoqpVectorBase<T>& v, T tol) const override { if(!v.isKindOf(kStochDummy)) std::cout << "one should never end up here"
      << std::endl; return v.isKindOf(kStochDummy); };
+   bool componentNotEqual( const T val, const T tol ) const override { return true; };
    void scalarMult( T num) override {};
    void writeToStream(std::ostream& out) const override {};
    void writeToStreamAll(std::ostream& out) const override {};
@@ -294,6 +297,7 @@ public:
    std::vector<T> gatherStochVector() const override {return std::vector<T>(0);};
 
    int getSize() const override { return 0; };
+   int getNnzs() const override { return 0; };
 
    bool isRootNodeInSync() const override { return true; };
 };

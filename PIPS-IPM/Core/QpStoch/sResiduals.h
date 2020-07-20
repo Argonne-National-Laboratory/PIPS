@@ -38,6 +38,10 @@ public:
   
   sResiduals( const sResiduals& res );
 
+  sResiduals( const sResiduals& res,
+        OoqpVectorHandle ixlow_, OoqpVectorHandle ixupp_,
+        OoqpVectorHandle iclow_, OoqpVectorHandle icupp_ );
+
   virtual void sync();
  private:
   std::vector<sResiduals*> children;

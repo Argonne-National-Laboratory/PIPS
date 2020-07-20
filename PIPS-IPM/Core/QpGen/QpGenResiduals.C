@@ -9,12 +9,10 @@
 #include "OoqpVector.h"
 #include "LinearAlgebraPackage.h"
 
+#include "pipsdef.h"
+
 #include <iostream>
 #include <fstream>
-
-
-
-using namespace std;
 
 #include "mpi.h"
 
@@ -102,13 +100,16 @@ QpGenResiduals::QpGenResiduals( const QpGenResiduals& res) : Residuals(res)
 }
 
 
-void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
+void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in, bool print_resids)
 {
-  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+#ifdef TIMING
+  print_resids = true;
+#endif
+  const int myRank = PIPS_MPIgetRank(MPI_COMM_WORLD);
   QpGenVars * vars = (QpGenVars *) vars_in;
   QpGenData * prob = (QpGenData *) prob_in;
 
-  double componentNorm, norm=0.0, gap=0.0;
+  double componentNorm, norm = 0.0, gap = 0.0;
  
   prob->getg( *rQ );
   prob->Qmult( 1.0, *rQ,  1.0, *vars->x );
@@ -125,11 +126,17 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
   if( nxupp > 0 ) rQ->axpy(  1.0, *vars->phi );
 
   componentNorm = rQ->infnorm();
-#ifdef TIMING
-  double rQtwonorm=rQ->twonorm();
-  if(0==myRank)  cout << " rQ infnorm=" << componentNorm 
-		      << " | twonorm=" << rQtwonorm << endl;
-#endif
+
+  if( print_resids )
+  {
+     const double rQtwonorm=rQ->twonorm();
+     if( 0 == myRank )
+     {
+//        std::cout << gap << std::endl;
+        std::cout << " rQ infnorm = " << componentNorm << " | twonorm = " << rQtwonorm << std::endl;
+     }
+  }
+
   if( componentNorm > norm ) norm = componentNorm;
 
   prob->getbA( *rA );
@@ -141,20 +148,26 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
   gap -= prob->bA->dotProductWith(*vars->y);
 
   componentNorm = rA->infnorm();
-#ifdef TIMING
-  if(0==myRank) cout << " rA norm = " << componentNorm << endl;
-#endif
+  if( print_resids )
+  {
+     if( 0 == myRank )
+     {
+//        std::cout << gap << std::endl;
+        std::cout << " rA norm = " << componentNorm << std::endl;
+     }
+  }
   if( componentNorm > norm ) norm = componentNorm;
 
   rC->copyFrom( *vars->s );
   prob->Cmult( -1.0, *rC, 1.0, *vars->x );
 
   componentNorm = rC->infnorm();
-#ifdef TIMING
-  if(0==myRank) cout << " rC norm = " << componentNorm << endl;
-#endif
-  // cout << " rC norm = " << componentNorm << endl;
-  // if( componentNorm > norm ) norm = componentNorm;
+  if( print_resids )
+  {
+     if( 0 == myRank )
+        std::cout << " rC norm = " << componentNorm << std::endl;
+  }
+  if( componentNorm > norm ) norm = componentNorm; // TODO : this was commented out - I assume by mistake?
 
   rz->copyFrom( *vars->z );
 
@@ -163,7 +176,8 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
 
 #ifdef TIMING
     componentNorm =  (vars->lambda)->infnorm();
-    if(0==myRank) cout << "lambda norm " << componentNorm << std::endl;
+    if( 0 == myRank )
+       std::cout << "lambda norm " << componentNorm << std::endl;
 #endif
 
 
@@ -174,17 +188,23 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
     gap -= prob->bl->dotProductWith(*vars->lambda);
 
     componentNorm = rt->infnorm();
-#ifdef TIMING
-    if(0==myRank) cout << " rt norm = " << componentNorm << endl;
-#endif
-    //cout << " rt norm = " << componentNorm << endl;
+    if( print_resids )
+    {
+       if( 0 == myRank )
+       {
+//          std::cout << gap << std::endl;
+          std::cout << " rt norm = " << componentNorm << std::endl;
+       }
+    }
     if( componentNorm > norm ) norm = componentNorm;
   }
-  if( mcupp > 0 ) { 
+  if( mcupp > 0 )
+  {
     rz->axpy(  1.0, *vars->pi );
 #ifdef TIMING
     componentNorm = (vars->pi)->infnorm();
-    if(0==myRank) cout  << "pi norm " << componentNorm << std::endl;
+    if( 0 == myRank )
+       std::cout << "pi norm " << componentNorm << std::endl;
 #endif
 
     ru->copyFrom( *vars->s );
@@ -195,20 +215,27 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
     gap += prob->bu->dotProductWith(*vars->pi);
 
     componentNorm = ru->infnorm();
-#ifdef TIMING
-    if(0==myRank) cout << " ru norm = " << componentNorm << endl;
-#endif
-    //    cout << " ru norm = " << componentNorm << endl;
+    if( print_resids )
+    {
+       if( 0 == myRank )
+       {
+//          std::cout << gap << std::endl;
+          std::cout << " ru norm = " << componentNorm << std::endl;
+       }
+    }
     if( componentNorm > norm ) norm = componentNorm;
   }
   componentNorm = rz->infnorm();
-  //  cout << " rz norm = " << componentNorm << endl;
-#ifdef TIMING
-  if(0==myRank) cout << " rz norm = " << componentNorm << endl;
-#endif
+  if( print_resids )
+  {
+     if( 0 == myRank )
+        std::cout << " rz norm = " << componentNorm << std::endl;
+
+  }
   if( componentNorm > norm ) norm = componentNorm;
 
-  if( nxlow > 0 ) {
+  if( nxlow > 0 )
+  {
     rv->copyFrom( *vars->x );
     rv->axpy( -1.0, prob->xlowerBound() );
     rv->selectNonZeros( *ixlow );
@@ -217,13 +244,18 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
     gap -= prob->blx->dotProductWith(*vars->gamma);
 
     componentNorm = rv->infnorm();
-    //    cout << " rv norm = " << componentNorm << endl;
-#ifdef TIMING
-    if(0==myRank) cout << " rv norm = " << componentNorm << endl;
-#endif
+    if( print_resids )
+    {
+       if( 0 == myRank )
+       {
+//          std::cout << gap << std::endl;
+          std::cout << " rv norm = " << componentNorm << std::endl;
+       }
+    }
     if( componentNorm > norm ) norm = componentNorm;
   }
-  if( nxupp > 0 ) {
+  if( nxupp > 0 )
+  {
     rw->copyFrom( *vars->x );
     rw->axpy( -1.0, prob->xupperBound() );
     rw->selectNonZeros( *ixupp );
@@ -232,15 +264,24 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
     gap += prob->bux->dotProductWith(*vars->phi);
 
     componentNorm = rw->infnorm();
-#ifdef TIMING
-    if(0==myRank) cout << " rw norm = " << componentNorm << endl;
-#endif
-    //    cout << " rw norm = " << componentNorm << endl;
+    if( print_resids )
+    {
+       if( 0 == myRank )
+       {
+//          std::cout << gap << std::endl;
+          std::cout << " rw norm = " << componentNorm << std::endl;
+       }
+    }
     if( componentNorm > norm ) norm = componentNorm;
   }
    
   mDualityGap = gap;
-  mResidualNorm = norm; 
+  mResidualNorm = norm;
+
+  if( print_resids && myRank == 0)
+  {
+     std::cout << "Norm residuals: " << mResidualNorm << "\tduality gap: " << mDualityGap << std::endl;
+  }
 }
   
 
@@ -341,7 +382,7 @@ QpGenResiduals::~QpGenResiduals()
 {
 }
 
-void QpGenResiduals::writeToStream(ostream& out)
+void QpGenResiduals::writeToStream(std::ostream& out)
 {
   /*
   printf("--------------rQ\n");

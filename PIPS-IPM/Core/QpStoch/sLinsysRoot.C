@@ -599,55 +599,37 @@ void sLinsysRoot::reduceKKT(sData* prob)
       reduceKKTdense();
 }
 
+
+// collects (reduces) dense global Schur complement
 void sLinsysRoot::reduceKKTdense()
 {
    DenseSymMatrix* const kktd = dynamic_cast<DenseSymMatrix*>(kkt);
 
-  //parallel communication
+   // parallel communication
    if( iAmDistrib )
    {
-
-#ifdef DENSE_USE_HALF
       if( locnx > 0 )
          submatrixAllReduceDiagLower(kktd, 0, locnx, mpiComm);
-#else
-      if( locnx > 0 )
-         submatrixAllReduce(kktd, 0, 0, locnx, locnx, mpiComm);
-#endif
+
       if( locmyl > 0 || locmzl > 0 )
       {
          const int locNxMy = locnx + locmy;
          assert(kktd->size() == locnx + locmy + locmyl + locmzl);
 
-#ifdef DENSE_USE_HALF
          // reduce lower left part
          if( locnx > 0 )
-            submatrixAllReduceFull(kktd, locNxMy, 0, locmyl + locmzl, locnx,
-                  mpiComm);
+         {
+            submatrixAllReduceFull(kktd, locNxMy, 0, locmyl + locmzl, locnx, mpiComm);
+         }
 
          // reduce lower diagonal linking part
          submatrixAllReduceDiagLower(kktd, locNxMy, locmyl + locmzl, mpiComm);
-
-#else
-         // reduce upper right part
-         if( locnx > 0 )
-            submatrixAllReduce(kktd, 0, locNxMy, locnx, locmyl + locmzl, mpiComm);
-
-         const int locNxMyMylMzl = locnx + locmy + locmyl + locmzl;
-
-         // preserve symmetry
-         double** M = kktd->mStorage->M;
-         for( int k = locNxMy; k < locNxMyMylMzl; k++ )
-            for( int k2 = 0; k2 < locnx; k2++ )
-               M[k][k2] = M[k2][k];
-
-         // reduce lower diagonal part
-         submatrixAllReduce(kktd, locNxMy, locNxMy, locmyl + locmzl, locmyl + locmzl, mpiComm);
-#endif
       }
   }
 }
 
+
+// collects sparse global Schur complement
 void sLinsysRoot::reduceKKTsparse()
 {
    if( !iAmDistrib )

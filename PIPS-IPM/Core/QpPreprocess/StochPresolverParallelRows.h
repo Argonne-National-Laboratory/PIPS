@@ -30,6 +30,42 @@ namespace rowlib
         rowWithColInd(int id, int offset, int lenA, const int* const colA, const double* const entA, int lenB, const int* const colB, const double* const entB)
             : id(id), offset_nA(offset), lengthA(lenA), colIndicesA(colA), norm_entriesA(entA),
               lengthB(lenB), colIndicesB(colB), norm_entriesB(entB)  {}
+
+        friend std::ostream& operator<< (std::ostream &out, const rowWithColInd& row)
+        {
+           out << "ID: " << row.id << ",offset_nA: " << row.offset_nA << ", A_col[";
+           for( int i = 0; i < row.lengthA; ++i )
+           {
+              if(i != 0 )
+                 out << ",";
+              out << row.colIndicesA[i];
+           }
+           out << "], A_entr[";
+           for( int i = 0; i < row.lengthA; ++i )
+           {
+              if(i != 0 )
+                 out << ",";
+              out << row.norm_entriesA[i];
+           }
+           out << "], B_col[";
+           for( int i = 0; i < row.lengthB; ++i )
+           {
+              if(i != 0 )
+                 out << ",";
+              out << row.colIndicesB[i];
+           }
+           out << "], B_entr[";
+           for( int i = 0; i < row.lengthB; ++i )
+           {
+              if(i != 0 )
+                 out << ",";
+              out << row.norm_entriesB[i];
+           }
+           out << "]";
+           return out;
+        }
+
+
     };
 
     bool operator==(rowWithColInd const& a, rowWithColInd const& b);
@@ -63,9 +99,12 @@ public:
    ~StochPresolverParallelRows();
 
    // remove parallel rows
-   virtual void applyPresolving();
+   bool applyPresolving() override;
 
 private:
+
+   /** tolerance for comparing two double values in two different rows and for them being considered equal */
+   const double limit_tol_compare_entries;
    int n_rows_removed;
 
    /// extension to the pointer set from StochPresolverBase to point to C and A at the same moment rather than
@@ -119,6 +158,7 @@ private:
    void setNormalizedSingletonFlags(int node);
    void setNormalizedReductionPointers(int node);
    void updateExtendedPointersForCurrentNode(int node);
+   void deleteNormalizedTransposedMatrices(int node);
    void deleteNormalizedPointers(int node);
 
    void setExtendedPointersToNull();

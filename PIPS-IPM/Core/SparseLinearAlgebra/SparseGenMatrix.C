@@ -906,6 +906,13 @@ void SparseGenMatrix::axpyWithRowAt(double alpha, SimpleVector& y, int row) cons
    mStorageDynamic->axpyWithRowAt(alpha, y.elements(), y.length(), row);
 }
 
+void SparseGenMatrix::axpyWithRowAtPosNeg( double alpha, SimpleVector& y_pos, SimpleVector& y_neg, int row) const
+{
+   assert( hasDynamicStorage() );
+   assert( y_pos.length() == y_neg.length() );
+
+   mStorageDynamic->axpyWithRowAtPosNeg(alpha, y_pos.elements(), y_neg.elements(), y_pos.length(), row);
+}
 
 double SparseGenMatrix::localRowTimesVec( const SimpleVector& vec, int row ) const
 {
@@ -973,7 +980,7 @@ void SparseGenMatrix::removeEntryAtRowCol( int row, int col )
 
    if( hasTransposed() )
    {
-      m_Mt->removeEntryAtRowCol(row, col);
+      m_Mt->removeEntryAtRowCol(col, row);
       assert( mStorageDynamic->getNVals() == m_Mt->getStorageDynamic()->getNVals() );
    }
 }

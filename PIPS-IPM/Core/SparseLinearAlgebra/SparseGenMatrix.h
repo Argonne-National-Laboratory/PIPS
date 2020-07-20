@@ -196,6 +196,7 @@ public:
 
   virtual double localRowTimesVec( const SimpleVector& vec, int row ) const;
   virtual void axpyWithRowAt(double alpha, SimpleVector& y, int row) const;
+  virtual void axpyWithRowAtPosNeg( double alpha, SimpleVector& y_pos, SimpleVector& y_neg, int row) const;
 
   virtual void removeRow(int row);
   virtual void removeCol( int col );

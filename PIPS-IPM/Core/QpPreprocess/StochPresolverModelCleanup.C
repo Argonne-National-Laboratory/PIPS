@@ -6,13 +6,21 @@
  */
 
 #include "StochPresolverModelCleanup.h"
+
+#include "StochOptions.h"
 #include <cmath>
 #include <utility>
 #include <vector>
 #include <string>
 
 StochPresolverModelCleanup::StochPresolverModelCleanup(PresolveData& presData, const sData& origProb)
-   : StochPresolverBase(presData, origProb), removed_entries_total(0), removed_rows_total(0)
+   : StochPresolverBase(presData, origProb),
+     limit_min_mat_entry( pips_options::getDoubleParameter("PRESOLVE_MODEL_CLEANUP_MIN_MATRIX_ENTRY") ),
+     limit_max_matrix_entry_impact( pips_options::getDoubleParameter("PRESOLVE_MODEL_CLEANUP_MAX_MATRIX_ENTRY_IMPACT") ),
+     limit_matrix_entry_impact_feasdist( pips_options::getDoubleParameter("PRESOLVE_MODEL_CLEANUP_MATRIX_ENTRY_IMPACT_FEASDIST") ),
+     removed_entries_total(0),
+     fixed_empty_cols_total(0),
+     removed_rows_total(0)
 {
 }
 
@@ -21,13 +29,13 @@ StochPresolverModelCleanup::~StochPresolverModelCleanup()
 }
 
 
-void StochPresolverModelCleanup::applyPresolving()
+bool StochPresolverModelCleanup::applyPresolving()
 {
    assert(presData.reductionsEmpty());
    assert(presData.presDataInSync());
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
    {
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
       std::cout << "--- Before model cleanup:" << std::endl;
@@ -35,8 +43,10 @@ void StochPresolverModelCleanup::applyPresolving()
    countRowsCols();
 #endif
 
-   int n_removed_entries = 0;
-   int n_removed_rows = 0;
+   std::vector<int> counts(3, 0);
+   int& n_removed_entries = counts[0];
+   int& n_fixed_empty_columns = counts[1];
+   int& n_removed_rows = counts[2];
 
    // removal of redundant constraints
    int n_removed_rows_eq = removeRedundantRows(EQUALITY_SYSTEM);
@@ -50,7 +60,7 @@ void StochPresolverModelCleanup::applyPresolving()
 
    presData.allreduceAndApplyNnzChanges();
 
-   fixEmptyColumns();
+   n_fixed_empty_columns = fixEmptyColumns();
 
    // update all nnzCounters - set reductionStochvecs to zero afterwards
    presData.allreduceAndApplyBoundChanges();
@@ -58,28 +68,35 @@ void StochPresolverModelCleanup::applyPresolving()
    presData.allreduceAndApplyLinkingRowActivities();
 
    if( distributed )
-   {
-      PIPS_MPIgetSumInPlace( n_removed_entries, MPI_COMM_WORLD);
-      PIPS_MPIgetSumInPlace( n_removed_rows, MPI_COMM_WORLD);
-   }
+      PIPS_MPIsumArrayInPlace( counts, MPI_COMM_WORLD);
+
+   fixed_empty_cols_total += n_fixed_empty_columns;
    removed_entries_total += n_removed_entries;
    removed_rows_total += n_removed_rows;
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
    {
       std::cout << "\tRemoved redundant rows in model cleanup: " << removed_rows_total << std::endl;
       std::cout << "\tRemoved tiny entries in model cleanup: " << removed_entries_total << std::endl;
+      std::cout << "\tFixed empty columns in model cleanup: " << fixed_empty_cols_total << std::endl;
       std::cout << "--- After model cleanup:" << std::endl;
    }
+   else if( my_rank == 0 && verbosity == 1)
+      std::cout << "Clean:\t removed " << removed_rows_total << " rows, " << fixed_empty_cols_total << " cols" << std::endl;
 
    countRowsCols();
-   if(my_rank == 0)
+   if( my_rank == 0 && verbosity > 1 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 
    assert(presData.reductionsEmpty());
    assert(presData.presDataInSync());
+
+   if( n_removed_entries != 0 || n_removed_rows != 0 || n_fixed_empty_columns != 0 )
+      return true;
+   else
+      return false;
 }
 
 /** Remove redundant rows in the constraint system. Compares the minimal and maximal row activity
@@ -156,7 +173,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
          if( (PIPSisLT( rhs_eq[row_index], actmin_part, feastol) && actmin_ubndd == 0)  || (PIPSisLT(actmax_part, rhs_eq[row_index], feastol) && actmax_ubndd == 0))
          {
-            PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's rhs with it's computed activities", "StochPresolverModelCleanup.C",
+            PIPS_MPIabortInfeasible("Found row that cannot meet it's rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");
          }
          else if( PIPSisLE(rhs_eq[row_index], actmin_part, feastol) && PIPSisLE(actmax_part, rhs_eq[row_index], feastol) )
@@ -167,12 +184,11 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
       }
       else
       {
-         assert(!presData.wasRowRemoved( row ));
          assert( PIPSisLT(0.0, iclow[row_index] + icupp[row_index]) );
 
          if( ( !PIPSisZero(iclow[row_index]) && (actmax_ubndd == 0 && PIPSisLTFeas(actmax_part, clow[row_index])) )
                || ( !PIPSisZero(icupp[row_index]) && (actmin_ubndd == 0 && PIPSisLTFeas(cupp[row_index], actmin_part)) ) )
-            PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's lhs or rhs with it's computed activities", "StochPresolverModelCleanup.C",
+            PIPS_MPIabortInfeasible("Found row that cannot meet it's lhs or rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");
          else if( ( PIPSisZero(iclow[row_index]) || PIPSisLE(clow[row_index], -infinity) ) &&
                ( PIPSisZero(icupp[row_index]) || PIPSisLE(infinity, cupp[row_index])) )
@@ -210,8 +226,8 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    /* reductions in root node */
    /* process B0 and Bl0 */
    n_elims += removeTinyInnerLoop(system_type, -1, B_MAT);
-   if (presData.hasLinking(system_type))
-	n_elims += removeTinyInnerLoop(system_type, -1, BL_MAT);
+   if (  presData.hasLinking(system_type) )
+      n_elims += removeTinyInnerLoop(system_type, -1, BL_MAT);
 
 
    /* count eliminations in B0 and Bl0 only once */
@@ -239,12 +255,9 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    return n_elims;
 }
 
-/** Removes tiny entries in storage and adapts the rhs accordingly.
- *  If block_type == LINKING_VARS_BLOCK, then block Amat is considered.
- *  If block_type == CHILD_BLOCK, then block Bmat is considered. */
-/* system type indicates matrix A or C, block_type indicates the block */
-// todo what is the proper order for criterion 1 to 3?
-// todo for criterion 3 - should ALL eliminations be considered?
+/** Removes tiny entries in storage and adapts the lhs/rhs accordingly.
+ * system type indicates matrix A or C, block_type indicates the block
+ */
 int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int node, BlockType block_type)
 {
    if(presData.nodeIsDummy(node))
@@ -308,10 +321,10 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
       for(int col_index = start; col_index < end; ++col_index )
       {
          const int col = storage->getJcolM(col_index);
-         const double mat_entry = storage->getMat(col_index);
+         const double mat_abs = std::fabs(storage->getMat(col_index));
 
          /* remove all small entries */
-         if( fabs( mat_entry ) < PRESOLVE_MODEL_CLEANUP_MIN_MATRIX_ENTRY )
+         if( mat_abs < limit_min_mat_entry )
          {
             const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
             const INDEX col_INDEX(COL, node_col, col);
@@ -320,13 +333,24 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
             /* since the current entry got deleted we have to step back one entry */
             --col_index;
             --end;
-            ++n_elims;
+            if( my_rank == 0 || !(node_row == -1 && node_col == -1) )
+               ++n_elims;
          }
          /* remove entries where their corresponding variables have valid lower and upper bounds, that overall do not have a real influence though */
          else if( !PIPSisZero((*x_upper_idx)[col]) && !PIPSisZero((*x_lower_idx)[col]) )
          {
-            if( (fabs( mat_entry ) < PRESOLVE_MODEL_CLEANUP_MAX_MATRIX_ENTRY_IMPACT &&
-                  fabs( mat_entry ) * ( (*x_upper)[col] - (*x_lower)[col]) * (*nnzRow)[r] < PRESOLVE_MODEL_CLEANUP_MATRIX_ENTRY_IMPACT_FEASDIST * feastol ))
+            const double bux = (*x_upper)[col];
+            const double blx = (*x_lower)[col];
+
+            /* don't remove entries in rows that need to be fixed */
+            if( PIPSisEQ(bux, blx) )
+               continue;
+
+            const int nnz = (*nnzRow)[r];
+            assert( nnz != 0 );
+
+            if( mat_abs < limit_max_matrix_entry_impact &&
+                  mat_abs * ( bux - blx ) * nnz < limit_matrix_entry_impact_feasdist * feastol )
             {
                const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
                const INDEX col_INDEX(COL, node_col, col);
@@ -335,29 +359,25 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
                /* since the current entry got deleted we have to step back one entry */
                --col_index;
                --end;
-               ++n_elims;
-            }
-         }
-         else if( false ) //TODO if not linking constraints
-         {
-            // TODO third criterion? for linking constraints: call extra function to know whether we have linking cons
-            // that link only two blocks (not so urgent for linking)
-            /* if valid lower and upper bounds */
-            if( !PIPSisZero((*x_upper_idx)[col]) && !PIPSisZero((*x_lower_idx)[col]) )
-            {
-               if( total_sum_modifications_row + (fabs(mat_entry) * ((*x_upper)[col] - (*x_lower)[col])) < 1.0e-1 * feastol)
-               {
-                  total_sum_modifications_row += fabs(mat_entry) * ((*x_upper)[col] - (*x_lower)[col]);
-                  const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
-                  const INDEX col_INDEX(COL, node_col, col);
-
-                  presData.deleteEntryAtIndex(row_INDEX, col_INDEX, col_index);
-
-                  /* since the current entry got deleted we have to step back one entry */
-                  --col_index;
-                  --end;
+               if( my_rank == 0 || !(node_row == -1 && node_col == -1) )
                   ++n_elims;
-               }
+            }
+            /* for linking constraints this is a slight modification of criterion three that does not require communication but is only a slight relaxation to
+             * criterion two
+             */
+            else if( ( block_type == BL_MAT && mat_abs * ( bux - blx ) * nnz < 1.0e-1 * feastol)
+                  || ( block_type != BL_MAT && total_sum_modifications_row + mat_abs * ( bux - blx ) < 1.0e-1 * feastol / 2.0 ) )
+            {
+               total_sum_modifications_row += mat_abs * (bux - blx);
+               const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
+               const INDEX col_INDEX(COL, node_col, col);
+               presData.deleteEntryAtIndex(row_INDEX, col_INDEX, col_index);
+
+               /* since the current entry got deleted we have to step back one entry */
+               --col_index;
+               --end;
+               if( my_rank == 0 || !(node_row == -1 && node_col == -1) )
+                  ++n_elims;
             }
          }
          /* not removed */
@@ -371,8 +391,9 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
 /* Go through columns and fix all empty ones to the current variables lower/upper bound (depending on objective)
  * Might detect unboundedness of problem.
  */
-void StochPresolverModelCleanup::fixEmptyColumns()
+int StochPresolverModelCleanup::fixEmptyColumns()
 {
+   int fixations = 0;
 
    for(int node = -1; node < nChildren; ++node)
    {
@@ -391,18 +412,21 @@ void StochPresolverModelCleanup::fixEmptyColumns()
       for(int col_index = 0; col_index < nnzs_col.n; ++col_index)
       {
          const INDEX col(COL, node, col_index);
-         /* column fixation candidate */
+
+         if( presData.wasColumnRemoved(col) )
+         {
+            assert( nnzs_col[col_index] == 0 );
+            assert( PIPSisZero(ixlow[col_index] ) );
+            assert( PIPSisZero(ixupp[col_index] ) );
+            assert( PIPSisZero(xlow[col_index] ) );
+            assert( PIPSisZero(xupp[col_index] ) );
+            assert( PIPSisZero(g[col_index] ) );
+
+            continue;
+         }
+            /* column fixation candidate */
          if( nnzs_col[col_index] == 0)
          {
-            /* check whether column was removed already */
-            if( PIPSisZero(ixlow[col_index]) && PIPSisZero(ixupp[col_index])
-               && PIPSisZero(xlow[col_index]) && PIPSisZero(xupp[col_index])
-               && PIPSisZero(g[col_index]))
-            {
-               if( presData.wasColumnRemoved(col) )
-                  continue;
-            }
-
             if( PIPSisLT( g[col_index], 0.0) )
             {
                if( !PIPSisZero(ixupp[col_index]) )
@@ -411,7 +435,7 @@ void StochPresolverModelCleanup::fixEmptyColumns()
                }
                else
                {
-                  PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found empty column with non-zero objective vector and no bounds in objective direction! Unbounded!", 
+                  PIPS_MPIabortInfeasible("Found empty column with non-zero objective vector and no bounds in objective direction! Unbounded!",
                      "StochPresolverModelCleanup.C", "fixEmptyColumns");
                }
             } 
@@ -423,14 +447,13 @@ void StochPresolverModelCleanup::fixEmptyColumns()
                }
                else
                {
-                  PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found empty column with non-zero objective vector and no bounds in objective direction! Unbounded!", 
+                  PIPS_MPIabortInfeasible("Found empty column with non-zero objective vector and no bounds in objective direction! Unbounded!",
                      "StochPresolverModelCleanup.C", "fixEmptyColumns");
                }
             }
             else
             {
                assert( PIPSisEQ( g[col_index], 0.0) );
-
                if( !PIPSisZero(ixlow[col_index]) )
                   presData.fixEmptyColumn(col, xlow[col_index]);
                else if( !PIPSisZero(ixlow[col_index]) )
@@ -438,9 +461,14 @@ void StochPresolverModelCleanup::fixEmptyColumns()
                else
                   presData.fixEmptyColumn(col, 0.0);
             }
+
+            if( my_rank == 0 || !col.isLinkingCol() )
+               ++fixations;
          }
       }
    }
+
+   return fixations;
 }
 
 

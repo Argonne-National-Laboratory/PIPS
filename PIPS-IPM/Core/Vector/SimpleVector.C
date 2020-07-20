@@ -6,12 +6,14 @@
 #include "VectorUtilities.h"
 #include "SimpleVector.h"
 #include "OoqpBlas.h"
+#include <pipsdef.h>
 #include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <limits>
 #include <iomanip>
 #include <algorithm>
+
 
 template <typename T>
 long long SimpleVectorBase<T>::numberOfNonzeros() const
@@ -107,6 +109,19 @@ void SimpleVectorBase<T>::absminNonZero(T& m, T zero_eps) const
 
    if( min < std::numeric_limits<T>::max() )
       m = min;
+}
+
+template<typename T>
+int SimpleVectorBase<T>::getNnzs() const
+{
+   int non_zeros = 0;
+   for( int i = 0; i < this->n; i++ )
+   {
+      if( !PIPSisZero(v[i]) )
+         non_zeros++;
+   }
+
+   return non_zeros;
 }
 
 template<typename T>
@@ -317,6 +332,21 @@ bool SimpleVectorBase<T>::componentEqual( const OoqpVectorBase<T>& vec, T tol) c
    {
       /* two comparisons - a numerical one and one for stuff like infinity/nan/max/min */
       if( !PIPSisRelEQ(v[i], sv[i], tol) && v[i] != sv[i])
+      {
+//         std::cout << v[i] << " != " << sv[i] << std::endl;
+         return false;
+      }
+   }
+   return true;
+}
+
+template<typename T>
+bool SimpleVectorBase<T>::componentNotEqual( const T val, const T tol ) const
+{
+   for(int i = 0; i < this->n; ++i)
+   {
+      /* two comparisons - a numerical one and one for stuff like infinity/nan/max/min */
+      if( PIPSisRelEQ(v[i], val, tol) || v[i] == val)
       {
          return false;
       }
@@ -930,30 +960,16 @@ void SimpleVectorBase<T>::divideSome( const OoqpVectorBase<T>& div, const OoqpVe
   T * q   = sdiv.v;
   assert( this->n == div.length() && this->n == select.length() );
 
-  // todo Daniel Rehfeldt: this expects non-aliasing; think there is no need for pointer arithmetic
-  // as the run-time is dominated by the division.
-#if 0
-  T * lmap = map + this->n;
-  T * w = v;
-  while( map < lmap ) {
-    if( 0 != *map ) {
-      *w  /= *q;
-    }
-    map++;
-    w++;
-    q++;
-  }
-#else
   for( int i = 0; i < this->n; i++ )
   {
      if( 0.0 != map[i] )
      {
-        assert(q[i] != 0.0);
+        assert(!PIPSisZero(map[i]));
+        assert(!PIPSisZero(q[i]));
+
         v[i] /= q[i];
      }
   }
-#endif
-
 }
 
 template<typename T>
