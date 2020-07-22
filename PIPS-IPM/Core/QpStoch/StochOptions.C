@@ -108,9 +108,6 @@ namespace pips_options
       /** alpha must be lower equal to this value for the IPM to try and apply small corrector steps */
       double_options["IP_GONDZIO_MAX_ALPHA_SMALL_CORRECTORS"] = 0.8;
 
-      /// SCHUR COMPLEMENT COMPUTATION
-      bool_options["SC_COMPUTE_BLOCKWISE"] = false;
-
       /// SOLVER CONTROLS
 
       /// ERROR ABSORBTION / ITERATIVE REFINEMENT

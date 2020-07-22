@@ -50,9 +50,13 @@ SCsparsifier::decreaseDiagDomBound(bool& success)
 
 	if( diagDomBoundsPosition < positionUpperBound - 1 )
 	{
+	    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
 		diagDomBoundsPosition++;
-		printf("\n SCsparsifier switched to sparsify factor %f (less aggressive) \n", diagDomBounds[diagDomBoundsPosition]);
 		success = true;
+
+		if( myRank == 0 )
+			printf("\n SCsparsifier switched to sparsify factor %f (less aggressive) \n", diagDomBounds[diagDomBoundsPosition]);
 	}
 	else
 	{
@@ -66,9 +70,13 @@ SCsparsifier::increaseDiagDomBound(bool& success)
 {
 	if( diagDomBoundsPosition > 0 )
 	{
+	    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
 		diagDomBoundsPosition--;
-		printf("\n SCsparsifier switched to sparsify factor %f (more aggressive)  \n", diagDomBounds[diagDomBoundsPosition]);
 		success = true;
+
+		if( myRank == 0 )
+			printf("\n SCsparsifier switched to sparsify factor %f (more aggressive)  \n", diagDomBounds[diagDomBoundsPosition]);
 	}
 	else
 	{
@@ -161,8 +169,6 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
    const std::vector<bool>& rowIsLocal = prob.getSCrowMarkerLocal();
 
    std::vector<double> diag(sizeSC);
-
-   updateDiagDomBound();
 
 // assert
    const double t = diagDomBounds[diagDomBoundsPosition];
