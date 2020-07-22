@@ -72,8 +72,12 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   }
 
   usePrecondDist = pips_options::getBoolParameter("PRECONDITION_DISTRIBUTED");
-  computeBlockwiseSC = pips_options::getBoolParameter("SC_COMPUTE_BLOCKWISE");
 
+#ifdef PARDISO_BLOCKSC
+  computeBlockwiseSC = true;
+#else
+  computeBlockwiseSC = false;
+#endif
   // use sparse KKT if link structure is present
   hasSparseKkt = prob_->exploitingLinkStructure();
 
@@ -124,7 +128,12 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
   }
 
   usePrecondDist = pips_options::getBoolParameter("PRECONDITION_DISTRIBUTED");
-  computeBlockwiseSC = pips_options::getBoolParameter("SC_COMPUTE_BLOCKWISE");
+
+#ifdef PARDISO_BLOCKSC
+  computeBlockwiseSC = true;
+#else
+  computeBlockwiseSC = false;
+#endif
 
   // use sparse KKT if (enough) 2 links are present
   hasSparseKkt = prob_->exploitingLinkStructure();
