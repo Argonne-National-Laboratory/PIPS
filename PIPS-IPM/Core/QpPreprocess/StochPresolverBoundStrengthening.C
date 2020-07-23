@@ -19,12 +19,33 @@ StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
       limit_entry( pips_options::getDoubleParameter("PRESOLVE_BOUND_STR_NUMERIC_LIMIT_ENTRY") ),
       limit_partial_activity( pips_options::getDoubleParameter("PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY") ),
       limit_bounds( pips_options::getDoubleParameter("PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS") ),
-      tightenings(0)
+      tightenings(0),
+      local_bound_tightenings(false),
+      n_linking_vars( dynamic_cast<const StochVector&>(*origProb.g).vec->length() ),
+      n_eq_linking_rows( dynamic_cast<const StochVector&>(*origProb.bA).vecl->length() ),
+      n_ineq_linking_rows( dynamic_cast<const StochVector&>(*origProb.bl).vecl->length() ),
+      ub_linking_var(n_linking_vars),
+      lb_linking_var(n_linking_vars),
+      rows_ub(n_linking_vars),
+      rows_lb(n_linking_vars),
+      used_linking_eq_row(n_eq_linking_rows),
+      used_linking_ineq_row(n_ineq_linking_rows)
 {
 }
 
 StochPresolverBoundStrengthening::~StochPresolverBoundStrengthening()
 {
+}
+
+void StochPresolverBoundStrengthening::resetArrays()
+{
+   /* upper bounds are stored inverted */
+   std::fill( ub_linking_var.begin(), ub_linking_var.end(), INF_NEG );
+   std::fill( lb_linking_var.begin(), lb_linking_var.end(), INF_NEG );
+   std::fill( rows_ub.begin(), rows_ub.end(), INDEX() );
+   std::fill( rows_lb.begin(), rows_lb.end(), INDEX() );
+   std::fill( used_linking_eq_row.begin(), used_linking_eq_row.end(), false );
+   std::fill( used_linking_eq_row.begin(), used_linking_eq_row.end(), false );
 }
 
 bool StochPresolverBoundStrengthening::applyPresolving()
@@ -33,7 +54,7 @@ bool StochPresolverBoundStrengthening::applyPresolving()
    assert(presData.presDataInSync());
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1)
    {
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
       std::cout << "--- Before Bound Strengthening Presolving:" << std::endl;
@@ -41,19 +62,25 @@ bool StochPresolverBoundStrengthening::applyPresolving()
    countRowsCols();
 #endif
 
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1)
       std::cout << "Start Bound Strengthening Presolving..." << std::endl;
 
+
    int iter = 0;
-   bool tightened;
+   bool tightened = false;
 
    do
    {
+      resetArrays();
+      presData.startBoundTightening();
+
       ++iter;
       tightened = false;
       /* root nodes */
+      /* it is important to do the root nodes first - we later communicate around bounds we found in A_MAT and want to get all the tightenings we can get from the root node before */
       if( strenghtenBoundsInNode( EQUALITY_SYSTEM, -1) )
         tightened = true;
+      MPI_Barrier(MPI_COMM_WORLD);
       if( strenghtenBoundsInNode( INEQUALITY_SYSTEM, -1) )
         tightened = true;
 
@@ -70,26 +97,83 @@ bool StochPresolverBoundStrengthening::applyPresolving()
               tightened = true;
          }
       }
-   /* update bounds on all processors */
+
+      /* update bounds on all processors */
+      communicateLinkingVarBounds();
+      resetArrays();
+
+      presData.endBoundTightening();
+      presData.allreduceAndApplyLinkingRowActivities();
+      PIPS_MPIgetLogicAndInPlace(tightened);
+
+      assert(presData.reductionsEmpty());
+      assert(presData.presDataInSync());
    }
    while( tightened && iter < limit_iter );
 
-   presData.allreduceLinkingVarBounds();
-   presData.allreduceAndApplyLinkingRowActivities();
+   // TODO : bounds found with linking_rows: mark all rows that need to be stored by all procs and store them after tightening in the postsolver
+   // later when postsolving and syncing the linking row multipliers use these rows to adjust all var bounds duals
 
 #ifndef NDEBUG
    tightenings = PIPS_MPIgetSum(tightenings, MPI_COMM_WORLD);
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
       std::cout << "--- After " << iter << " rounds of bound strengthening and " << tightenings << " times of tightening bounds:" << std::endl;
+   if( my_rank == 0 && verbosity == 1 )
+      std::cout << "Tight:\t tightened " << tightenings << std::endl;
    countRowsCols();
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1)
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 
-   return tightened;
 
-   assert(presData.reductionsEmpty());
-   assert(presData.presDataInSync());
+   return tightened;
+}
+
+void StochPresolverBoundStrengthening::communicateLinkingVarBounds()
+{
+   PIPS_MPIgetLogicOrInPlace(local_bound_tightenings, MPI_COMM_WORLD);
+
+   if( !local_bound_tightenings )
+      return;
+
+   // TODO : make vector bool
+   std::vector<double> lbx_ubx( 2 * n_linking_vars );
+   std::copy( lb_linking_var.begin(), lb_linking_var.end(), lbx_ubx.begin() );
+   std::copy( ub_linking_var.begin(), ub_linking_var.end(), lbx_ubx.begin() + n_linking_vars );
+
+   std::vector<std::pair<double,int>> maxloc_bounds = PIPS_MPImaxlocArray(lbx_ubx);
+
+   /* now that the best bounds and the respective processes are determined actually tighten the bounds */
+   for( unsigned int i = 0; i < 2 * n_linking_vars; ++i )
+   {
+      const bool is_lower_bound = (i < n_linking_vars );
+      const int best_rank = maxloc_bounds[i].second;
+      const double best_bound = maxloc_bounds[i].first;
+      const INDEX col = is_lower_bound ? INDEX(COL, -1, i) : INDEX(COL, -1, i - n_linking_vars);
+
+      /* do nothing if not bound was found */
+      if( best_bound == INF_NEG )
+      {
+         assert( PIPS_MPIisValueEqual(maxloc_bounds[i].second) );
+      }
+      else if( best_rank == my_rank )
+      {
+         is_lower_bound ? assert( lb_linking_var[i] == best_bound ) : assert( ub_linking_var[i - n_linking_vars] == best_bound );
+         const INDEX& row = is_lower_bound ? rows_lb[i] : rows_ub[i - n_linking_vars];
+         const bool propagated = presData.rowPropagatedBounds(row, col, is_lower_bound ? best_bound : INF_NEG, is_lower_bound ? INF_POS : -best_bound);
+         if( propagated )
+            ++tightenings;
+      }
+      else if( best_rank != -1 )
+      {
+         const bool propagated = presData.rowPropagatedBounds(INDEX(), col, is_lower_bound ? best_bound : INF_NEG, is_lower_bound ? INF_POS : -best_bound);
+         if( propagated )
+            ++tightenings;
+      }
+      else
+         assert(false && "This cannot happen!");
+   }
+   local_bound_tightenings = false;
 }
 
 bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_type, int node)
@@ -217,8 +301,6 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             assert(actmax_ubndd <= 1);
             assert( PIPSisZero(actmin_row_without_curr, feastol) );
             assert( PIPSisZero(actmax_row_without_curr, feastol) );
-
-            actmin_row_without_curr = actmax_row_without_curr = 0;
             continue;
          }
 
@@ -263,10 +345,39 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
 
          const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
 
-//         bool row_propagated = presData.rowPropagatedBounds( INDEX(ROW, node, row, linking, system_type), INDEX(COL, node_col, col), lbx_new, ubx_new);
-         bool row_propagated = presData.rowPropagatedBoundsNonTight( row_INDEX, INDEX(COL, node_col, col), lbx_new, ubx_new);
+         bool row_propagated = false;
+         /* here we have to store and communicate found changes - only one process should change an upper / lower bound of a variable */
+         if( block_type == A_MAT )
+         {
+            assert( node_col == -1 );
 
-         if(row_propagated && (node != -1 || my_rank == 0))
+            /* store found upper bound if better */
+            if( ubx_new != INF_POS )
+            {
+               /* we store upper bound inverted so that MPI communication can simple do a min over all entries */
+               if( (PIPSisLT(ubx_new, xupp[col]) || PIPSisZero(ixupp[col]) ) && PIPSisLT(ub_linking_var[col], -ubx_new) )
+               {
+                  local_bound_tightenings = true;
+                  ub_linking_var[col] = -ubx_new;
+                  rows_ub[col] = row_INDEX;
+               }
+            }
+
+            /* store found lower bound if better */
+            if( lbx_new != INF_NEG )
+            {
+               if( (PIPSisLT(xlow[col], lbx_new) || PIPSisZero(ixlow[col]) ) && PIPSisLT(lbx_new, lb_linking_var[col]) )
+               {
+                  local_bound_tightenings = true;
+                  lb_linking_var[col] = lbx_new;
+                  rows_lb[col] = row_INDEX;
+               }
+            }
+         }
+         else
+            row_propagated = presData.rowPropagatedBounds(row_INDEX, INDEX(COL, node_col, col), lbx_new, ubx_new);
+
+         if( row_propagated && (node != -1 || my_rank == 0) )
             ++tightenings;
          tightened = tightened || row_propagated;
       }

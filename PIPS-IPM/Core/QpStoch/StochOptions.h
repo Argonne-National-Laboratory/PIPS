@@ -48,6 +48,7 @@ namespace pips_options
       }
 
       void setDefaults() override;
+      void setPresolveDefaults();
       StochOptions();
 
       virtual ~StochOptions() {};

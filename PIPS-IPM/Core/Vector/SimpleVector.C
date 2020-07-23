@@ -112,6 +112,19 @@ void SimpleVectorBase<T>::absminNonZero(T& m, T zero_eps) const
 }
 
 template<typename T>
+int SimpleVectorBase<T>::getNnzs() const
+{
+   int non_zeros = 0;
+   for( int i = 0; i < this->n; i++ )
+   {
+      if( !PIPSisZero(v[i]) )
+         non_zeros++;
+   }
+
+   return non_zeros;
+}
+
+template<typename T>
 void SimpleVectorBase<T>::max( T& m, int& index ) const
 {
    if( this->n == 0 )
@@ -319,6 +332,21 @@ bool SimpleVectorBase<T>::componentEqual( const OoqpVectorBase<T>& vec, T tol) c
    {
       /* two comparisons - a numerical one and one for stuff like infinity/nan/max/min */
       if( !PIPSisRelEQ(v[i], sv[i], tol) && v[i] != sv[i])
+      {
+//         std::cout << v[i] << " != " << sv[i] << std::endl;
+         return false;
+      }
+   }
+   return true;
+}
+
+template<typename T>
+bool SimpleVectorBase<T>::componentNotEqual( const T val, const T tol ) const
+{
+   for(int i = 0; i < this->n; ++i)
+   {
+      /* two comparisons - a numerical one and one for stuff like infinity/nan/max/min */
+      if( PIPSisRelEQ(v[i], val, tol) || v[i] == val)
       {
          return false;
       }

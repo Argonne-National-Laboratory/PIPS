@@ -46,6 +46,8 @@ StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = nullpt
    limit_max_rounds( pips_options::getIntParameter("PRESOLVE_MAX_ROUNDS") ),
    reset_free_variables_after_presolve( pips_options::getBoolParameter("PRESOLVE_RESET_FREE_VARIABLES") ),
    print_problem( pips_options::getBoolParameter("PRESOLVE_PRINT_PROBLEM") ),
+   write_presolved_problem( pips_options::getBoolParameter("PRESOLVE_WRITE_PRESOLVED_PROBLEM_MPS") ),
+   verbosity( pips_options::getIntParameter("PRESOLVE_VERBOSITY") ),
    presData( new PresolveData(dynamic_cast<const sData*>(origprob), dynamic_cast<StochPostsolver*>(postsolver)) )
 {
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
@@ -53,17 +55,17 @@ StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = nullpt
    if( pips_options::getBoolParameter("PRESOLVE_SINGLETON_ROWS") )
       presolvers.push_back( new StochPresolverSingletonRows(*presData, *sorigprob) );
 
+   if( pips_options::getBoolParameter("PRESOLVE_COLUMN_FIXATION") )
+      presolvers.push_back( new StochPresolverColumnFixation(*presData, *sorigprob) );
+
    if( pips_options::getBoolParameter("PRESOLVE_PARALLEL_ROWS") )
       presolvers.push_back( new StochPresolverParallelRows(*presData, *sorigprob) );
-
-   if( pips_options::getBoolParameter("PRESOLVE_SINGLETON_COLUMNS") )
-      presolvers.push_back( new StochPresolverSingletonColumns(*presData, *sorigprob) );
 
    if( pips_options::getBoolParameter("PRESOLVE_BOUND_STRENGTHENING") )
       presolvers.push_back( new StochPresolverBoundStrengthening(*presData, *sorigprob) );
 
-   if( pips_options::getBoolParameter("PRESOLVE_COLUMN_FIXATION") )
-      presolvers.push_back( new StochPresolverColumnFixation(*presData, *sorigprob) );
+   if( pips_options::getBoolParameter("PRESOLVE_SINGLETON_COLUMNS") )
+      presolvers.push_back( new StochPresolverSingletonColumns(*presData, *sorigprob) );
 }
 
 StochPresolver::~StochPresolver()
@@ -77,18 +79,19 @@ Data* StochPresolver::presolve()
 {
    if( my_rank == 0 )
       std::cout << "start stoch presolving" << std::endl;
+   presData->printRowColStats();
 
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
    assert( sorigprob->isRootNodeInSync() );
    assert( presData->getPresProb().isRootNodeInSync() );
 
-   if( print_problem)
+   if( print_problem )
       sorigprob->writeToStreamDense(std::cout);
 
    /* initialize model clean up (necessary presolver) */
    StochPresolverModelCleanup presolverCleanup(*presData, *sorigprob);
 
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
       std::cout <<"--- Before Presolving: " << std::endl;
    presolverCleanup.countRowsCols();
 
@@ -108,7 +111,7 @@ Data* StochPresolver::presolve()
    // before the finalize call fix all empty rows and columns not yet fixed
    presolverCleanup.applyPresolving();
    
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
    if( my_rank == 0 )
@@ -124,6 +127,21 @@ Data* StochPresolver::presolve()
 
    if( print_problem )
       finalPresData->writeToStreamDense(std::cout);
+
+   if( write_presolved_problem )
+   {
+      std::ofstream of("presolved.mps");
+
+      if( of.is_open() )
+         finalPresData->writeMPSformat(of);
+      else
+         if( my_rank == 0 )
+            std::cout << "Could not open presolved.mps to write out presolved problem!!" << std::endl;
+   }
+
+   if( my_rank == 0 )
+      std::cout << "end stoch presolving" << std::endl;
+   presData->printRowColStats();
 
    return finalPresData;
 }

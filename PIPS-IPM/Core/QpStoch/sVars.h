@@ -32,8 +32,12 @@ public:
 
   sVars(const sVars& vars);
 
+  sVars(const sVars& vars, OoqpVectorHandle ixlow_, OoqpVectorHandle ixupp_,
+        OoqpVectorHandle iclow_, OoqpVectorHandle icupp_);
+
   virtual ~sVars();
   
+  bool isRootNodeInSync() const;
   virtual void sync();
 protected:
   void createChildren();

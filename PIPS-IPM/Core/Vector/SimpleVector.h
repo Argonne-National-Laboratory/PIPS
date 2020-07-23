@@ -70,12 +70,14 @@ public:
   void absmaxVecUpdate(OoqpVectorBase<T>& absmaxvec) const override;
   void absmin( T& m) const override;
   void absminNonZero(T& m, T zero_eps) const override;
+  int getNnzs() const override;
 
   void componentMult( const OoqpVectorBase<T>& v ) override;
   void scalarMult( T num) override;
   virtual void printSolutionToStdErr( OoqpVectorBase<T>& v );
   void componentDiv( const OoqpVectorBase<T>& v ) override;
   bool componentEqual( const OoqpVectorBase<T>& vec, T tol) const override;
+  bool componentNotEqual( const T val, const T tol ) const override;
   void writeToStream( std::ostream& out ) const override;
   void writeToStreamAll( std::ostream& out ) const override;
   void writeToStreamAllStringStream( std::stringstream& sout ) const override;

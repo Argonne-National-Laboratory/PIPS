@@ -698,7 +698,7 @@ void sLinsysRootAug::addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, 
          }
       }
 
-      assert(pHt == krowHt[i + 1] || jcolHt[pHt] >= endCol); // asserts that no entry of Ht has been missed
+      assert(pHt == krowHt[i + 1] || jcolHt[pHt] + nHtOffsetCols >= endCol); // asserts that no entry of Ht has been missed
    }
 }
 

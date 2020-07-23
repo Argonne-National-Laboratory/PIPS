@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cstring>
 #include <iostream>
+#include <iomanip>
 #include <limits>
 #include <math.h>
 #include "StochVector_fwd.h"
@@ -1068,6 +1069,38 @@ bool StochVectorBase<T>::componentEqual( const OoqpVectorBase<T>& v_, T tol) con
 }
 
 template<typename T>
+bool StochVectorBase<T>::componentNotEqual( const T val, const T tol ) const
+{
+   bool not_equal = true;
+   not_equal = (not_equal && vec->componentNotEqual( val, tol ) );
+   if( !not_equal )
+   {
+      if(parent == NULL)
+        std::cout << "equal in root node non-link" << std::endl;
+      return not_equal;
+   }
+
+   if( vecl )
+      not_equal = (not_equal && vecl->componentNotEqual(val, tol));
+   if( !not_equal )
+   {
+      std::cout << "equal in root node link" << std::endl;
+      return not_equal;
+   }
+
+   for(size_t child = 0; child < children.size(); child++)
+   {
+      not_equal = (not_equal && children[child]->componentNotEqual(val, tol));
+      if( !not_equal )
+      {
+         std::cout << "equal in root child node " << child << std::endl;
+         return not_equal;
+      }
+   }
+   return not_equal;
+}
+
+template<typename T>
 void StochVectorBase<T>::scalarMult( T num )
 {
   vec->scalarMult(num);
@@ -1714,6 +1747,25 @@ void StochVectorBase<T>::removeEntries( const OoqpVectorBase<int>& select )
 }
 
 template<typename T>
+int StochVectorBase<T>::getNnzs() const
+{
+   int non_zeros = 0;
+
+   for( size_t it = 0; it < children.size(); it++ )
+      non_zeros += children[it]->getNnzs();
+
+   if( iAmDistrib )
+      PIPS_MPIgetSumInPlace(non_zeros, mpiComm);
+
+   non_zeros += vec->getNnzs();
+
+   if( vecl )
+      non_zeros += vecl->getNnzs();
+
+   return non_zeros;
+}
+
+template<typename T>
 void StochVectorBase<T>::permuteVec0Entries(const std::vector<unsigned int>& permvec)
 {
    dynamic_cast<SimpleVectorBase<T>*>(vec)->permuteEntries(permvec);
@@ -1844,8 +1896,11 @@ bool StochVectorBase<T>::isRootNodeInSync() const
 
    for( int i = 0; i < count; ++i )
    {
-      if( !PIPSisEQ(sendbuf[i], recvbuf[i]) && (sendbuf[i] != recvbuf[i]) )
+      if( !PIPSisEQ(sendbuf[i], recvbuf[i]) && (sendbuf[i] != recvbuf[i]) && !(std::isnan(sendbuf[i]) && std::isnan(recvbuf[i])) )
       {
+//         std::cout << std::setprecision(16);
+//         std::cout << sendbuf[i] << " != " << recvbuf[i] << std::endl;
+
          /* someone else had a higher value here */
          in_sync = false;
       }
