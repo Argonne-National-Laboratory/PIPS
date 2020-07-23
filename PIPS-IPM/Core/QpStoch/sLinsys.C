@@ -785,7 +785,7 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
 
    const int withF = (locmyl > 0);
    const int withG = (locmzl > 0);
-   const int blocksizemax = 1; // todo nThreads, or 64?
+   const int blocksizemax = 2; // todo nThreads, or 64?
 
    assert(nThreads >= 1);
    //std::cout << "blocksizemax " << blocksizemax << std::endl;

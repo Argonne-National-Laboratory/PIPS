@@ -53,9 +53,9 @@ PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 	  std::cout << "PardisoSolver::PardisoSolver (sparse input)" << std::endl;
 #endif
   Msys = sgm;
-  Mdsys=nullptr;
+  Mdsys = nullptr;
   n = sgm->size();
-  nnz=sgm->numberOfNonZeros();
+  nnz = sgm->numberOfNonZeros();
 
   krowM = new int[n+1];
   jcolM = new int[nnz];
@@ -141,7 +141,6 @@ void PardisoSolver::firstCall()
 
    if( Msys )
    {
-
       //get the matrix in upper triangular
       Msys->getStorageRef().transpose(krowM, jcolM, M);
 
@@ -158,7 +157,7 @@ void PardisoSolver::firstCall()
                idxDiagMsys = idx;
                break;
             }
-         assert(idxDiagMsys>=0);
+         assert(idxDiagMsys >= 0);
          //must have all diagonals entries
 
          // aug - find the index in jcol for the diagonal (r,r)
@@ -265,7 +264,8 @@ void PardisoSolver::setIparm(int* iparm){
 
 }
 
-bool PardisoSolver::iparmUnchanged(){
+bool PardisoSolver::iparmUnchanged()
+{
 
    bool same = true;
    bool print = true;
@@ -273,7 +273,7 @@ bool PardisoSolver::iparmUnchanged(){
    int iparm_compare[64];
    setIparm(iparm_compare);
 
-   static const int arr[] = { 1, 7, 10, 12, 23, 24 };
+   static const int arr[] = { 1, 7, 10, 12 };
    vector<int> to_compare(arr, arr + sizeof(arr) / sizeof(arr[0]) );
 
    for(int i = 0; i < 64; ++i)
@@ -299,7 +299,6 @@ void PardisoSolver::diagonalChanged( int /* idiag */, int /* extent */ )
   this->matrixChanged();
 }
 
-extern double g_iterNumber;
 void PardisoSolver::matrixChanged()
 {
    if( first )
