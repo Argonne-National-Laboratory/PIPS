@@ -28,18 +28,18 @@ StochPresolverColumnFixation::~StochPresolverColumnFixation()
 bool StochPresolverColumnFixation::applyPresolving()
 {
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyActivities());
-   assert(presData.verifyNnzcounters());
+   assert(presData.presDataInSync());
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1)
    {
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
       std::cout << "--- Before column fixation presolving:" << std::endl;
    }
    countRowsCols();
 #endif
+
+   presData.startColumnFixation();
 
    int fixed_columns_run = 0;
 
@@ -126,6 +126,7 @@ bool StochPresolverColumnFixation::applyPresolving()
    }
 
    /* communicate the local changes */
+   presData.allreduceAndApplyBoundChanges();
    presData.allreduceAndApplyLinkingRowActivities();
    presData.allreduceAndApplyNnzChanges();
    presData.allreduceObjOffset();
@@ -134,19 +135,20 @@ bool StochPresolverColumnFixation::applyPresolving()
    fixed_columns += fixed_columns_run;
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1)
       std::cout << "\tFixed columns during column fixation: " << fixed_columns << std::endl;
-   if( my_rank == 0 )
+   else if( my_rank == 0 && verbosity == 1)
+      std::cout << "Colfix:\t removed " << fixed_columns << " columns" << std::endl;
+
+   if( my_rank == 0 && verbosity > 1)
       std::cout << "--- After column fixation presolving:" << std::endl;
    countRowsCols();
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1)
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyActivities());
-   assert(presData.verifyNnzcounters());
+   assert(presData.presDataInSync());
 
    if( fixed_columns_run != 0)
       return true;

@@ -1783,25 +1783,31 @@ int StochGenMatrix::appendRow( const StochGenMatrix& matrix_row, int child, int 
 };
 
 /* y += alpha RowAt(child, row, linking) */
-void StochGenMatrix::axpyWithRowAt( double alpha, StochVector& y, int child, int row, bool linking) const
+void StochGenMatrix::axpyWithRowAt( double alpha, StochVector* y, SimpleVector* y_linking, int child, int row, bool linking) const
 {
+   assert( y );
    assert(-1 <= child && child < static_cast<int>(children.size()));
-   assert(y.children.size() == children.size());
+   assert(y->children.size() == children.size());
 
    /* go through all available children and calculate y += alpha * rowAt(row) */
    if( linking )
    {
-      assert(Blmat);
-      assert(y.vec);
-      Blmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.vec), row);
+      assert( Blmat );
+      if( y_linking )
+         Blmat->axpyWithRowAt(alpha, *y_linking, row);
+      else
+      {
+         assert( y->vec );
+         Blmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y->vec), row);
+      }
 
       for( unsigned int i = 0; i < children.size(); ++i )
       {
          if( !children[i]->isKindOf(kStochGenDummyMatrix) )
          {
             assert(children[i]->Blmat);
-            assert(y.children[i]->vec);
-            children[i]->Blmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.children[i]->vec), row);
+            assert(y->children[i]->vec);
+            children[i]->Blmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y->children[i]->vec), row);
          }
       }
    }
@@ -1810,21 +1816,100 @@ void StochGenMatrix::axpyWithRowAt( double alpha, StochVector& y, int child, int
       if( child == -1 )
       {
          assert(Bmat);
-         assert(y.vec);
-         Bmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.vec), row);
+         if( y_linking )
+            Bmat->axpyWithRowAt(alpha, *y_linking, row);
+         else
+         {
+            assert(y->vec);
+            Bmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y->vec), row);
+         }
       }
       else
       {
          assert(children[child]->Amat);
          assert(children[child]->Bmat);
-         assert(y.vec);
-         assert(y.children[child]->vec);
-         children[child]->Amat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.vec), row);
-         children[child]->Bmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.children[child]->vec), row);
+
+         assert(y->children[child]->vec);
+         children[child]->Bmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y->children[child]->vec), row);
+
+         if( y_linking )
+            children[child]->Amat->axpyWithRowAt(alpha, *y_linking, row);
+         else
+         {
+            assert(y->vec);
+            children[child]->Amat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y->vec), row);
+         }
       }
    }
 }
 
+void StochGenMatrix::axpyWithRowAtPosNeg( double alpha, StochVector* y_pos, SimpleVector* y_link_pos,
+      StochVector* y_neg, SimpleVector* y_link_neg, int child, int row, bool linking ) const
+{
+   assert( y_pos && y_neg );
+   assert( (y_link_neg && y_link_pos) || (!y_link_neg && !y_link_pos) );
+   assert(-1 <= child && child < static_cast<int>(children.size()));
+   assert(y_neg->children.size() == children.size());
+   assert(y_pos->children.size() == children.size());
+
+   /* go through all available children and calculate y += alpha * rowAt(row) */
+   if( linking )
+   {
+      assert( Blmat );
+      if( y_link_pos )
+         Blmat->axpyWithRowAtPosNeg(alpha, *y_link_pos, *y_link_neg, row);
+      else
+      {
+         assert( y_pos->vec );
+         assert( y_neg->vec );
+         Blmat->axpyWithRowAtPosNeg(alpha, dynamic_cast<SimpleVector&>(*y_pos->vec), dynamic_cast<SimpleVector&>(*y_neg->vec), row);
+      }
+
+      for( unsigned int i = 0; i < children.size(); ++i )
+      {
+         if( !children[i]->isKindOf(kStochGenDummyMatrix) )
+         {
+            assert(children[i]->Blmat);
+            assert(y_pos->children[i]->vec);
+            assert(y_neg->children[i]->vec);
+            children[i]->Blmat->axpyWithRowAtPosNeg(alpha, dynamic_cast<SimpleVector&>(*y_pos->children[i]->vec), dynamic_cast<SimpleVector&>(*y_neg->children[i]->vec), row);
+         }
+      }
+   }
+   else
+   {
+      if( child == -1 )
+      {
+         assert(Bmat);
+         if( y_link_pos )
+            Bmat->axpyWithRowAtPosNeg(alpha, *y_link_pos, *y_link_neg, row);
+         else
+         {
+            assert(y_pos->vec);
+            assert(y_neg->vec);
+            Bmat->axpyWithRowAtPosNeg(alpha, dynamic_cast<SimpleVector&>(*y_pos->vec), dynamic_cast<SimpleVector&>(*y_neg->vec), row);
+         }
+      }
+      else
+      {
+         assert(children[child]->Amat);
+         assert(children[child]->Bmat);
+
+         assert(y_pos->children[child]->vec);
+         assert(y_neg->children[child]->vec);
+         children[child]->Bmat->axpyWithRowAtPosNeg(alpha, dynamic_cast<SimpleVector&>(*y_pos->children[child]->vec), dynamic_cast<SimpleVector&>(*y_neg->children[child]->vec), row);
+
+         if( y_link_pos )
+            children[child]->Amat->axpyWithRowAtPosNeg(alpha, *y_link_pos, *y_link_neg, row);
+         else
+         {
+            assert(y_pos->vec);
+            assert(y_neg->vec);
+            children[child]->Amat->axpyWithRowAtPosNeg(alpha, dynamic_cast<SimpleVector&>(*y_pos->vec), dynamic_cast<SimpleVector&>(*y_neg->vec), row);
+         }
+      }
+   }
+}
 
 double StochGenMatrix::localRowTimesVec(const StochVector &vec, int child, int row, bool linking) const
 {

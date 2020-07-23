@@ -63,7 +63,9 @@ class PIPSIpmInterface
   std::vector<double> getSecondStageDualRowSolution(int scen) const;
 
   void postsolveComputedSolution();
-
+private:
+  void printComplementarityResiduals(const sVars& vars) const;
+public:
   std::vector<double> gatherEqualityConsValues();
   std::vector<double> gatherInequalityConsValues();
 
@@ -77,6 +79,7 @@ class PIPSIpmInterface
   FORMULATION * factory;
   PreprocessFactory * prefactory;
   sData *        data;       // possibly presolved data
+  sData *        dataUnperm; // data after presolve before permutation and scaling
   sData *        origData;   // original data
   sVars *        vars;
   sVars *        unscaleUnpermVars;
@@ -101,9 +104,9 @@ class PIPSIpmInterface
 
 
 template<class FORMULATION, class IPMSOLVER>
-PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, MPI_Comm comm) :
-   unscaleUnpermVars(nullptr), postsolvedVars(nullptr),
-  unscaleUnpermResids(nullptr), postsolvedResids(nullptr), comm(comm), ran_solver(false)
+PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, MPI_Comm comm) : prefactory(nullptr), dataUnperm(nullptr), origData(nullptr),
+   unscaleUnpermVars(nullptr), postsolvedVars(nullptr), unscaleUnpermResids(nullptr), postsolvedResids(nullptr), presolver(nullptr),
+   postsolver(nullptr), comm(comm), ran_solver(false)
 {
 #ifdef TIMING
   int mype;
@@ -212,6 +215,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("data created\n");
 #endif
 
+  dataUnperm = data->cloneFull();
   if( pips_options::getBoolParameter("PARDISO_FOR_GLOBAL_SC") )
      data->activateLinkStructureExploitation();
 
@@ -375,6 +379,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
   delete postsolvedVars;
   delete unscaleUnpermVars;
   delete vars;
+  delete dataUnperm;
   delete data;
   delete postsolver;
   delete presolver;
@@ -387,16 +392,18 @@ template<class FORMULATION, class IPMSOLVER>
 void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getVarsUnscaledUnperm()
 {
   assert(unscaleUnpermVars == nullptr);
+  assert(dataUnperm);
+
   if(!ran_solver)
     throw std::logic_error("Must call go() and start solution process before trying to retrieve unscaled unpermutated solution");
   if( scaler )
   {
     sVars* unscaled_vars = dynamic_cast<sVars*>(scaler->getVariablesUnscaled(*vars));
-    unscaleUnpermVars = data->getVarsUnperm(*unscaled_vars);
+    unscaleUnpermVars = data->getVarsUnperm(*unscaled_vars, *dataUnperm);
     delete unscaled_vars;
   }
   else
-    unscaleUnpermVars = data->getVarsUnperm(*vars);
+    unscaleUnpermVars = data->getVarsUnperm(*vars, *dataUnperm);
 
 }
 
@@ -404,18 +411,18 @@ template<class FORMULATION, class IPMSOLVER>
 void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getResidsUnscaledUnperm()
 {
   assert(unscaleUnpermResids == nullptr);
+  assert(dataUnperm);
 
   if(!ran_solver)
     throw std::logic_error("Must call go() and start solution process before trying to retrieve unscaled unpermutated residuals");
-
   if( scaler )
   {
     sResiduals* unscaled_resids = dynamic_cast<sResiduals*>(scaler->getResidualsUnscaled(*resids));
-    unscaleUnpermResids = data->getResidsUnperm(*unscaled_resids);
+    unscaleUnpermResids = data->getResidsUnperm(*unscaled_resids, *dataUnperm);
     delete unscaled_resids;
   }
   else
-    unscaleUnpermResids = data->getResidsUnperm(*resids);
+    unscaleUnpermResids = data->getResidsUnperm(*resids, *dataUnperm);
 }
 
 
@@ -715,8 +722,52 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDual
 }
 
 template<class FORMULATION, class IPMSOLVER>
+void PIPSIpmInterface<FORMULATION, IPMSOLVER>::printComplementarityResiduals(const sVars& svars) const
+{
+  const int my_rank = PIPS_MPIgetRank(MPI_COMM_WORLD);
+
+  /* complementarity residuals before postsolve */
+  OoqpVectorBase<double>* t_clone = svars.t->cloneFull();
+  OoqpVectorBase<double>* u_clone = svars.u->cloneFull();
+  OoqpVectorBase<double>* v_clone = svars.v->cloneFull();
+  OoqpVectorBase<double>* w_clone = svars.w->cloneFull();
+
+  t_clone->componentMult(*svars.lambda);
+  t_clone->selectNonZeros(*svars.iclow);
+
+  u_clone->componentMult(*svars.pi);
+  u_clone->selectNonZeros(*svars.icupp);
+
+  v_clone->componentMult(*svars.gamma);
+  v_clone->selectNonZeros(*svars.ixlow);
+
+  w_clone->componentMult(*svars.phi);
+  w_clone->selectNonZeros(*svars.ixupp);
+
+  const double rlambda_infnorm = t_clone->infnorm();
+  const double rpi_infnorm = u_clone->infnorm();
+  const double rgamma_infnorm = v_clone->infnorm();
+  const double rphi_infnorm = w_clone->infnorm();
+
+  delete t_clone;
+  delete u_clone;
+  delete v_clone;
+  delete w_clone;
+
+  if( my_rank == 0 )
+  {
+     std::cout << " rl norm = " << rlambda_infnorm << std::endl;
+     std::cout << " rp norm = " << rpi_infnorm << std::endl;
+     std::cout << " rg norm = " << rgamma_infnorm << std::endl;
+     std::cout << " rf norm = " << rphi_infnorm << std::endl;
+     std::cout << std::endl;
+  }
+}
+
+template<class FORMULATION, class IPMSOLVER>
 void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
 {
+//  const bool print_resudial = true; // TODO make PIPSoption
   const int my_rank = PIPS_MPIgetRank(comm);
 
   assert(origData);
@@ -746,13 +797,22 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   MPI_Barrier(comm);
   const double t0_postsolve = MPI_Wtime();
 
+  if( my_rank == 0 )
+     std::cout << std::endl << "Residuals before postsolve:" << std::endl;
+  resids->calcresids(data, vars, true);
+  printComplementarityResiduals(*vars);
+
+  if( my_rank == 0 )
+     std::cout << "Residuals after unscaling/permuting:" << std::endl;
+  unscaleUnpermResids->calcresids(dataUnperm, unscaleUnpermVars, true);
+  printComplementarityResiduals(*unscaleUnpermVars);
+
   sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*origData->stochNode);
   callbackTree.switchToOriginalData();
 
   factory->data = origData;
 
   postsolvedVars = dynamic_cast<sVars*>( factory->makeVariables( origData ) );
-
 
   postsolvedResids = dynamic_cast<sResiduals*>( factory->makeResiduals( origData ) );
   postsolver->postsolve(*unscaleUnpermVars, *postsolvedVars);
@@ -769,36 +829,10 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   }
 
   /* compute residuals for postprocessed solution and check for feasibility */
-  postsolvedResids->calcresids(origData, postsolvedVars);
-  
-  const double infnorm_rA_orig = resids->rA->infnorm();
-  const double infnorm_rC_orig = resids->rC->infnorm();
-  const double onenorm_rA_orig = resids->rA->onenorm();
-  const double onenorm_rC_orig = resids->rC->onenorm();
+  if( my_rank == 0 )
+     std::cout << std::endl << "Residuals after postsolve:" << std::endl;
+  postsolvedResids->calcresids(origData, postsolvedVars, true);
 
-  const double infnorm_rA = unscaleUnpermResids->rA->infnorm();
-  const double infnorm_rC = unscaleUnpermResids->rC->infnorm();
-  const double onenorm_rA = unscaleUnpermResids->rA->onenorm();
-  const double onenorm_rC = unscaleUnpermResids->rC->onenorm();
-
-  const double infnorm_rA_postsolved = postsolvedResids->rA->infnorm();
-  const double infnorm_rC_postsolved = postsolvedResids->rC->infnorm();
-  const double onenorm_rA_postsolved = postsolvedResids->rA->onenorm();
-  const double onenorm_rC_postsolved = postsolvedResids->rC->onenorm();
-
-  if( my_rank == 0)
-  {
-    std::cout << "\t||.||_inf\t ||.||_1" << std::endl;
-    std::cout << "Residuals of reduced problem:" << std::endl;
-    std::cout << "rA:\t" << infnorm_rA_orig << "\t" << onenorm_rA_orig << std::endl;
-    std::cout << "rC:\t" << infnorm_rC_orig << "\t" << onenorm_rC_orig << std::endl;
-    std::cout << "Residuals after unscaling:" << std::endl;
-    std::cout << "rA:\t" << infnorm_rA << "\t" << onenorm_rA << std::endl;
-    std::cout << "rC:\t" << infnorm_rC << "\t" << onenorm_rC << std::endl; 
-    std::cout << "Residuals after postsolve:" << std::endl;
-    std::cout << "rA:\t" << infnorm_rA_postsolved << "\t" << onenorm_rA_postsolved << std::endl;
-    std::cout << "rC:\t" << infnorm_rC_postsolved << "\t" << onenorm_rC_postsolved << std::endl; 
-  }
+  printComplementarityResiduals(*postsolvedVars);
 }
-
 #endif

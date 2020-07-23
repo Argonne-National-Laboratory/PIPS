@@ -29,6 +29,7 @@ private:
 
    std::vector<int> local_linking_column_for_row_in_proc;
    std::vector<INDEX> cols;
+   std::vector<double> coeffs;
 
 
    bool removeSingletonColumn( const INDEX& col );
@@ -39,6 +40,7 @@ private:
    bool findRowForSingletonColumnInMatrix( const SparseStorageDynamic& mat, int& row, const int& col );
 
    void checkColImpliedFree( const INDEX& col, const INDEX& row, bool& lb_implied_free, bool& ub_implied_free );
+   void resetArrays();
 };
 
 

@@ -84,7 +84,7 @@ extern "C" {
 }
 #endif
 
-#define SHRINK_SC  // shrink the Schur complement (i.e. remove empty rows/columns)
+#define SHRINK_SC
 
 PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
 {
@@ -217,6 +217,24 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
   C.getSize(nC,nx); nnz += C.numberOfNonZeros();
   const int Msize = Msys->size();
 
+  if( nR == 0 )
+     assert(R.numberOfNonZeros() == 0);
+  if( nA == 0 )
+     assert(A.numberOfNonZeros() == 0);
+  if( nC == 0 )
+     assert(C.numberOfNonZeros() == 0);
+  if( nF == 0 )
+     assert(F.numberOfNonZeros() == 0);
+  if( nG == 0 )
+     assert(G.numberOfNonZeros() == 0);
+
+  assert( F.getStorageRef().isValid() );
+  assert( G.getStorageRef().isValid() );
+  assert( R.getStorageRef().isValid() );
+  assert( A.getStorageRef().isValid() );
+  assert( C.getStorageRef().isValid() );
+  assert( Msys->getStorageRef().isValid() );
+
   // todo not implemented yet
   assert(R.numberOfNonZeros() == 0);
 
@@ -256,13 +274,12 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
   memcpy(MAug,    Msys->getStorageRef().M,     sizeof(double)*Msys->numberOfNonZeros());
 
 
-  int nnzIt=Msys->numberOfNonZeros();
-
+  int nnzIt = Msys->numberOfNonZeros();
   //
   //put A and C block in the augmented system as At and Ct in the lower triangular part
   //
 
-  if( nA > 0 || nC > 0 )
+  if( nA > 0 || nC > 0 || nF > 0 || nG > 0 )
   {
     const bool putA = A.numberOfNonZeros() > 0;
     const bool putC = C.numberOfNonZeros() > 0;
@@ -323,6 +340,7 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
     }
     krowAug[row]=nnzIt;
   }
+  assert( nnzIt = Msys->numberOfNonZeros() + A.numberOfNonZeros() + C.numberOfNonZeros() + nx );
 
   //
   // add linking constraint matrices F and G
@@ -404,7 +422,7 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
         krowAug[row]=nnzIt;
      }
   }
-
+  assert( nnzIt = Msys->numberOfNonZeros() + A.numberOfNonZeros() + C.numberOfNonZeros() + F.numberOfNonZeros() + G.numberOfNonZeros() + nSC );
 
 #ifdef SHRINK_SC
 

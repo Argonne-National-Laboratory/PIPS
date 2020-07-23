@@ -27,13 +27,39 @@ int StochRowStorage::storeRow( const INDEX& row, const StochGenMatrix& matrix_ro
 
 /* TODO : it would probably be nice to have something like a StochVectorView that one can create at this point and then use like a normal StochVec.. */
 /** y = beta * y + alpha * stored */
-void StochRowStorage::axpyAtRow(double beta, StochVector &y, double alpha, const INDEX& row) const
+/** if y_linking is defined the result of beta * y + alpha * stored for linking variables will be put there */
+void StochRowStorage::axpyAtRow(double beta, StochVector* y, SimpleVector* y_linking, double alpha, const INDEX& row) const
 {
-   assert(row.isRow());
-   if(!PIPSisEQ(beta, 1.0))
-      y.scale(beta);
+   assert( row.isRow() );
+   assert( y );
+   if( !PIPSisEQ(beta, 1.0) )
+   {
+      y->scale(beta);
+      if( y_linking )
+         y_linking->scale(beta);
+   }
 
-   row_storage->axpyWithRowAt(beta, y, row.getNode(), row.getIndex(), row.getLinking());
+   row_storage->axpyWithRowAt(alpha, y, y_linking, row.getNode(), row.getIndex(), row.getLinking());
+}
+
+void StochRowStorage::axpyAtRowPosNeg(double beta, StochVector* y_pos, SimpleVector* y_link_pos, StochVector* y_neg, SimpleVector* y_link_neg, double alpha, const INDEX& row) const
+{
+   assert( row.isRow() );
+   assert( (y_link_pos && y_link_neg) || (!y_link_pos && !y_link_neg) );
+
+   if( !PIPSisEQ(beta, 1.0) )
+   {
+      y_pos->scale(beta);
+      y_neg->scale(beta);
+
+      if( y_link_pos )
+      {
+         y_link_pos->scale(beta);
+         y_link_neg->scale(beta);
+      }
+   }
+
+   row_storage->axpyWithRowAtPosNeg(alpha, y_pos, y_link_pos, y_neg, y_link_neg, row.getNode(), row.getIndex(), row.getLinking());
 }
 
 double StochRowStorage::multRowTimesVec( const INDEX& row, const StochVector& vec ) const
@@ -59,7 +85,7 @@ double StochRowStorage::getRowCoefficientAtColumn( const INDEX& row, const INDEX
    if( col.getNode() == -1 && row.getNode() != -1)
       block_col = A_MAT;
 
-   const SparseStorageDynamic& mat = *getSparseGenMatrixFromStochMat(*row_storage, row.getNode(), block_col )->getStorageDynamic();
+   const SparseStorageDynamic& mat = *getSparseGenMatrixFromStochMat(*row_storage, block_col == BL_MAT ? col.getNode() : row.getNode(), block_col )->getStorageDynamic();
 
    const int row_start = mat.getRowPtr(row.getIndex()).start;
    const int row_end = mat.getRowPtr(row.getIndex()).end;

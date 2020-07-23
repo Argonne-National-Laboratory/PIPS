@@ -120,7 +120,7 @@ $ifthen %METHOD%==PIPS
 
 
 *For creation of gdx files:
-$ echo jacobian example_break_singletonrows.gdx > convertd.opt
+$ echo jacobian example_breakSingletonRows.gdx > convertd.opt
   option lp=convertd;
   m.optfile = 1;
   solve m use lp min z;

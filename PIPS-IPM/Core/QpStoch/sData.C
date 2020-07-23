@@ -10,7 +10,7 @@
 #include "pipsport.h"
 
 static
-std::vector<unsigned int> getInversePermuation(const std::vector<unsigned int>& perm)
+std::vector<unsigned int> getInversePermutation(const std::vector<unsigned int>& perm)
 {
    size_t size = perm.size();
    std::vector<unsigned int> perm_inv(size, 0);
@@ -1530,13 +1530,13 @@ void sData::permuteLinkingVars()
 }
 
 
-sVars* sData::getVarsUnperm(const sVars& vars) const
+sVars* sData::getVarsUnperm(const sVars& vars, const sData& unpermData) const
 {
    const std::vector<unsigned int> perm_inv_link_vars = this->getLinkVarsPermInv();   
    const std::vector<unsigned int> perm_inv_link_cons_eq = this->getLinkConsEqPermInv();   
    const std::vector<unsigned int> perm_inv_link_cons_ineq = this->getLinkConsIneqPermInv();   
 
-   sVars* unperm_vars = new sVars(vars);
+   sVars* unperm_vars = new sVars(vars, unpermData.ixlow, unpermData.ixupp, unpermData.iclow, unpermData.icupp);
 
    if( perm_inv_link_vars.size() != 0 )
    {
@@ -1565,13 +1565,13 @@ sVars* sData::getVarsUnperm(const sVars& vars) const
    return unperm_vars;
 }
 
-sResiduals* sData::getResidsUnperm(const sResiduals& resids) const
+sResiduals* sData::getResidsUnperm(const sResiduals& resids, const sData& unpermData) const
 {
    const std::vector<unsigned int> perm_inv_link_vars = this->getLinkVarsPermInv();   
    const std::vector<unsigned int> perm_inv_link_cons_eq = this->getLinkConsEqPermInv();   
    const std::vector<unsigned int> perm_inv_link_cons_ineq = this->getLinkConsIneqPermInv();   
 
-   sResiduals* unperm_resids = new sResiduals(resids);
+   sResiduals* unperm_resids = new sResiduals(resids, unpermData.ixlow, unpermData.ixupp, unpermData.iclow, unpermData.icupp );
 
    if( perm_inv_link_vars.size() != 0 )
    {
@@ -1590,9 +1590,9 @@ sResiduals* sData::getResidsUnperm(const sResiduals& resids) const
    if( perm_inv_link_cons_ineq.size() != 0 )
    {
       dynamic_cast<StochVector&>(*unperm_resids->rC).permuteLinkingEntries(perm_inv_link_cons_ineq); 
-      dynamic_cast<StochVector&>(*unperm_resids->rz).permuteLinkingEntries(perm_inv_link_cons_ineq);   
       dynamic_cast<StochVector&>(*unperm_resids->rt).permuteLinkingEntries(perm_inv_link_cons_ineq);   
       dynamic_cast<StochVector&>(*unperm_resids->ru).permuteLinkingEntries(perm_inv_link_cons_ineq);   
+      dynamic_cast<StochVector&>(*unperm_resids->rz).permuteLinkingEntries(perm_inv_link_cons_ineq);
       dynamic_cast<StochVector&>(*unperm_resids->rlambda).permuteLinkingEntries(perm_inv_link_cons_ineq);   
       dynamic_cast<StochVector&>(*unperm_resids->rpi).permuteLinkingEntries(perm_inv_link_cons_ineq);   
    }
@@ -1604,11 +1604,20 @@ void sData::activateLinkStructureExploitation()
 {
    if( useLinkStructure )
       return;
-
    useLinkStructure = true;
 
-   const int nx0 = getLocalnx();
    const int myrank = PIPS_MPIgetRank(MPI_COMM_WORLD);
+
+   /* don't attempt to use linking structure when there actually is no linking constraints */
+   if( stochNode->myl() == 0 && stochNode->mzl() == 0 )
+   {
+      useLinkStructure = false;
+      if( myrank == 0 )
+         std::cout << "no linking constraints so no linking structure found" << std::endl;
+      return;
+   }
+
+   const int nx0 = getLocalnx();
 
    const StochGenMatrix& Astoch = dynamic_cast<const StochGenMatrix&>(*A);
    const StochGenMatrix& Cstoch = dynamic_cast<const StochGenMatrix&>(*C);
@@ -1878,15 +1887,15 @@ std::vector<unsigned int> sData::getLinkVarsPerm() const
 }
 std::vector<unsigned int> sData::getLinkVarsPermInv() const
 {
-   return getInversePermuation(linkVarsPermutation);
+   return getInversePermutation(linkVarsPermutation);
 }
 std::vector<unsigned int> sData::getLinkConsEqPermInv() const
 {
-   return getInversePermuation(linkConsPermutationA);
+   return getInversePermutation(linkConsPermutationA);
 }
 std::vector<unsigned int> sData::getLinkConsIneqPermInv() const
 {
-   return getInversePermuation(linkConsPermutationC);
+   return getInversePermutation(linkConsPermutationC);
 }
 
 int sData::getLocalnx()
@@ -2353,13 +2362,6 @@ int sData::n2linkRowsIneq() const
 // is root node data of sData object same on all procs?
 bool sData::isRootNodeInSync() const
 {
-   int my_rank, world_size;
-   MPI_Comm_rank( dynamic_cast<const StochGenMatrix&>(*A).mpiComm, &my_rank);
-   MPI_Comm_size( dynamic_cast<const StochGenMatrix&>(*A).mpiComm, &world_size);
-
-   if(my_rank == 0)
-      std::cout << "checking if root node data over all processes is in sync" << std::endl;
-
    bool in_sync = true;
 
    /* matrix Q */
@@ -2451,9 +2453,6 @@ bool sData::isRootNodeInSync() const
 
    /* sacle sc */
    // todo
-
-   if(my_rank == 0 && in_sync)
-      std::cout << "root node data over all processes is in sync" << std::endl;
 
    return in_sync;
 }

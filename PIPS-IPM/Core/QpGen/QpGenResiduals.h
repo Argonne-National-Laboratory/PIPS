@@ -68,7 +68,7 @@ public:
 
   virtual ~QpGenResiduals();
   
-  void calcresids(Data *problem, Variables *vars) override;
+  void calcresids(Data *problem, Variables *vars, bool print_resids = false) override;
 
   virtual void add_r3_xz_alpha(Variables *vars, double alpha);
 

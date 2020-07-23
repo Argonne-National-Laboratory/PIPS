@@ -112,6 +112,7 @@ public:
 
   double rowTimesVec( const double* vec, int length, int row) const;
   void axpyWithRowAt( double alpha, double* y, int length, int row) const;
+  void axpyWithRowAtPosNeg( double alpha, double * y_pos, double* y_neg, int length, int row) const;
 
   void scaleRow( int row, double factor );
 

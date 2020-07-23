@@ -58,6 +58,10 @@ message(STATUS "WITH_MUMPS_LEAF=${WITH_MUMPS_LEAF}")
 option(WITH_MUMPS_ROOT "Use MUMPS (if available) for (global) Schur complement at root" OFF)
 message(STATUS "WITH_MUMPS_ROOT=${WITH_MUMPS_ROOT}")
 
+#compute local schur complement blockwise with pardiso
+option(WITH_PARDISO_BLOCKSC "Use Pardiso (if available) for comuting the Schur complement in blocks" OFF)
+message(STATUS "WITH_PARDISO_BLOCKSC=${WITH_PARDISO_BLOCKSC}")
+
 option(BUILD_GDX_SOURCE "Build GDX Source" OFF)
 message(STATUS "BUILD_GDX_SOURCE=${BUILD_GDX_SOURCE}")
 
@@ -456,6 +460,9 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
 
   if(HAVE_PARDISO)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PARDISO")
+    if(WITH_PARDISO_BLOCKSC)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPARDISO_BLOCKSC")
+    endif(WITH_PARDISO_BLOCKSC)    
   else(HAVE_PARDISO)
     set(PARDISO_LIBRARY "")
   endif(HAVE_PARDISO)

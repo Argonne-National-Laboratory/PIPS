@@ -35,6 +35,10 @@ private:
    const bool reset_free_variables_after_presolve;
    /** should the problem be written to std::cout before and after presolve */
    const bool print_problem;
+   /** should the presolved problem be written out in MPS format */
+   const bool write_presolved_problem;
+
+   const int verbosity;
 
    PresolveData* presData;
    std::vector<StochPresolverBase*> presolvers;

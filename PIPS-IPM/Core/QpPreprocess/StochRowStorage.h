@@ -20,8 +20,10 @@ public:
 
    int storeRow( const INDEX& row, const StochGenMatrix& matrix_row);
 
-   /** y = beta * y + alpha * stored */
-   void axpyAtRow(double beta, StochVector &y, double alpha, const INDEX& row ) const;
+   /** y = beta * y + alpha * stored row */
+   void axpyAtRow(double beta, StochVector* y, SimpleVector* y_linking, double alpha, const INDEX& row ) const;
+   void axpyAtRowPosNeg(double beta, StochVector* y_pos, SimpleVector* y_link_pos, StochVector* y_neg, SimpleVector* y_link_neg, double alpha, const INDEX& row ) const;
+
    double multRowTimesVec(const INDEX& row, const StochVector &vec) const;
    double multLinkingRowTimesVecWithoutBl0(int row, const StochVector &vec) const;
 

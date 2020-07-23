@@ -66,15 +66,20 @@ if [ -d "$built_dir" ]; then
   rm -r "$built_dir"
 fi
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 mkdir $built_dir
 cd $built_dir
-cp ../../../../build_pips/PIPSIPMpp.opt ./
+
+if [ -f ../PIPSIPMpp.opt ]; then
+   cp ../PIPSIPMpp.opt ./
+fi
 
 nblocks=$(echo "8760 * $to * (60/$mins) / $tbsize + ((8760*${to}) % ${tbsize} > 0) + 1" | bc)
 echo "$nblocks"
 
-$mygams ../simple4pips.gms --NBREGIONS=$regions --TO=$to --RESOLUTION=\($mins/60\)  --TBSIZE=$tbsize --METHOD=PIPS subsys=../subsysLinux.txt  --SCENBLOCK=-1 > /dev/null
-../../../../build_pips/gmschk -g $GAMSSYSDIR -T -X $nblocks allblocksPips.gdx > /dev/null
+$mygams $DIR/simple4pips.gms --NBREGIONS=$regions --TO=$to --RESOLUTION=\($mins/60\)  --TBSIZE=$tbsize --METHOD=PIPS subsys=$DIR/subsysLinux.txt  --SCENBLOCK=-1 > /dev/null
+$DIR/../../../build_pips/gmschk -g $GAMSSYSDIR -T -X $nblocks allblocksPips.gdx > /dev/null
 
 if [ "$stepLp" = "true" ]; then
   stepLp="stepLp"
@@ -111,6 +116,6 @@ else
 fi
 
 echo "Calling: mpirun -np $np $memcheck ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $scale $stepLp $presolve"
-mpirun -np $np $memcheck ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $scale $stepLp $presolve 2>&1 | tee pips.out
+mpirun -np $np $memcheck $DIR/../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $scale $stepLp $presolve 2>&1 | tee pips.out
 
 
