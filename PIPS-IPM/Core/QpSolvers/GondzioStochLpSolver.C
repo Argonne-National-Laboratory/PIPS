@@ -169,12 +169,17 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       // if we are not in a refactorization - check convergence of bicgstab
       if( !refactorized &&
-            !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
+            !bicgstab_converged && bigcstab_norm_res_rel * 1e2 > resid->residualNorm() / dnorm )
       {
          PIPSdebugMessage("Affine step computation in BiCGStab failed");
 
          bool success = false;
          dynamic_cast<sLinsysRoot*>(sys)->precondSC.decreaseDiagDomBound(success);
+         if( !success )
+         {
+            if( my_rank == 0 )
+               std::cout << "Cannot increase precision in preconditioner anymore" << std::endl;
+         }
 
          step->setToZero();
          do_small_correctors_aggressively = true;
@@ -213,6 +218,11 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
          bool success = false;
          dynamic_cast<sLinsysRoot*>(sys)->precondSC.decreaseDiagDomBound(success);
+         if( !success )
+         {
+            if( my_rank == 0 )
+               std::cout << "Cannot increase precision in preconditioner anymore" << std::endl;
+         }
 
          do_small_correctors_aggressively = true;
          if( my_rank == 0 )
@@ -273,7 +283,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
          // solve for corrector direction
          sys->solve(prob, iterate, corrector_resid, corrector_step); // corrector_step is now delta_m
 
-         if( !bicgstab_converged && bigcstab_norm_res_rel * 1e2 > resid->residualNorm() / dnorm )
+         if( !bicgstab_converged && bigcstab_norm_res_rel * 1e4 > resid->residualNorm() / dnorm )
          {
             PIPSdebugMessage("Gondzio corrector step computation in BiCGStab failed - break corrector loop");
 
@@ -380,6 +390,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       // length using Mehrotra's heuristic.x
       finalStepLength_PD(iterate, step, alpha_pri, alpha_dual);
 
+      // TODO : if bicgstab did not converge we check centering and residuals of faith step
       // actually take the step and calculate the new mu
 
       iterate->saxpy_pd(step, alpha_pri, alpha_dual);

@@ -40,6 +40,7 @@ using namespace std;
 #include "QpGenVars.h"
 #include "QpGenResiduals.h"
 #include "QpGenLinsys.h"
+#include "sLinsysRoot.h"
 
 extern int gOoqpPrintLevel;
 extern double g_iterNumber;
@@ -207,10 +208,18 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
       // if we are not in a refactorization - check convergence of bicgstab
       if( !refactorized &&
-            !bicgstab_converged && bigcstab_norm_res_rel * 1e-2 > resid->residualNorm() / dnorm )
+            !bicgstab_converged &&
+            bigcstab_norm_res_rel * 1e2 >= resid->residualNorm() / dnorm )
       {
          PIPSdebugMessage("Affine step computation in BiCGStab failed");
-         // TODO : improve accuracy in preconditioner
+
+         bool success = false;
+         dynamic_cast<sLinsysRoot*>(sys)->precondSC.decreaseDiagDomBound(success);
+         if( !success )
+         {
+            if( my_rank == 0 )
+               std::cout << "Cannot increase precision in preconditioner anymore" << std::endl;
+         }
 
          // go on, discard the affine step and try a pure centering step
          step->setToZero();
@@ -249,9 +258,16 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
             && bigcstab_norm_res_rel * 1e2 > resid->residualNorm() / dnorm )
       {
          PIPSdebugMessage("1st corrector step computation in BiCGStab failed");
-         do_small_correctors_aggressively = true;
 
-         // TODO : use preconditioner more conservatively
+         bool success = false;
+         dynamic_cast<sLinsysRoot*>(sys)->precondSC.decreaseDiagDomBound(success);
+         if( !success )
+         {
+            if( my_rank == 0 )
+               std::cout << "Cannot increase precision in preconditioner anymore" << std::endl;
+         }
+
+         do_small_correctors_aggressively = true;
          if( my_rank == 0 )
             std::cout << "refactorizing since lin solves failed" << std::endl;
          refactorized = true;
@@ -310,7 +326,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
          // solve for corrector direction
          sys->solve(prob, iterate, corrector_resid, corrector_step);	// corrector_step is now delta_m
 
-         if( !bicgstab_converged && bigcstab_norm_res_rel * 1e2 > resid->residualNorm() / dnorm )
+         if( !bicgstab_converged && bigcstab_norm_res_rel * 1e4 > resid->residualNorm() / dnorm )
          {
             PIPSdebugMessage("Gondzio corrector step computation in BiCGStab failed - break corrector loop");
 
@@ -380,6 +396,8 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
       // We've finally decided on a step direction, now calculate the
       // length using Mehrotra's heuristic.x
+
+      // TODO : if bicgstab did not converge we check centering and residuals of faith step
       alpha = finalStepLength(iterate, step);
 
       // alternatively, just use a crude step scaling factor.
