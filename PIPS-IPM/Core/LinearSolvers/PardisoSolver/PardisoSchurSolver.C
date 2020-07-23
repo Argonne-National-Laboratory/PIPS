@@ -493,22 +493,23 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
 
   n = augSys.size();
 
-  // todo: make it asserts
+#ifndef NDEBUG
   for( int i = 0; i < Msize; i++ )
   {
      if( i != shrinked2orgAug[i] )
      {
         std::cout << "zero row in (1,1) block of Schur complement!" << std::endl;
         std::cout << "i=" << i << " shrinked2orgAug[i]=" << shrinked2orgAug[i] << std::endl;
-        exit(1);
+        MPI_Abort(MPI_COMM_WORLD, 1);
      }
 
      if( Msys->getStorageRef().krowM[i] == Msys->getStorageRef().krowM[i + 1] )
      {
         std::cout << "(2) zero row in (1,1) block of Schur complement!"<< std::endl;
-        exit(1);
+        MPI_Abort(MPI_COMM_WORLD, 1);
      }
    }
+#endif
 
   nSC = augSys.size() - Msize;
 
@@ -694,10 +695,8 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 
         SC0[c_org][r_org] += eltsSC[ci];
 
-#ifndef DENSE_USE_HALF
-        if( r_org != c_org )
-           SC0[r_org][c_org] += eltsSC[ci];
-#endif
+        // NOTE: we only save half of the matrix, so we don't need
+        // if( r_org != c_org ) SC0[r_org][c_org] += eltsSC[ci];
      }
   }
 #else
@@ -710,10 +709,6 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 
         SC0[c][r] += eltsSC[ci];
 
-#ifndef DENSE_USE_HALF
-        if( r != c )
-           SC0[r][c] += eltsSC[ci];
-#endif
      }
   }
 #endif
