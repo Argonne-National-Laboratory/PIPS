@@ -70,8 +70,6 @@ private:
   int nrhs;
   int error;
 
-
-
 #ifndef WITH_MKL_PARDISO
   int num_threads;
   double dparm[64];

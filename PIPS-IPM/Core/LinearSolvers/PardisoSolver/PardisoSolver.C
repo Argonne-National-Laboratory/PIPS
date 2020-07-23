@@ -27,14 +27,12 @@ using namespace std;
 #include <unistd.h>
 #endif
 
+extern int gOoqpPrintLevel;
+
 #ifdef WITH_MKL_PARDISO
 #include "mkl_pardiso.h"
 #include "mkl_types.h"
-#endif
-
-extern int gOoqpPrintLevel;
-
-#ifndef WITH_MKL_PARDISO
+#else
 extern "C" void pardisoinit (void   *, int    *,   int *, int *, double *, int *);
 extern "C" void pardiso     (void   *, int    *,   int *, int *,    int *, int *, 
                   double *, int    *,    int *, int *,   int *, int *,
@@ -50,9 +48,9 @@ extern "C" void pardiso_printstats (int *, int *, double *, int *, int *, int *,
 PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 {
 #ifdef TIMING
-    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-    if(myRank==0)
-	cout << "PardisoSolver::PardisoSolver (sparse input)" << endl;
+   const int myRank = PIPS_MPIgetRank();
+   if( myRank == 0 )
+	  std::cout << "PardisoSolver::PardisoSolver (sparse input)" << std::endl;
 #endif
   Msys = sgm;
   Mdsys=nullptr;
@@ -71,10 +69,13 @@ PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 
 #ifndef WITH_MKL_PARDISO
   num_threads = PIPSgetnOMPthreads();
+  solver = 0; /* sparse direct solver */
 #endif
 
   mtype = -2;
   error = 0;
+  phase = 0;
+  nrhs = -1; // do not specify here
   maxfct = 1; // max number of fact having same sparsity pattern to keep at the same time
   mnum = 1; // actual matrix (as in index from 1 to maxfct)
   msglvl = 0; // messaging level (0 = no output, 1 = statistical info to screen)
@@ -84,9 +85,9 @@ PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 PardisoSolver::PardisoSolver( DenseSymMatrix * m )
 {
 #ifdef TIMING
-    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-    if(myRank==0)
-	cout << "PardisoSolver created (dense input)" << endl;
+   const int myRank = PIPS_MPIgetRank();
+   if( myRank == 0 )
+	  std::cout << "PardisoSolver created (dense input)" << std::endl;
 #endif
   Msys = nullptr;
   Mdsys = m;
@@ -106,10 +107,13 @@ PardisoSolver::PardisoSolver( DenseSymMatrix * m )
 
 #ifndef WITH_MKL_PARDISO
   num_threads = PIPSgetnOMPthreads();
+  solver = 0; /* sparse direct solver */
 #endif
 
   mtype = -2;
   error = 0;
+  nrhs = -1;
+  phase = 0;
   maxfct = 1; // max number of fact having same sparsity pattern to keep at the same time
   mnum = 1; // actual matrix (as in index from 1 to maxfct)
   msglvl = 0; // messaging level (0 = no output, 1 = statistical info to screen)
@@ -135,7 +139,6 @@ void PardisoSolver::firstCall()
 
 #ifndef WITH_MKL_PARDISO
    int error = 0;
-   solver = 0; /* sparse direct solver */
 
    pardisoinit(pt, &mtype, &solver, iparm, dparm, &error);
 
