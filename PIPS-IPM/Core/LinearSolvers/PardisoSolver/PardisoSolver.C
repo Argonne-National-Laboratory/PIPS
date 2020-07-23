@@ -119,20 +119,6 @@ PardisoSolver::PardisoSolver( DenseSymMatrix * m )
   msglvl = 0; // messaging level (0 = no output, 1 = statistical info to screen)
 }
 
-// todo should be moved to DenseSymMatrix..
-int PardisoSolver::getNumberOfNonZeros(DenseSymMatrix& m)
-{
-   int nnz = 0;
-   for( int i = 0; i < n; i++ )
-   {
-      for( int j = i + 1; j < n; j++ )
-         if( m[i][j] != 0.0 )
-            nnz++;
-      nnz++; //always have diags
-   }
-   return nnz;
-}
-
 void PardisoSolver::firstCall()
 {
    iparm[0] = 0;
@@ -144,7 +130,7 @@ void PardisoSolver::firstCall()
 
    if( error != 0 )
    {
-      cout << "PardisoSolver ERROR during pardisoinit:" << error << "." << endl;
+      std::cout << "PardisoSolver ERROR during pardisoinit:" << error << "." << std::endl;
       assert(false);
    }
 #else
@@ -195,7 +181,7 @@ void PardisoSolver::firstCall()
 
       // the input is a dense matrix
       DenseSymMatrix& Md = (*Mdsys);
-      nnz = getNumberOfNonZeros(Md);
+      nnz = Md.getNumberOfNonZeros();
 
       delete[] krowM;
       delete[] jcolM;

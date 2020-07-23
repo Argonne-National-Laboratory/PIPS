@@ -53,7 +53,6 @@ private:
 
  private:
   //Helper functions for when the input is a dense matrix
-  int getNumberOfNonZeros(DenseSymMatrix& m);
   void setIparm(int* iparm);
   bool iparmUnchanged();
 
