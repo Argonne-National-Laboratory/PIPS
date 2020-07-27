@@ -1006,8 +1006,7 @@ void SparseStorage::multMatSymUpper( double beta, SparseStorage& y,
             break;
          }
       }
-
-      assert(c_y != krowM_y[r + 1]);
+      assert(c_y != krowM_y[yrow + 1]);
    }
 }
 
