@@ -1025,16 +1025,16 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   phase = 33; /* solve - iterative refinement */
 
   int* rhsSparsity = nullptr;
-  if( useSparseRhs )
-  {
-     iparm[30] = 1; //sparse rhs
-     rhsSparsity = new int[n]();
-
-     for( int i = 0; i < dim; i++  )
-        if( !PIPSisZero(rhs_n[i]) )
-           rhsSparsity[i] = 1;
-  }
-  else
+//  if( useSparseRhs )
+//  {
+//     iparm[30] = 1; //sparse rhs
+//     rhsSparsity = new int[n]();
+//
+//     for( int i = 0; i < dim; i++  )
+//        if( !PIPSisZero(rhs_n[i]) )
+//           rhsSparsity[i] = 1;
+//  }
+//  else
   {
      iparm[30] = 0;
   }

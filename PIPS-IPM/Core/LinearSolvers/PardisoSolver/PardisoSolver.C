@@ -358,7 +358,10 @@ void PardisoSolver::matrixChanged()
    phase = 12; // Analysis, numerical factorization
    nrhs = 1;
 
-   iparm[30] = 0; // do not specify sparse rhs at this point
+   iparm[30] = 0; // do not specify sparse rhs
+                  // if one wants to use the sparse rhs and partial solves according to
+                  // the PARDISO user guide the perm vector has to be present during all
+                  // phases of pardiso
 
    assert(iparmUnchanged());
 
@@ -446,6 +449,8 @@ void PardisoSolver::solve( GenMatrix& rhs_in )
 
 void PardisoSolver::solve( GenMatrix& rhs_in, int *colSparsity)
 {
+  assert(false);
+
   DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
 
   int nrows,ncols; rhs.getSize(ncols,nrows);
@@ -504,7 +509,6 @@ void PardisoSolver::solve( int nrhss, double* rhss, int* colSparsity )
                assert(colSparsity[i] == 1);
             else if( nrhss == 1 ) // does not work with zeroes in matrix, e.g. callback example
                assert(colSparsity[i] == 0);
-
          }
       }
    }
@@ -516,18 +520,19 @@ void PardisoSolver::solve( int nrhss, double* rhss, int* colSparsity )
 
    assert(iparmUnchanged());
 
-   if( colSparsity )
-   {
-      iparm[30] = 1; //sparse rhs
-   }
-   else
-   {
+// see notes on [30] earlier - cannot be specified on the go
+//   if( colSparsity )
+//   {
+//      iparm[30] = 1; //sparse rhs
+//   }
+//   else
+//   {
       iparm[30] = 0;
-   }
+//   }
 
    assert(pt); assert(M); assert(krowM); assert(jcolM); assert(rhss); assert(sol);
 
-   pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, M, krowM, jcolM, colSparsity,
+   pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, M, krowM, jcolM, nullptr,
          &nrhss_local, iparm, &msglvl, rhss, sol, &error
 #ifndef WITH_MKL_PARDISO
          , dparm
