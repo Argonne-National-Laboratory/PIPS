@@ -157,10 +157,10 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   initializeKKT(prob, vars);
 
   // First tell children to factorize. 
-  for(size_t c=0; c<children.size(); c++)
+  for(size_t c = 0; c < children.size(); c++)
     children[c]->factor2(prob->children[c], vars);
 
-  for(size_t c=0; c<children.size(); c++) {
+  for(size_t c = 0; c < children.size(); c++) {
 #ifdef STOCH_TESTING
     g_scenNum=c;
 #endif
