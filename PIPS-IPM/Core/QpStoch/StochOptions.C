@@ -27,6 +27,8 @@ namespace pips_options
       /* default int values */
       int_options["dummy"] = 1;
 
+      int_options["SC_BLOCKWISE_BLOCKSIZE_MAX"] = 64;
+
       /* default double values */
       double_options["dummy"] = 1.0;
 
