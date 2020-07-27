@@ -650,16 +650,16 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
       if( !x )
          x = new double[n];
 
-//      if( useSparseRhs )
-//      {
-//         iparm[30] = 1; //sparse rhs
-//         rhsSparsity = new int[n]();
-//
-//         for( int i = 0; i < n; i++  )
-//            if( !PIPSisZero(b[i]) )
-//               rhsSparsity[i] = 1;
-//      }
-//      else
+      if( useSparseRhs )
+      {
+         iparm[30] = 1; //sparse rhs
+         rhsSparsity = new int[n]();
+
+         for( int i = 0; i < n; i++  )
+            if( !PIPSisZero(b[i]) )
+               rhsSparsity[i] = 1;
+      }
+      else
       {
          iparm[30] = 0;
       }

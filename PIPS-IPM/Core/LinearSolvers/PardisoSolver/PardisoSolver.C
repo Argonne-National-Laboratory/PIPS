@@ -449,8 +449,7 @@ void PardisoSolver::solve( GenMatrix& rhs_in )
 
 void PardisoSolver::solve( GenMatrix& rhs_in, int *colSparsity)
 {
-  assert(false);
-
+  std::cout << "PardisoSolver - using sparse rhs but might lead to numerical troubles .. " << std::endl;
   DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
 
   int nrows,ncols; rhs.getSize(ncols,nrows);
@@ -521,14 +520,15 @@ void PardisoSolver::solve( int nrhss, double* rhss, int* colSparsity )
    assert(iparmUnchanged());
 
 // see notes on [30] earlier - cannot be specified on the go
+// seems to detoriate parformance a lot - triggers many BiCGStab steps
 //   if( colSparsity )
 //   {
 //      iparm[30] = 1; //sparse rhs
 //   }
 //   else
-//   {
+   {
       iparm[30] = 0;
-//   }
+   }
 
    assert(pt); assert(M); assert(krowM); assert(jcolM); assert(rhss); assert(sol);
 
