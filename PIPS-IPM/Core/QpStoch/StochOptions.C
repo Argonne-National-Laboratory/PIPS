@@ -24,19 +24,6 @@ namespace pips_options
    // todo maybe split this up into several submethods?
    void StochOptions::setDefaults()
    {
-      // TODO
-      /* default bool values */
-      bool_options["dummy"] = false;
-      bool_options["POSTSOLVE"] = true;
-
-      /* default int values */
-      int_options["dummy"] = 1;
-
-      int_options["SC_BLOCKWISE_BLOCKSIZE_MAX"] = 64;
-
-      /* default double values */
-      double_options["dummy"] = 1.0;
-
       /// LINEAR SOLVERS
       bool_options["PARDISO_FOR_GLOBAL_SC"] = true;
       bool_options["PARDISO_SPARSE_RHS_LEAF"] = false;
@@ -58,9 +45,12 @@ namespace pips_options
 
       /// GONDZIO SOLVERS
       bool_options["GONDZIO_ADAPTIVE_LINESEARCH"] = false;
+
       int_options["GONDZIO_N_LINESEARCH"] = 10;
 
       /// SOLVER CONTROLS
+
+      int_options["SC_BLOCKWISE_BLOCKSIZE_MAX"] = 64;
 
       /// ERROR ABSORBTION / ITERATIVE REFINEMENT
       // controls the type of error absorbtion at the outer level of the linear system
@@ -157,8 +147,14 @@ namespace pips_options
       int_options["PRESOLVE_TRACK_COL_NODE"] = -1;
 
       /// POSTSOLVE
+      /** should postsolve be applied */
+      bool_options["POSTSOLVE"] = true;
+
       /** tolerance used for checking residuals after postsolve */
       double_options["POSTSOLVE_TOLERANCE"] = feastol * 1e2;
+
+      /** should the residuals before unscaling, after unscaling before postsolve, after postsolve be printed */
+      bool_options["POSTSOLVE_PRINT_RESIDS"] = true;
    }
 
 }
