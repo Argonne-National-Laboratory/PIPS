@@ -21,7 +21,6 @@ namespace pips_options
       setDefaults();
    }
 
-   // todo maybe split this up into several submethods?
    void StochOptions::setDefaults()
    {
       /// LINEAR SOLVERS
