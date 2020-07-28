@@ -50,10 +50,13 @@ protected:
 
   void registerBiCGStabOvserver(LinearSystem* sys);
 
+  void setBiCGStabTol(int iteration) const;
+  // controls whether setBiCGTol applies an dynamic schedule for the BiCGStab tolerance or just uses the user defined input (OUTER_BICG_TOL)
+  bool dynamic_bicg_tol;
+
 public:
 
-  GondzioStochSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10,
-        bool adaptive_linesearch = true );
+  GondzioStochSolver( ProblemFormulation * of, Data * prob);
 
   virtual ~GondzioStochSolver();
 

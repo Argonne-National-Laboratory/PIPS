@@ -39,8 +39,10 @@ namespace qpgen_options
 
 
       /// OUTER BIGCSTAB
+      double_options["OUTER_BICG_TOL"] = 1e-10;
       double_options["OUTER_BICG_EPSILON"] = 1e-15;
 
+      bool_options["OUTER_BICG_DYNAMIC_TOL"] = true;
       bool_options["OUTER_BICG_PRINT_STATISTICS"] = false;
 
       int_options["OUTER_BICG_MAX_ITER"] = 75;

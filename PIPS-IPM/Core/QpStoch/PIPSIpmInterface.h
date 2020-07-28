@@ -767,7 +767,7 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::printComplementarityResiduals(con
 template<class FORMULATION, class IPMSOLVER>
 void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
 {
-//  const bool print_resudial = true; // TODO make PIPSoption
+  const bool print_residuals = pips_options::getBoolParameter("POSTSOLVE_PRINT_RESIDS");
   const int my_rank = PIPS_MPIgetRank(comm);
 
   assert(origData);
@@ -794,18 +794,21 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
     return;
   }
 
+  if( print_residuals )
+  {
+     if( my_rank == 0 )
+        std::cout << std::endl << "Residuals before postsolve:" << std::endl;
+     resids->calcresids(data, vars, print_residuals);
+     printComplementarityResiduals(*vars);
+
+     if( my_rank == 0 )
+        std::cout << "Residuals after unscaling/permuting:" << std::endl;
+     unscaleUnpermResids->calcresids(dataUnperm, unscaleUnpermVars, print_residuals);
+     printComplementarityResiduals(*unscaleUnpermVars);
+  }
+
   MPI_Barrier(comm);
   const double t0_postsolve = MPI_Wtime();
-
-  if( my_rank == 0 )
-     std::cout << std::endl << "Residuals before postsolve:" << std::endl;
-  resids->calcresids(data, vars, true);
-  printComplementarityResiduals(*vars);
-
-  if( my_rank == 0 )
-     std::cout << "Residuals after unscaling/permuting:" << std::endl;
-  unscaleUnpermResids->calcresids(dataUnperm, unscaleUnpermVars, true);
-  printComplementarityResiduals(*unscaleUnpermVars);
 
   sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*origData->stochNode);
   callbackTree.switchToOriginalData();
@@ -829,10 +832,14 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   }
 
   /* compute residuals for postprocessed solution and check for feasibility */
-  if( my_rank == 0 )
-     std::cout << std::endl << "Residuals after postsolve:" << std::endl;
-  postsolvedResids->calcresids(origData, postsolvedVars, true);
+  if( print_residuals )
+  {
+     if( my_rank == 0 )
+        std::cout << std::endl << "Residuals after postsolve:" << std::endl;
+     postsolvedResids->calcresids(origData, postsolvedVars, print_residuals);
 
-  printComplementarityResiduals(*postsolvedVars);
+     printComplementarityResiduals(*postsolvedVars);
+  }
 }
+
 #endif

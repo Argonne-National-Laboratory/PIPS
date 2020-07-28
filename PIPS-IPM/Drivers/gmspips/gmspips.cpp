@@ -1,5 +1,6 @@
 #if defined(GMS_PIPS)
 #include "StochInputTree.h"
+#include "PreprocessFactory.h"
 #include "PIPSIpmInterface.h"
 #include "GondzioStochSolver.h"
 #include "GondzioStochLpSolver.h"
@@ -181,6 +182,7 @@ int fmatQ(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 }
 
+#if defined(GMS_PIPS)
 static void setParams(ScalerType& scaler_type, bool& stepDiffLp, bool& presolve, bool& printsol, const char* paramname)
 {
    if( strcmp(paramname, "scale") == 0 || strcmp(paramname, "scaleEqui") == 0 )
@@ -196,6 +198,7 @@ static void setParams(ScalerType& scaler_type, bool& stepDiffLp, bool& presolve,
    else if( strcmp(paramname, "printsol") == 0 )
       printsol = true;
 }
+#endif
 
 int main(int argc, char ** argv)
 {
@@ -210,14 +213,16 @@ int main(int argc, char ** argv)
    initGMSPIPSIO();
 
    GMSPIPSBlockData_t** blocks;
+#if defined(GMS_PIPS)
    ScalerType scaler_type = SCALER_NONE;
+#endif
    bool stepDiffLp = false;
    bool presolve = false;
    bool printsol = false;
 
    if ( (argc<3) || (argc>8) )
    {
-      cout << "Usage: " << argv[0] << " numBlocks all.gdx|blockstem [GDXLibDir] [scale] [stepLp] [presolve] [printsol]" << endl;
+      std::cout << "Usage: " << argv[0] << " numBlocks all.gdx|blockstem [GDXLibDir] [scale] [stepLp] [presolve] [printsol]" << std::endl;
       exit(1);
    }
 
@@ -230,8 +235,10 @@ int main(int argc, char ** argv)
       pGDXDirectory = &GDXDirectory[0];
    }
 
+#if defined(GMS_PIPS)
    for( int i = 5; i <= argc; i++ )
       setParams(scaler_type, stepDiffLp, presolve, printsol, argv[i - 1]);
+#endif
 
    blocks = (GMSPIPSBlockData_t**) calloc(numBlocks,sizeof(GMSPIPSBlockData_t*));
 
@@ -372,7 +379,7 @@ int main(int argc, char ** argv)
       std::cout << "using outer BICGSTAB" << std::endl;
 
    if( gmsRank == 0 && pips_options::getIntParameter("INNER_SC_SOLVE") == 2 )
-      cout << "using inner BICGSTAB" << endl;
+      std::cout << "using inner BICGSTAB" << std::endl;
 
    std::vector<double> primalSolVec;
    std::vector<double> dualSolEqVec;
@@ -390,8 +397,10 @@ int main(int argc, char ** argv)
 
 	if (stepDiffLp)
 	{
+	   pips_options::setBoolParameter("GONDZIO_ADAPTIVE_LINESEARCH", false);
+
 	   if( gmsRank == 0 )
-	      cout << "Different steplengths in primal and dual direction are used." << endl;
+	      std::cout << "Different steplengths in primal and dual direction are used." << std::endl;
 #if defined(WITH_MUMPS_LEAF)
       PIPSIpmInterface<sFactoryAugMumpsLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
             scaler_type, presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
@@ -404,10 +413,10 @@ int main(int argc, char ** argv)
 #endif
 
 		if( gmsRank == 0 )
-		   cout << "PIPSIpmInterface created" << endl;
+		   std::cout << "PIPSIpmInterface created" << std::endl;
 
 		if( gmsRank == 0 )
-		   cout << "solving..." << endl;
+		   std::cout << "solving..." << std::endl;
 
 		pipsIpm.go();
       objective = pipsIpm.getObjective();
@@ -430,6 +439,8 @@ int main(int argc, char ** argv)
 	}
 	else
 	{
+      pips_options::setBoolParameter("GONDZIO_ADAPTIVE_LINESEARCH", true);
+
 #if defined(WITH_MUMPS_LEAF)
       PIPSIpmInterface<sFactoryAugMumpsLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
             scaler_type, presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
@@ -474,29 +485,7 @@ int main(int argc, char ** argv)
    if( printsol && gmsRank == 0 )
    {
       int rc;
-#if 0
-      cout << "primalSolVec " << primalSolVec.size() << endl;
-      cout << "dualSolEqVec " << dualSolEqVec.size() << endl;
-      cout << "dualSolIneqVec " << dualSolIneqVec.size() << endl;
-      cout << "eqValues " << eqValues.size() << endl;
-      cout << "ineqValues " << ineqValues.size() << endl;
-      //cout << "dualSolIneqUppVec " << dualSolIneqUppVec.size() << endl;
-      //cout << "dualSolIneqLowVec " << dualSolIneqLowVec.size() << endl;
-      cout << "dualSolVarBounds " << dualSolVarBounds.size() << endl;
-      //cout << "dualSolVarBoundsUppVec " << dualSolVarBoundsUppVec.size() << endl;
-      //cout << "dualSolVarBoundsLowVec " << dualSolVarBoundsLowVec.size() << endl;
-    
-      cout << "variables" << endl; 
-      for (unsigned int j=0; j<primalSolVec.size(); j++)
-          cout << j << " " << primalSolVec[j] << " " << dualSolVarBounds[j] << endl; 
-      cout << "=constraints" << endl; 
-      for (unsigned int j=0; j<dualSolEqVec.size(); j++)
-          cout << j << " " << eqValues[j] << " " << dualSolEqVec[j] << endl; 
-      cout << "<constraints" << endl; 
-      for (unsigned int j=0; j<dualSolIneqVec.size(); j++)
-          cout << j << " " << ineqValues[j] << " " << dualSolIneqVec[j] << endl; 
-#endif
-       
+
       rc = writeSolution(fileName,
 						 primalSolVec.size(),
 						 dualSolEqVec.size(),
@@ -509,9 +498,9 @@ int main(int argc, char ** argv)
 						 &dualSolEqVec[0],
 						 &dualSolIneqVec[0],
 						 pGDXDirectory);
-      if (0==rc)
+      if (0 == rc)
          std::cout << "Solution written to " << fileName << "_sol.gdx" << std::endl;
-      else if (-1==rc)
+      else if (-1 == rc)
          std::cout << "Could not access " << fileName << ".map" << std::endl;
       else
          std::cout << "Other error writing solution: rc=" << rc << std::endl;
@@ -523,7 +512,7 @@ int main(int argc, char ** argv)
 #endif
 
 
-  for (int blk=0; blk<numBlocks; blk++)
+  for (int blk = 0; blk < numBlocks; blk++)
   {
      freeBlock(blocks[blk]);
      free(blocks[blk]);

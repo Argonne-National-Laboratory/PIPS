@@ -95,23 +95,6 @@ static void biCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
 
 }
 
-static double biCGStabGetTolerance(int ipIterations)
-{
-   double tolerance;
-   assert(ipIterations >= -1);
-
-   if( ipIterations == -1 )
-      tolerance = 1e-10;
-   else if( ipIterations <= 4 )
-      tolerance = 1e-8;
-   else if( ipIterations <= 8 )
-      tolerance = 1e-9;
-   else
-      tolerance = 1e-10;
-
-   return tolerance;
-}
-
 static void biCGStabCommunicateStatus(int flag, int it)
 {
    gOuterBiCGIter = it;
@@ -120,7 +103,6 @@ static void biCGStabCommunicateStatus(int flag, int it)
       gOuterBiCGFails++;
 
 }
-
 
 static bool isZero(double val, int& flag)
 {
@@ -142,8 +124,7 @@ QpGenLinsys::QpGenLinsys( QpGen * factory_, QpGenData * prob, LinearAlgebraPacka
   outer_bicg_eps(qpgen_options::getDoubleParameter("OUTER_BICG_EPSILON")),
   outer_bicg_max_iter(qpgen_options::getIntParameter("OUTER_BICG_MAX_ITER")),
   outer_bicg_max_normr_divergences(qpgen_options::getIntParameter("OUTER_BICG_MAX_NORMR_DIVERGENCES")),
-  outer_bicg_max_stagnations(qpgen_options::getIntParameter("OUTER_BICG_MAX_STAGNATIONS")),
-  ipIterations(-2)
+  outer_bicg_max_stagnations(qpgen_options::getIntParameter("OUTER_BICG_MAX_STAGNATIONS"))
 {
   nx = prob->nx; my = prob->my; mz = prob->mz;
   const int len_x = nx + my + mz;
@@ -209,8 +190,7 @@ QpGenLinsys::QpGenLinsys()
    outer_bicg_eps(qpgen_options::getDoubleParameter("OUTER_BICG_EPSILON")),
    outer_bicg_max_iter(qpgen_options::getIntParameter("OUTER_BICG_MAX_ITER")),
    outer_bicg_max_normr_divergences(qpgen_options::getIntParameter("OUTER_BICG_MAX_NORMR_DIVERGENCES")),
-   outer_bicg_max_stagnations(qpgen_options::getIntParameter("OUTER_BICG_MAX_STAGNATIONS")),
-   ipIterations(-2)
+   outer_bicg_max_stagnations(qpgen_options::getIntParameter("OUTER_BICG_MAX_STAGNATIONS"))
 {
 }
 
@@ -439,8 +419,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    OoqpVector &r0 = *res2, &dx = *sol2, &best_x = *sol3, &v = *res3, &t = *res4, &p = *res5;
    OoqpVector &x = *sol, &r = *res, &b = *rhs;
 
-   // TODO : control from the outside as well
-   const double tol = biCGStabGetTolerance(ipIterations);
+   const double tol = qpgen_options::getDoubleParameter("OUTER_BICG_TOL");
 
    const double n2b = b.twonorm();
    const double tolb = max(n2b * tol, outer_bicg_eps);

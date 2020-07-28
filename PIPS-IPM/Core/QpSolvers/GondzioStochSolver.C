@@ -29,7 +29,6 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-using namespace std;
 
 #include <cstdio>
 #include <cassert>
@@ -47,23 +46,24 @@ extern double g_iterNumber;
 extern bool ipStartFound;
 
 
-GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points,
-      bool adaptive_linesearch )
-  : GondzioSolver(opt, prob), n_linesearch_points(n_linesearch_points),
+GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob )
+  : GondzioSolver(opt, prob),
+    n_linesearch_points( pips_options::getIntParameter("GONDZIO_N_LINESEARCH")),
     additional_correctors_small_comp_pairs( pips_options::getBoolParameter("IP_GONDZIO_ADDITIONAL_CORRECTORS_SMALL_VARS") ),
     max_additional_correctors( pips_options::getIntParameter("IP_GONDZIO_ADDITIONAL_CORRECTORS_MAX") ),
     first_iter_small_correctors( pips_options::getIntParameter("IP_GONDZIO_FIRST_ITER_SMALL_CORRECTORS") ),
     max_alpha_small_correctors( pips_options::getDoubleParameter("IP_GONDZIO_MAX_ALPHA_SMALL_CORRECTORS") ),
-    NumberSmallCorrectors(0), bicgstab_converged(true), bigcstab_norm_res_rel(0.0)
+    NumberSmallCorrectors(0), bicgstab_converged(true), bigcstab_norm_res_rel(0.0),
+    dynamic_bicg_tol(pips_options::getBoolParameter("OUTER_BICG_DYNAMIC_TOL"))
 {
    assert(max_additional_correctors > 0);
    assert(first_iter_small_correctors >= 0);
    assert(0 < max_alpha_small_correctors && max_alpha_small_correctors < 1);
    assert(n_linesearch_points > 0);
 
-   if( adaptive_linesearch )
+   if( pips_options::getBoolParameter("GONDZIO_ADAPTIVE_LINESEARCH") )
    {
-      const int size = PIPS_MPIgetSize(MPI_COMM_WORLD);
+      const int size = PIPS_MPIgetSize();
 
       if( size > 1)
          this->n_linesearch_points =
@@ -74,36 +74,6 @@ GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, u
    // length for each corrector
    StepFactor0 = 0.3;
    StepFactor1 = 1.5;
-
-   // todo the parameters should be read in Solver.c
-   if( pips_options::getBoolParameter("IP_STEPLENGTH_CONSERVATIVE") )
-   {
-      steplength_factor = 0.99;
-      gamma_f = 0.95;
-   }
-   else
-   {
-      steplength_factor = 0.99999999;
-      gamma_f = 0.99;
-   }
-   gamma_a = 1.0 / (1.0 - gamma_f);
-
-   if( pips_options::getBoolParameter("IP_ACCURACY_REDUCED")  )
-   {
-	  artol = 1.e-3;
-	  mutol = 1.e-5;
-   }
-   else
-   {
-	  artol = 1.e-4;
-      mutol = 1.e-6;
-   }
-
-   if( pips_options::getBoolParameter("IP_PRINT_TIMESTAMP") )
-   {
-      printTimeStamp = true;
-      startTime = MPI_Wtime();
-   }
 
    temp_step = factory->makeVariables(prob);
 }
@@ -167,6 +137,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
    // register as observer for the BiCGStab solves
    registerBiCGStabOvserver(sys);
+   setBiCGStabTol(-1);
 
    stochFactory->iterateStarted();
    this->start(factory, iterate, prob, resid, step);
@@ -182,6 +153,8 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
    do
    {
       iter++;
+      setBiCGStabTol(iter);
+
       stochFactory->iterateStarted();
 
       // evaluate residuals and update algorithm status:
@@ -440,6 +413,23 @@ void GondzioStochSolver::notifyFromSubject()
 
    if( !bicgstab_converged )
       PIPSdebugMessage("BiGCStab had troubles converging\n");
+}
+
+void GondzioStochSolver::setBiCGStabTol(int iteration) const
+{
+   if( !dynamic_bicg_tol )
+      return;
+
+   assert( iteration >= -1);
+
+   if( iteration == -1 )
+      pips_options::setDoubleParameter("OUTER_BICG_TOL", 1e-10);
+   else if( iteration <= 4 )
+      pips_options::setDoubleParameter("OUTER_BICG_TOL", 1e-8);
+   else if( iteration <= 8 )
+      pips_options::setDoubleParameter("OUTER_BICG_TOL", 1e-9);
+   else
+      pips_options::setDoubleParameter("OUTER_BICG_TOL", 1e-10);
 }
 
 GondzioStochSolver::~GondzioStochSolver()

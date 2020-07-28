@@ -51,10 +51,9 @@ extern double g_iterNumber;
 extern bool ipStartFound;
 
 
-GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points, bool adaptive_linesearch)
-  : GondzioStochSolver(opt, prob, n_linesearch_points, adaptive_linesearch)
+GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob)
+  : GondzioStochSolver(opt, prob)
 {
-
 }
 
 void GondzioStochLpSolver::calculateAlphaPDWeightCandidate(Variables *iterate, Variables* predictor_step,
@@ -129,6 +128,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
    // register as observer for the BiCGStab solves
    registerBiCGStabOvserver(sys);
+   setBiCGStabTol(-1);
 
    stochFactory->iterateStarted();
    this->start(factory, iterate, prob, resid, step);
@@ -143,6 +143,8 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    while( true )
    {
       iter++;
+      setBiCGStabTol(iter);
+
       stochFactory->iterateStarted();
 
       // evaluate residuals and update algorithm status:
@@ -413,6 +415,3 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 GondzioStochLpSolver::~GondzioStochLpSolver()
 {
 }
-
-
-

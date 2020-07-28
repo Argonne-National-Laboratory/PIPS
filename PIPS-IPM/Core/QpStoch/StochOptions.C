@@ -21,21 +21,8 @@ namespace pips_options
       setDefaults();
    }
 
-   // todo maybe split this up into several submethods?
    void StochOptions::setDefaults()
    {
-      /* default bool values */
-      bool_options["dummy"] = false;
-      bool_options["POSTSOLVE"] = true;
-
-      /* default int values */
-      int_options["dummy"] = 1;
-
-      int_options["SC_BLOCKWISE_BLOCKSIZE_MAX"] = 64;
-
-      /* default double values */
-      double_options["dummy"] = 1.0;
-
       /// LINEAR SOLVERS
       bool_options["PARDISO_FOR_GLOBAL_SC"] = true;
       bool_options["PARDISO_SPARSE_RHS_LEAF"] = false;
@@ -55,6 +42,11 @@ namespace pips_options
       bool_options["IP_PRINT_TIMESTAMP"] = false;
       bool_options["IP_STEPLENGTH_CONSERVATIVE"] = false;
 
+      /// GONDZIO SOLVERS
+      /** should adaptive linesearch be applied in the GondzioStoch solvers - overwritten in gmspips.cpp */
+      bool_options["GONDZIO_ADAPTIVE_LINESEARCH"] = false;
+      /** if GONDZIO adaptive linesearch is true determines number of linesearch points */
+      int_options["GONDZIO_N_LINESEARCH"] = 10;
       /** should additional corrector steps for small complementarity pairs be applied */
       bool_options["IP_GONDZIO_ADDITIONAL_CORRECTORS_SMALL_VARS"] = true;
       /** how many additional steps should be applied at most (in addition to the still existing gondzio corrector limit) */
@@ -64,7 +56,10 @@ namespace pips_options
       /** alpha must be lower equal to this value for the IPM to try and apply small corrector steps */
       double_options["IP_GONDZIO_MAX_ALPHA_SMALL_CORRECTORS"] = 0.8;
 
+
       /// SOLVER CONTROLS
+
+      int_options["SC_BLOCKWISE_BLOCKSIZE_MAX"] = 64;
 
       /// ERROR ABSORBTION / ITERATIVE REFINEMENT
       // controls the type of error absorbtion at the outer level of the linear system
@@ -161,8 +156,14 @@ namespace pips_options
       int_options["PRESOLVE_TRACK_COL_NODE"] = -1;
 
       /// POSTSOLVE
+      /** should postsolve be applied */
+      bool_options["POSTSOLVE"] = true;
+
       /** tolerance used for checking residuals after postsolve */
       double_options["POSTSOLVE_TOLERANCE"] = feastol * 1e2;
+
+      /** should the residuals before unscaling, after unscaling before postsolve, after postsolve be printed */
+      bool_options["POSTSOLVE_PRINT_RESIDS"] = true;
    }
 
 }
