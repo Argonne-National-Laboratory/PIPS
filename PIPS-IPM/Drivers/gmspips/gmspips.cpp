@@ -413,6 +413,8 @@ int main(int argc, char ** argv)
 
 	if (stepDiffLp)
 	{
+	   pips_options::setBoolParameter("GONDZIO_ADAPTIVE_LINESEARCH", false);
+
 	   if( gmsRank == 0 )
 	      cout << "Different steplengths in primal and dual direction are used." << endl;
 #if defined(WITH_MUMPS_LEAF)
@@ -453,6 +455,8 @@ int main(int argc, char ** argv)
 	}
 	else
 	{
+      pips_options::setBoolParameter("GONDZIO_ADAPTIVE_LINESEARCH", true);
+
 #if defined(WITH_MUMPS_LEAF)
       PIPSIpmInterface<sFactoryAugMumpsLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
             scaler_type, presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );

@@ -56,6 +56,10 @@ namespace pips_options
       bool_options["IP_PRINT_TIMESTAMP"] = false;
       bool_options["IP_STEPLENGTH_CONSERVATIVE"] = false;
 
+      /// GONDZIO SOLVERS
+      bool_options["GONDZIO_ADAPTIVE_LINESEARCH"] = false;
+      int_options["GONDZIO_N_LINESEARCH"] = 10;
+
       /// SOLVER CONTROLS
 
       /// ERROR ABSORBTION / ITERATIVE REFINEMENT

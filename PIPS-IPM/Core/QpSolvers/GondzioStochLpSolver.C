@@ -50,8 +50,8 @@ extern double g_iterNumber;
 extern bool ipStartFound;
 
 
-GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points, bool adaptive_linesearch)
-  : GondzioStochSolver(opt, prob, n_linesearch_points, adaptive_linesearch)
+GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob)
+  : GondzioStochSolver(opt, prob)
 {
 }
 

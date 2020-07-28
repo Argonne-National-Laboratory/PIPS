@@ -45,17 +45,16 @@ extern double g_iterNumber;
 extern bool ipStartFound;
 
 
-GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points,
-      bool adaptive_linesearch )
-  : GondzioSolver(opt, prob), n_linesearch_points(n_linesearch_points),
+GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob )
+  : GondzioSolver(opt, prob),
+    n_linesearch_points( pips_options::getIntParameter("GONDZIO_N_LINESEARCH")),
     dynamic_bicg_tol(pips_options::getBoolParameter("OUTER_BICG_DYNAMIC_TOL"))
 {
    assert(n_linesearch_points > 0);
 
-   if( adaptive_linesearch )
+   if( pips_options::getBoolParameter("GONDZIO_ADAPTIVE_LINESEARCH") )
    {
-      int size;
-      MPI_Comm_size(MPI_COMM_WORLD, &size);
+      const int size = PIPS_MPIgetSize();
 
       if( size > 1)
          this->n_linesearch_points =
