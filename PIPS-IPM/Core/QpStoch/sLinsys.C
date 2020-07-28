@@ -2,6 +2,7 @@
    Authors: Cosmin Petra and Miles Lubin
    See license and copyright information in the documentation */
 
+#include "StochOptions.h"
 #include "sLinsys.h"
 #include "sTree.h"
 #include "sFactory.h"
@@ -22,7 +23,9 @@
 extern int gOuterIterRefin;
 
 sLinsys::sLinsys(sFactory* factory_, sData* prob)
-  : QpGenLinsys(), kkt(nullptr), solver(nullptr), nThreads(PIPSgetnOMPthreads())
+  : QpGenLinsys(), kkt(nullptr), solver(nullptr), nThreads(PIPSgetnOMPthreads()),
+        blocksizemax( pips_options::getIntParameter("SC_BLOCKWISE_BLOCKSIZE_MAX") ),
+        colsBlockDense(nullptr), colId(nullptr), colSparsity(nullptr)
 {
   factory = factory_;
 
@@ -63,7 +66,9 @@ sLinsys::sLinsys(sFactory* factory_,
 		 OoqpVector* dq_,
 		 OoqpVector* nomegaInv_,
 		 OoqpVector* rhs_)
-  : QpGenLinsys(), kkt(nullptr), solver(nullptr), nThreads(PIPSgetnOMPthreads())
+  : QpGenLinsys(), kkt(nullptr), solver(nullptr), nThreads(PIPSgetnOMPthreads()),
+    blocksizemax( pips_options::getIntParameter("SC_BLOCKWISE_BLOCKSIZE_MAX") ),
+    colsBlockDense(nullptr), colId(nullptr), colSparsity(nullptr)
 {
   factory = factory_;
 
@@ -96,6 +101,8 @@ sLinsys::sLinsys(sFactory* factory_,
 
 sLinsys::~sLinsys()
 {
+  if( colId ) delete[] colId;
+  if( colsBlockDense ) delete[] colsBlockDense;
   if (solver) delete solver;
   if (kkt)    delete kkt;
 }
@@ -760,6 +767,9 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
    const int nxMyP = NP - locmyl - locmzl;
    const int nxMyMzP = NP - locmzl;
 
+   assert( nxMyP > 0 );
+   assert( nxMyMzP > 0 );
+
    if( nxP == -1 )
       C.getSize(N, nxP);
 
@@ -767,6 +777,7 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
    C.getSize(N2, nxP2);
    const bool withC = (nxP2 != -1);
 
+   // TODO : is this correct?
    if( nxP == -1 )
       nxP = NP;
 
@@ -785,18 +796,21 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
 
    const int withF = (locmyl > 0);
    const int withG = (locmzl > 0);
-   const int blocksizemax = 1; // todo nThreads, or 64?
 
    assert(nThreads >= 1);
-   //std::cout << "blocksizemax " << blocksizemax << std::endl;
 
-   // save columns in this array todo member variable, initialized at first call (if == nullptr)
-   double* colsBlockDense = new double[blocksizemax * N];
+   // storage for sets of dense cols
+   if( colsBlockDense == nullptr )
+      colsBlockDense = new double[blocksizemax * N];
 
    // to save original column index of each column in colsBlockTrans
-   int* colId = new int[blocksizemax];
+   if( colId == nullptr )
+      colId = new int[blocksizemax];
+
 #if 1
-   int* colSparsity = new int[N];
+   // indicating whether a right hand side is zero
+   if( colSparsity == nullptr )
+      colSparsity = new int[N];
 #else
    int* colSparsity = nullptr;
 #endif
@@ -937,10 +951,6 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
 
    assert(0);
 #endif
-
-   delete[] colSparsity;
-   delete[] colId;
-   delete[] colsBlockDense;
 }
 
 
@@ -1096,7 +1106,6 @@ void sLinsys:: multLeftSparseSchurComplBlocked(/*const*/sData *prob, /*const*/do
       // do we have linking inequality constraints? If so, set SC+=G*x
       if( withG )
          G.multMatSymUpper(1.0, SC, -1.0, &col[0], row_sc, nxMyMzP);
-
    }
 }
 

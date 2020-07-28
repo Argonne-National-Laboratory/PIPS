@@ -120,6 +120,7 @@ public:
    */
   void atRankkUpdate( double alpha, double beta, DenseGenMatrix& U, int trans);
 
+  int getNumberOfNonZeros() const;
 };
 
 

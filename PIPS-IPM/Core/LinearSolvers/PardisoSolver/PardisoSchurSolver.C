@@ -156,7 +156,7 @@ PardisoSchur32Solver::PardisoSchur32Solver( SparseSymMatrix * sgm )
 
 void PardisoSchurSolver::firstCall()
 {
-   iparm[0] = 0;
+   iparm[0] = 0; /* make init set iparm to default values */
 
 #ifndef WITH_MKL_PARDISO
    int error = 0;
@@ -513,7 +513,8 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
 void PardisoSchurSolver::setIparm(int* iparm){
 
    /* common parameters */
-   iparm[1] = 2; // 2 is for metis, 0 for min degree
+   iparm[1] = 2; // 2 and 3 are for METIS - 2 is METIS 4.1, 3 is METIS 5.1, 0 for min degree ordering
+
    /* NOTE: if iparm[9] is less than 13 mkl_pardiso will not consistently produce the same schur complement as the other pardiso (on some examples)
     * this might not be an issue should be kept in mind though
     */

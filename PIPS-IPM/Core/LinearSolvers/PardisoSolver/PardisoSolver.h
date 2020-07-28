@@ -53,7 +53,6 @@ private:
 
  private:
   //Helper functions for when the input is a dense matrix
-  int getNumberOfNonZeros(DenseSymMatrix& m);
   void setIparm(int* iparm);
   bool iparmUnchanged();
 
@@ -69,8 +68,6 @@ private:
 
   int nrhs;
   int error;
-
-
 
 #ifndef WITH_MKL_PARDISO
   int num_threads;

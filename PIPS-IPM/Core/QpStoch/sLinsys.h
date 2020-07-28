@@ -115,6 +115,12 @@ class sLinsys : public QpGenLinsys
  protected:
   int nThreads;
 
+  /* members for blockwise schur complement computation */
+  int blocksizemax;
+  double* colsBlockDense;
+  int* colId;
+  int* colSparsity;
+
   void multLeftSchurComplBlocked(/*const*/sData *prob, /*const*/double* colsBlockDense,
         const int* colId, int blocksize, bool sparseSC, SymMatrix& SC);
 
