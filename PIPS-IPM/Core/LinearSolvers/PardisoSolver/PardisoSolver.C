@@ -27,14 +27,12 @@ using namespace std;
 #include <unistd.h>
 #endif
 
+extern int gOoqpPrintLevel;
+
 #ifdef WITH_MKL_PARDISO
 #include "mkl_pardiso.h"
 #include "mkl_types.h"
-#endif
-
-extern int gOoqpPrintLevel;
-
-#ifndef WITH_MKL_PARDISO
+#else
 extern "C" void pardisoinit (void   *, int    *,   int *, int *, double *, int *);
 extern "C" void pardiso     (void   *, int    *,   int *, int *,    int *, int *, 
                   double *, int    *,    int *, int *,   int *, int *,
@@ -50,14 +48,14 @@ extern "C" void pardiso_printstats (int *, int *, double *, int *, int *, int *,
 PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 {
 #ifdef TIMING
-    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-    if(myRank==0)
-	cout << "PardisoSolver::PardisoSolver (sparse input)" << endl;
+   const int myRank = PIPS_MPIgetRank();
+   if( myRank == 0 )
+	  std::cout << "PardisoSolver::PardisoSolver (sparse input)" << std::endl;
 #endif
   Msys = sgm;
-  Mdsys=nullptr;
+  Mdsys = nullptr;
   n = sgm->size();
-  nnz=sgm->numberOfNonZeros();
+  nnz = sgm->numberOfNonZeros();
 
   krowM = new int[n+1];
   jcolM = new int[nnz];
@@ -71,10 +69,13 @@ PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 
 #ifndef WITH_MKL_PARDISO
   num_threads = PIPSgetnOMPthreads();
+  solver = 0; /* sparse direct solver */
 #endif
 
   mtype = -2;
   error = 0;
+  phase = 0;
+  nrhs = -1; // do not specify here
   maxfct = 1; // max number of fact having same sparsity pattern to keep at the same time
   mnum = 1; // actual matrix (as in index from 1 to maxfct)
   msglvl = 0; // messaging level (0 = no output, 1 = statistical info to screen)
@@ -84,9 +85,9 @@ PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 PardisoSolver::PardisoSolver( DenseSymMatrix * m )
 {
 #ifdef TIMING
-    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-    if(myRank==0)
-	cout << "PardisoSolver created (dense input)" << endl;
+   const int myRank = PIPS_MPIgetRank();
+   if( myRank == 0 )
+	  std::cout << "PardisoSolver created (dense input)" << std::endl;
 #endif
   Msys = nullptr;
   Mdsys = m;
@@ -106,27 +107,16 @@ PardisoSolver::PardisoSolver( DenseSymMatrix * m )
 
 #ifndef WITH_MKL_PARDISO
   num_threads = PIPSgetnOMPthreads();
+  solver = 0; /* sparse direct solver */
 #endif
 
   mtype = -2;
   error = 0;
+  nrhs = -1;
+  phase = 0;
   maxfct = 1; // max number of fact having same sparsity pattern to keep at the same time
   mnum = 1; // actual matrix (as in index from 1 to maxfct)
   msglvl = 0; // messaging level (0 = no output, 1 = statistical info to screen)
-}
-
-// todo should be moved to DenseSymMatrix..
-int PardisoSolver::getNumberOfNonZeros(DenseSymMatrix& m)
-{
-   int nnz = 0;
-   for( int i = 0; i < n; i++ )
-   {
-      for( int j = i + 1; j < n; j++ )
-         if( m[i][j] != 0.0 )
-            nnz++;
-      nnz++; //always have diags
-   }
-   return nnz;
 }
 
 void PardisoSolver::firstCall()
@@ -135,13 +125,12 @@ void PardisoSolver::firstCall()
 
 #ifndef WITH_MKL_PARDISO
    int error = 0;
-   solver = 0; /* sparse direct solver */
 
    pardisoinit(pt, &mtype, &solver, iparm, dparm, &error);
 
    if( error != 0 )
    {
-      cout << "PardisoSolver ERROR during pardisoinit:" << error << "." << endl;
+      std::cout << "PardisoSolver ERROR during pardisoinit:" << error << "." << std::endl;
       assert(false);
    }
 #else
@@ -152,7 +141,6 @@ void PardisoSolver::firstCall()
 
    if( Msys )
    {
-
       //get the matrix in upper triangular
       Msys->getStorageRef().transpose(krowM, jcolM, M);
 
@@ -169,7 +157,7 @@ void PardisoSolver::firstCall()
                idxDiagMsys = idx;
                break;
             }
-         assert(idxDiagMsys>=0);
+         assert(idxDiagMsys >= 0);
          //must have all diagonals entries
 
          // aug - find the index in jcol for the diagonal (r,r)
@@ -192,7 +180,7 @@ void PardisoSolver::firstCall()
 
       // the input is a dense matrix
       DenseSymMatrix& Md = (*Mdsys);
-      nnz = getNumberOfNonZeros(Md);
+      nnz = Md.getNumberOfNonZeros();
 
       delete[] krowM;
       delete[] jcolM;
@@ -276,7 +264,8 @@ void PardisoSolver::setIparm(int* iparm){
 
 }
 
-bool PardisoSolver::iparmUnchanged(){
+bool PardisoSolver::iparmUnchanged()
+{
 
    bool same = true;
    bool print = true;
@@ -284,7 +273,7 @@ bool PardisoSolver::iparmUnchanged(){
    int iparm_compare[64];
    setIparm(iparm_compare);
 
-   static const int arr[] = { 1, 7, 10, 12, 23, 24 };
+   static const int arr[] = { 1, 7, 10, 12 };
    vector<int> to_compare(arr, arr + sizeof(arr) / sizeof(arr[0]) );
 
    for(int i = 0; i < 64; ++i)
@@ -310,7 +299,6 @@ void PardisoSolver::diagonalChanged( int /* idiag */, int /* extent */ )
   this->matrixChanged();
 }
 
-extern double g_iterNumber;
 void PardisoSolver::matrixChanged()
 {
    if( first )
@@ -370,7 +358,10 @@ void PardisoSolver::matrixChanged()
    phase = 12; // Analysis, numerical factorization
    nrhs = 1;
 
-   iparm[30] = 0; // do not specify sparse rhs at this point
+   iparm[30] = 0; // do not specify sparse rhs
+                  // if one wants to use the sparse rhs and partial solves according to
+                  // the PARDISO user guide the perm vector has to be present during all
+                  // phases of pardiso
 
    assert(iparmUnchanged());
 
@@ -458,6 +449,7 @@ void PardisoSolver::solve( GenMatrix& rhs_in )
 
 void PardisoSolver::solve( GenMatrix& rhs_in, int *colSparsity)
 {
+  std::cout << "PardisoSolver - using sparse rhs but might lead to numerical troubles .. " << std::endl;
   DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
 
   int nrows,ncols; rhs.getSize(ncols,nrows);
@@ -516,7 +508,6 @@ void PardisoSolver::solve( int nrhss, double* rhss, int* colSparsity )
                assert(colSparsity[i] == 1);
             else if( nrhss == 1 ) // does not work with zeroes in matrix, e.g. callback example
                assert(colSparsity[i] == 0);
-
          }
       }
    }
@@ -528,18 +519,20 @@ void PardisoSolver::solve( int nrhss, double* rhss, int* colSparsity )
 
    assert(iparmUnchanged());
 
-   if( colSparsity )
-   {
-      iparm[30] = 1; //sparse rhs
-   }
-   else
+// see notes on [30] earlier - cannot be specified on the go
+// seems to detoriate parformance a lot - triggers many BiCGStab steps
+//   if( colSparsity )
+//   {
+//      iparm[30] = 1; //sparse rhs
+//   }
+//   else
    {
       iparm[30] = 0;
    }
 
    assert(pt); assert(M); assert(krowM); assert(jcolM); assert(rhss); assert(sol);
 
-   pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, M, krowM, jcolM, colSparsity,
+   pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, M, krowM, jcolM, nullptr,
          &nrhss_local, iparm, &msglvl, rhss, sol, &error
 #ifndef WITH_MKL_PARDISO
          , dparm

@@ -482,5 +482,18 @@ void DenseSymMatrix::atRankkUpdate( double alpha, double beta, DenseGenMatrix& U
 	 &n, &k,
 	 &beta,   &U.getStorageRef().M[0][0], &ldu,
 	 &alpha,  &mStorage->M[0][0],       &lda);
+}
 
+int DenseSymMatrix::getNumberOfNonZeros() const
+{
+   assert( mStorage->m == mStorage->n );
+   int nnz = 0;
+   for( int i = 0; i < mStorage->m; i++ )
+   {
+      for( int j = i + 1; j < mStorage->n; j++ )
+         if( mStorage->M[i][j] != 0.0 )
+            nnz++;
+      nnz++; //always have diags
+   }
+   return nnz;
 }
