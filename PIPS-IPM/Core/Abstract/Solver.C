@@ -58,7 +58,7 @@ Solver::Solver() : itsMonitors(0), status(0), startStrategy(0), dnorm(0.0),
   else
   {
     artol = 1.e-4;
-     mutol = 1.e-6;
+    mutol = 1.e-6;
   }
 
   if( base_options::getBoolParameter("IP_PRINT_TIMESTAMP") )

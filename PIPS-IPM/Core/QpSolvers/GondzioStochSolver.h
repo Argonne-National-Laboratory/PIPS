@@ -33,6 +33,10 @@ protected:
   unsigned int n_linesearch_points;
   Variables* temp_step;
 
+  void setBiCGStabTol(int iteration) const;
+  // controls whether setBiCGTol applies an dynamic schedule for the BiCGStab tolerance or just uses the user defined input (OUTER_BICG_TOL)
+  bool dynamic_bicg_tol;
+
 public:
 
   GondzioStochSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10,
@@ -41,7 +45,6 @@ public:
   virtual ~GondzioStochSolver();
 
   virtual int solve( Data *prob, Variables *iterate, Residuals * resid );
-
 };
 
 #endif /* PIPS_IPM_GONDZIOSTOCHSOLVER_H */

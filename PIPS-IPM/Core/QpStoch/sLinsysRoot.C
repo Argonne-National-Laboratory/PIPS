@@ -1294,9 +1294,6 @@ void sLinsysRoot::myAtPutZeros(DenseSymMatrix* mat)
 
 void sLinsysRoot::addTermToSchurCompl(sData* prob, size_t childindex)
 {
-   // todo bad hack, should be removed once user parameters are available (along all global variables)
-   ipIterations = ipStartFound ? static_cast<int>(g_iterNumber) : -1;
-
    assert(childindex < prob->children.size());
 
    if( computeBlockwiseSC )

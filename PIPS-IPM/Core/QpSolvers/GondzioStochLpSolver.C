@@ -53,7 +53,6 @@ extern bool ipStartFound;
 GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points, bool adaptive_linesearch)
   : GondzioStochSolver(opt, prob, n_linesearch_points, adaptive_linesearch)
 {
-
 }
 
 void GondzioStochLpSolver::calculateAlphaPDWeightCandidate(Variables *iterate, Variables* predictor_step,
@@ -122,6 +121,8 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    // initialization of (x,y,z) and factorization routine.
    sys = factory->makeLinsys(prob);
 
+   setBiCGStabTol(-1);
+
    stochFactory->iterateStarted();
    this->start(factory, iterate, prob, resid, step);
    stochFactory->iterateEnded();
@@ -135,6 +136,8 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    while( true )
    {
       iter++;
+      setBiCGStabTol(iter);
+
       stochFactory->iterateStarted();
 
       // evaluate residuals and update algorithm status:
@@ -314,6 +317,3 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 GondzioStochLpSolver::~GondzioStochLpSolver()
 {
 }
-
-
-
