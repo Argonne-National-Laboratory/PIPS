@@ -45,6 +45,7 @@ protected:
   int NumberSmallCorrectors;
 
   /* observer stuff for checking convergence of BiCGStab */
+  bool bicgstab_skipped;
   bool bicgstab_converged;
   double bigcstab_norm_res_rel;
 

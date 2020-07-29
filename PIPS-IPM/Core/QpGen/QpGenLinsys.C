@@ -31,6 +31,8 @@ int QpGenLinsys::getIntValue(const std::string& s) const
 {
    if( s.compare("BICG_NITERATIONS") == 0 )
       return bicg_niterations;
+   else if( s.compare("BICG_CONV_FLAG") )
+      return bicg_conv_flag;
    else
    {
       std::cout << "Unknown observer int request in QpGenLinsys.C: " << s << std::endl;
@@ -42,6 +44,8 @@ bool QpGenLinsys::getBoolValue(const std::string& s) const
 {
    if( s.compare("BICG_CONVERGED") == 0 )
       return bicg_conv_flag == 0;
+   else if( s.compare("BICG_SKIPPED") == 0 )
+      return bicg_conv_flag == 1;
    else if( s.compare("BICG_DIVERGED") == 0 )
       return bicg_conv_flag == 5;
    else if( s.compare("BICG_BREAKDOWN") == 0 )
@@ -88,6 +92,8 @@ static void biCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
       std::cout << " stagnation occurred" << std::endl;
    else if( flag == -1 )
       std::cout << " not converged in max iterations" << std::endl;
+   else if( flag == 1 )
+      std::cout << " skipped" << std::endl;
    else if( flag == 0 )
       std::cout << " converged" << std::endl;
    else
@@ -454,7 +460,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
       if( myRank == 0 )
          std::cout << "outer BiCGStab skipped: " << normr << " <= " << tolb <<  std::endl;
 
-      bicg_conv_flag = 0;
+      bicg_conv_flag = 1;
       return;
    }
 

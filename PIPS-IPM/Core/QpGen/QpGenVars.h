@@ -37,7 +37,6 @@ public:
   OoqpVectorHandle icupp;
   OoqpVectorHandle iclow;
   QpGenVars(){};
-public:  
 
   OoqpVectorHandle x;
   OoqpVectorHandle s;
