@@ -113,6 +113,9 @@ namespace base_options
             continue;
          }
 
+         if( identifier.length() == 0 || identifier[0] == '#' )
+            continue;
+
          try
          {
             if( type.compare("int") == 0 || type.compare("integer") == 0 )
