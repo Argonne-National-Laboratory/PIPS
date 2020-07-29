@@ -256,9 +256,10 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       const double rmax = sigma * mu * beta_max;
 
       NumberGondzioCorrections = 0;
-
       NumberSmallCorrectors = 0;
-      bool small_pairs_corr = small_corr_aggr;
+
+      // if small_corr_aggr only try small correctors
+      bool small_corr = small_corr_aggr;
 
       // enter the Gondzio correction loop:
       while( NumberGondzioCorrections < maximum_correctors
@@ -281,7 +282,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
          corrector_resid->set_r3_xz_alpha(corrector_step, 0.0);
 
          // do the projection operation
-         if( small_pairs_corr )
+         if( small_corr )
             corrector_resid->project_r3(rmin, std::numeric_limits<double>::infinity());
          else
             corrector_resid->project_r3(rmin, rmax);
@@ -290,12 +291,12 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
          sys->solve(prob, iterate, corrector_resid, corrector_step);	// corrector_step is now delta_m
 
          /* if a normal corrector did not converge - discard it, try a small corr one and set small correctors to aggressive */
-         if( !bicgstab_converged && bigcstab_norm_res_rel * 1e2 > resid->residualNorm() / dnorm )
+         if( !bicgstab_converged && bigcstab_norm_res_rel * 1e2 * dnorm > resid->residualNorm() )
          {
             PIPSdebugMessage("Gondzio corrector step computation in BiCGStab failed - break corrector loop");
 
             // try small correctors to improve centering and numerical stability
-            if( !small_pairs_corr )
+            if( !small_corr )
             {
                if( !small_corr_aggr )
                {
@@ -303,7 +304,12 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
                      std::cout << "switching to small correctors aggressive" << std::endl;
                   small_corr_aggr = true;
                }
-               small_pairs_corr = true;
+               if( my_rank == 0 )
+               {
+                  std::cout << "Switching to small corrector " << std::endl;
+                  std::cout << "Alpha when switching: " << alpha << std::endl;
+               }
+               small_corr = true;
                continue;
             }
             // exit corrector loop if small correctors have already been tried
@@ -321,7 +327,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
             step->saxpy(corrector_step, weight_candidate);
             alpha = alpha_enhanced;
 
-            if( small_pairs_corr && !small_corr_aggr )
+            if( small_corr && !small_corr_aggr )
                NumberSmallCorrectors++;
 
             NumberGondzioCorrections++;
@@ -337,17 +343,17 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
             step->saxpy(corrector_step, weight_candidate);
             alpha = alpha_enhanced;
 
-            if( small_pairs_corr && !small_corr_aggr )
+            if( small_corr && !small_corr_aggr )
                NumberSmallCorrectors++;
 
             NumberGondzioCorrections++;
          }
          /* if not done yet because correctors were not good enough - try a small corrector if enabled */
-         else if( additional_correctors_small_comp_pairs && !small_pairs_corr && iter >= first_iter_small_correctors )
+         else if( additional_correctors_small_comp_pairs && !small_corr && iter >= first_iter_small_correctors )
          {
             if( alpha < max_alpha_small_correctors )
             {
-               small_pairs_corr = true;
+               small_corr = true;
                if( my_rank == 0 )
                {
                   std::cout << "Switching to small corrector " << std::endl;
@@ -425,14 +431,14 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
          alpha = factor * alpha;
 
          // if step was poor try pure centering step
-         if( !pure_centering_step && alpha < 1e-7 )
+         if( !pure_centering_step && alpha < mutol * 1e-2 )
          {
             if( my_rank == 0 )
                std::cout << "poor step computed - trying pure centering step" << std::endl;
             pure_centering_step = true;
             continue;
          }
-         else if( alpha < 1e-7 && pure_centering_step && !precond_limit )
+         else if( alpha < mutol * 1e-2 && pure_centering_step && !precond_limit )
          {
             if( my_rank == 0 )
                std::cout << "refactorization" << std::endl;
@@ -475,7 +481,10 @@ void GondzioStochSolver::notifyFromSubject()
    const Subject& subj = *getSubject();
 
    bicgstab_skipped = subj.getBoolValue("BICG_SKIPPED");
-   bicgstab_converged = subj.getBoolValue("BICG_CONVERGED");
+   if( !bicgstab_skipped )
+      bicgstab_converged = subj.getBoolValue("BICG_CONVERGED");
+   else
+      bicgstab_converged = true;
    bigcstab_norm_res_rel = subj.getDoubleValue("BICG_RELRESNORM");
 
    if( !bicgstab_converged )
