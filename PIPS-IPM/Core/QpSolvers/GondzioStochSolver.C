@@ -297,6 +297,12 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
             // try small correctors to improve centering and numerical stability
             if( !small_pairs_corr )
             {
+               if( !small_corr_aggr )
+               {
+                  if( my_rank == 0 )
+                     std::cout << "switching to small correctors aggressive" << std::endl;
+                  small_corr_aggr = true;
+               }
                small_pairs_corr = true;
                continue;
             }
@@ -315,7 +321,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
             step->saxpy(corrector_step, weight_candidate);
             alpha = alpha_enhanced;
 
-            if( small_pairs_corr )
+            if( small_pairs_corr && !small_corr_aggr )
                NumberSmallCorrectors++;
 
             NumberGondzioCorrections++;
@@ -331,7 +337,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
             step->saxpy(corrector_step, weight_candidate);
             alpha = alpha_enhanced;
 
-            if( small_pairs_corr )
+            if( small_pairs_corr && !small_corr_aggr )
                NumberSmallCorrectors++;
 
             NumberGondzioCorrections++;
