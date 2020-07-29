@@ -400,7 +400,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
          const double resids_norm_probing = resid->residualNorm();
 
          double factor = 1.0;
-         double limit_resids = std::max( artol * dnorm, 10 * resids_norm_last );
+         double limit_resids = std::max( artol * dnorm, resids_norm_last );
 
          if( resids_norm_probing > limit_resids )
          {
@@ -409,7 +409,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
             assert( resids_diff > 0 ); assert( resids_max_change > 0 );
             assert( resids_max_change < resids_diff );
 
-            factor = std::min(factor, resids_max_change / resids_diff * 0.9999);
+            factor = std::min(factor, resids_max_change / resids_diff * 0.9995 );
          }
 
          if( mu_probing > 10 * mu_last )
@@ -419,7 +419,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
             assert( mu_diff > 0 ); assert( mu_max_change > 0 );
             assert( mu_max_change < mu_diff );
 
-            factor = std::min(factor, mu_max_change / mu_diff * 0.9999 );
+            factor = std::min(factor, mu_max_change / mu_diff * 0.9995 );
          }
 
          alpha = factor * alpha;
