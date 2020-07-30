@@ -44,17 +44,17 @@ namespace pips_options
 
       /// GONDZIO SOLVERS
       /** should adaptive linesearch be applied in the GondzioStoch solvers - overwritten in gmspips.cpp */
-      bool_options["GONDZIO_ADAPTIVE_LINESEARCH"] = false;
+      bool_options["GONDZIO_STOCH_ADAPTIVE_LINESEARCH"] = false;
       /** if GONDZIO adaptive linesearch is true determines number of linesearch points */
-      int_options["GONDZIO_N_LINESEARCH"] = 10;
+      int_options["GONDZIO_STOCH_N_LINESEARCH"] = 10;
       /** should additional corrector steps for small complementarity pairs be applied */
-      bool_options["GONDZIO_ADDITIONAL_CORRECTORS_SMALL_VARS"] = true;
+      bool_options["GONDZIO_STOCH_ADDITIONAL_CORRECTORS_SMALL_VARS"] = true;
       /** how many additional steps should be applied at most (in addition to the still existing gondzio corrector limit) */
-      int_options["GONDZIO_ADDITIONAL_CORRECTORS_MAX"] = 1;
+      int_options["GONDZIO_STOCH_ADDITIONAL_CORRECTORS_MAX"] = 1;
       /** first iteration at which to look for small corrector steps */
-      int_options["GONDZIO_FIRST_ITER_SMALL_CORRECTORS"] = 15;
+      int_options["GONDZIO_STOCH_FIRST_ITER_SMALL_CORRECTORS"] = 15;
       /** alpha must be lower equal to this value for the IPM to try and apply small corrector steps */
-      double_options["GONDZIO_MAX_ALPHA_SMALL_CORRECTORS"] = 0.8;
+      double_options["GONDZIO_STOCH_MAX_ALPHA_SMALL_CORRECTORS"] = 0.8;
 
 
       /// SOLVER CONTROLS

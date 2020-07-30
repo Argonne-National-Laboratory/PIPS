@@ -48,11 +48,11 @@ extern bool ipStartFound;
 
 GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob )
   : GondzioSolver(opt, prob),
-    n_linesearch_points( pips_options::getIntParameter("GONDZIO_N_LINESEARCH")),
-    additional_correctors_small_comp_pairs( pips_options::getBoolParameter("GONDZIO_ADDITIONAL_CORRECTORS_SMALL_VARS") ),
-    max_additional_correctors( pips_options::getIntParameter("GONDZIO_ADDITIONAL_CORRECTORS_MAX") ),
-    first_iter_small_correctors( pips_options::getIntParameter("GONDZIO_FIRST_ITER_SMALL_CORRECTORS") ),
-    max_alpha_small_correctors( pips_options::getDoubleParameter("GONDZIO_MAX_ALPHA_SMALL_CORRECTORS") ),
+    n_linesearch_points( pips_options::getIntParameter("GONDZIO_STOCH_N_LINESEARCH")),
+    additional_correctors_small_comp_pairs( pips_options::getBoolParameter("GONDZIO_STOCH_ADDITIONAL_CORRECTORS_SMALL_VARS") ),
+    max_additional_correctors( pips_options::getIntParameter("GONDZIO_STOCH_ADDITIONAL_CORRECTORS_MAX") ),
+    first_iter_small_correctors( pips_options::getIntParameter("GONDZIO_STOCH_FIRST_ITER_SMALL_CORRECTORS") ),
+    max_alpha_small_correctors( pips_options::getDoubleParameter("GONDZIO_STOCH_MAX_ALPHA_SMALL_CORRECTORS") ),
     NumberSmallCorrectors(0), bicgstab_skipped(false), bicgstab_converged(true), bigcstab_norm_res_rel(0.0),
     dynamic_bicg_tol(pips_options::getBoolParameter("OUTER_BICG_DYNAMIC_TOL"))
 {
@@ -61,7 +61,7 @@ GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob )
    assert(0 < max_alpha_small_correctors && max_alpha_small_correctors < 1);
    assert(n_linesearch_points > 0);
 
-   if( pips_options::getBoolParameter("GONDZIO_ADAPTIVE_LINESEARCH") )
+   if( pips_options::getBoolParameter("GONDZIO_STOCH_ADAPTIVE_LINESEARCH") )
    {
       const int size = PIPS_MPIgetSize();
 

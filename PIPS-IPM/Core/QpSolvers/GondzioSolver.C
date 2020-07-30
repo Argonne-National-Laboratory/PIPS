@@ -9,6 +9,7 @@
 #include "Status.h"
 #include "Data.h"
 #include "ProblemFormulation.h"
+#include "QpGenOptions.h"
 
 #include <cstring>
 #include <iostream>
