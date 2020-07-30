@@ -37,11 +37,6 @@ namespace pips_options
       bool_options["PRECONDITION_DISTRIBUTED"] = true;
       bool_options["PRECONDITION_SPARSE"] = true;
 
-      /// INTERIOR-POINT ALGORITHM
-      bool_options["IP_ACCURACY_REDUCED"] = false;
-      bool_options["IP_PRINT_TIMESTAMP"] = false;
-      bool_options["IP_STEPLENGTH_CONSERVATIVE"] = false;
-
       /// GONDZIO SOLVERS
       /** should adaptive linesearch be applied in the GondzioStoch solvers - overwritten in gmspips.cpp */
       bool_options["GONDZIO_STOCH_ADAPTIVE_LINESEARCH"] = false;
@@ -55,7 +50,8 @@ namespace pips_options
       int_options["GONDZIO_STOCH_FIRST_ITER_SMALL_CORRECTORS"] = 15;
       /** alpha must be lower equal to this value for the IPM to try and apply small corrector steps */
       double_options["GONDZIO_STOCH_MAX_ALPHA_SMALL_CORRECTORS"] = 0.8;
-
+      /** should the amount of gondzio correctors be scheduled dynamically - invalidates the max correctors setting */
+      bool_options["GONDZIO_STOCH_USE_DYNAMIC_CORRECTOR_SCHEDULE"] = false;
 
       /// SOLVER CONTROLS
 

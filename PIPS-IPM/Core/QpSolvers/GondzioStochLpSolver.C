@@ -258,6 +258,8 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
             && NumberSmallCorrectors < max_additional_correctors
             && (PIPSisLT(alpha_pri, 1.0) || PIPSisLT(alpha_dual, 1.0)) )
       {
+         if( dynamic_corrector_schedule )
+            adjustLimitGondzioCorrectors();
          corrector_step->copy(iterate);
 
          double alpha_pri_enhanced, alpha_dual_enhanced;

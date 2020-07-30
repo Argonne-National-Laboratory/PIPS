@@ -20,6 +20,15 @@ namespace qpgen_options
 
    void QpGenOptions::setDefaults()
    {
+      /// INTERIOR-POINT ALGORITHM
+      bool_options["IP_ACCURACY_REDUCED"] = false;
+      bool_options["IP_PRINT_TIMESTAMP"] = false;
+      bool_options["IP_STEPLENGTH_CONSERVATIVE"] = false;
+
+      /// GONDZIO SOLVER
+      /** maximum of Gondzio correctors computed */
+      int_options["GONDZIO_MAX_CORRECTORS"] = 3;
+
       /// SOLVER CONTROLS
 
       /// ERROR ABSORBTION / ITERATIVE REFINEMENT
@@ -36,7 +45,6 @@ namespace qpgen_options
       // - 1: iter. refin.
       // - 2: BiCGStab
       int_options["INNER_SC_SOLVE"] = 0;
-
 
       /// OUTER BIGCSTAB
       double_options["OUTER_BICG_TOL"] = 1e-10;

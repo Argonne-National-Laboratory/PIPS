@@ -49,11 +49,12 @@ extern bool ipStartFound;
 GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob )
   : GondzioSolver(opt, prob),
     n_linesearch_points( pips_options::getIntParameter("GONDZIO_STOCH_N_LINESEARCH")),
+    dynamic_corrector_schedule( pips_options::getBoolParameter("GONDZIO_STOCH_USE_DYNAMIC_CORRECTOR_SCHEDULE") ),
     additional_correctors_small_comp_pairs( pips_options::getBoolParameter("GONDZIO_STOCH_ADDITIONAL_CORRECTORS_SMALL_VARS") ),
     max_additional_correctors( pips_options::getIntParameter("GONDZIO_STOCH_ADDITIONAL_CORRECTORS_MAX") ),
     first_iter_small_correctors( pips_options::getIntParameter("GONDZIO_STOCH_FIRST_ITER_SMALL_CORRECTORS") ),
     max_alpha_small_correctors( pips_options::getDoubleParameter("GONDZIO_STOCH_MAX_ALPHA_SMALL_CORRECTORS") ),
-    NumberSmallCorrectors(0), bicgstab_skipped(false), bicgstab_converged(true), bigcstab_norm_res_rel(0.0),
+    NumberSmallCorrectors(0), bicgstab_skipped(false), bicgstab_converged(true), bigcstab_norm_res_rel(0.0), bicg_iterations(0),
     dynamic_bicg_tol(pips_options::getBoolParameter("OUTER_BICG_DYNAMIC_TOL"))
 {
    assert(max_additional_correctors > 0);
@@ -266,7 +267,8 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
             && NumberSmallCorrectors < max_additional_correctors
             && PIPSisLT(alpha, 1.0) )
       {
-         // copy current variables into corrector_step
+         if( dynamic_corrector_schedule )
+            adjustLimitGondzioCorrectors();
          corrector_step->copy(iterate);
 
          // calculate target steplength
@@ -486,7 +488,7 @@ void GondzioStochSolver::notifyFromSubject()
    else
       bicgstab_converged = true;
    bigcstab_norm_res_rel = subj.getDoubleValue("BICG_RELRESNORM");
-
+   bicg_iterations = subj.getIntValue("BICG_NITERATIONS");
    if( !bicgstab_converged )
       PIPSdebugMessage("BiGCStab had troubles converging\n");
 }
@@ -506,6 +508,24 @@ void GondzioStochSolver::setBiCGStabTol(int iteration) const
       pips_options::setDoubleParameter("OUTER_BICG_TOL", 1e-9);
    else
       pips_options::setDoubleParameter("OUTER_BICG_TOL", 1e-10);
+}
+
+void GondzioStochSolver::adjustLimitGondzioCorrectors()
+{
+   assert( bicg_iterations >= 0 );
+   if( dynamic_corrector_schedule )
+   {
+      if( bicgstab_skipped )
+         NumberGondzioCorrections = 5;
+      else if( bicg_iterations < 2 )
+         NumberGondzioCorrections = 4;
+      else if( bicg_iterations < 10 )
+         NumberGondzioCorrections = 3;
+      else if( bicg_iterations < 15 )
+         NumberGondzioCorrections = 2;
+      else if( bicg_iterations < 20 )
+         NumberGondzioCorrections = 1;
+   }
 }
 
 GondzioStochSolver::~GondzioStochSolver()

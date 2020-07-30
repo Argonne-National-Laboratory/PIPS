@@ -38,7 +38,7 @@ GondzioSolver::GondzioSolver( ProblemFormulation * of, Data * prob )
 
   NumberGondzioCorrections = 0;
 
-  maximum_correctors = 3; // maximum number of Gondzio correctors
+  maximum_correctors = qpgen_options::getIntParameter("GONDZIO_MAX_CORRECTORS");
 
   // the two StepFactor constants set targets for increase in step
   // length for each corrector

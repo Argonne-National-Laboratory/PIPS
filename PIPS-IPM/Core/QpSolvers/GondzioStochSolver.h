@@ -33,6 +33,8 @@ protected:
   unsigned int n_linesearch_points;
   Variables* temp_step;
 
+  /** should a BiCGDependent Schedule for the number of Gondzio Correctors be used */
+  const bool dynamic_corrector_schedule;
   /** should additional corrector steps for small complementarity pairs be applied */
   const bool additional_correctors_small_comp_pairs;
   /** should additional corrector steps for small complementarity pairs be applied */
@@ -48,12 +50,15 @@ protected:
   bool bicgstab_skipped;
   bool bicgstab_converged;
   double bigcstab_norm_res_rel;
+  int bicg_iterations;
 
   void registerBiCGStabOvserver(LinearSystem* sys);
 
   void setBiCGStabTol(int iteration) const;
   // controls whether setBiCGTol applies an dynamic schedule for the BiCGStab tolerance or just uses the user defined input (OUTER_BICG_TOL)
   bool dynamic_bicg_tol;
+
+  void adjustLimitGondzioCorrectors();
 
 public:
 
