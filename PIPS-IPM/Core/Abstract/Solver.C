@@ -253,6 +253,8 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	}
 	const double mufull = iterate->mustep_pd( step, maxAlpha_p, maxAlpha_d) / gamma_a;
 
+	if( PIPS_MPIgetRank() == 0 )
+	   std::cout << mufull << std::endl;
 	// No primal constraints were blocking?
 	if( !primalBlocking )
 	{
@@ -296,12 +298,18 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	assert(alpha_primal <= 1.0);
    assert(alpha_dual <= 1.0);
 
+	if( PIPS_MPIgetRank() == 0 )
+	   std::cout << alpha_primal << " " << alpha_dual << std::endl;
 	// make it at least gamma_f * maxAlpha and no bigger than 1
 	if( alpha_primal < gamma_f * maxAlpha_p ) alpha_primal = gamma_f * maxAlpha_p;
 	if( alpha_dual < gamma_f * maxAlpha_d ) alpha_dual = gamma_f * maxAlpha_d;
+	if( PIPS_MPIgetRank() == 0 )
+	   std::cout << alpha_primal << " " << alpha_dual << std::endl;
 
 	alpha_primal *= steplength_factor;
 	alpha_dual *= steplength_factor;
+	if( PIPS_MPIgetRank() == 0 )
+	   std::cout << alpha_primal << " " << alpha_dual << std::endl;
 
 	assert(alpha_primal < 1.0 && alpha_dual < 1.0);
 	assert(alpha_primal >= 0 && alpha_dual >= 0);
