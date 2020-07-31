@@ -294,11 +294,6 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	}
 	else
 	{
-	   if( PIPS_MPIgetRank() == 0 )
-	   {
-	      std::cout << "primalValue_d " << primalValue_d << "\tmaxAlpha_p " << maxAlpha_p << "\tprimalStep_d" << primalStep_d << std::endl;
-	      std::cout << "maxAlpha_p * primalStep_d " << maxAlpha_p * primalStep_d << std::endl;
-	   }
 	   const double primValueEstim_d = primalValue_d + maxAlpha_p * primalStep_d;
 
 	   if( PIPSisEQ(primValueEstim_d, 0.0 ) )
@@ -307,8 +302,6 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	   }
 	   else
 	   {
-         if( PIPS_MPIgetRank() == 0 )
-            std::cout << "primValueEstim_d " << primValueEstim_d << "\tdualStep_d " << dualStep_d << std::endl;
          alpha_dual = ( - dualValue_d + mufull / ( primValueEstim_d ) ) /
                dualStep_d;
 	   }
