@@ -264,6 +264,11 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	}
 	else
 	{
+	   if( PIPS_MPIgetRank() == 0 )
+	   {
+	      std::cout << "dualValue_p " << dualValue_p << "\tmaxAlpha_d " << maxAlpha_d << "\tdualStep_p " << dualStep_p << std::endl;
+	      std::cout << "maxAlpha_d * dualStep_p " << maxAlpha_d * dualStep_p << std::endl;
+	   }
 	   const double dualValueEstim_p = dualValue_p + maxAlpha_d * dualStep_p;
 
       if( PIPSisEQ(dualValueEstim_p, 0.0 ) )
