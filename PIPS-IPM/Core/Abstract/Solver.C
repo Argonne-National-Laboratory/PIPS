@@ -248,8 +248,8 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 					  primalBlocking, dualBlocking );
 
 	if( PIPS_MPIgetRank() == 0 ){
-	   std::cout << primalValue_p << " " << primalStep_p << " " << dualValue_p << " " << dualStep_p << " -> " << maxAlpha_p << std::endl;
-	   std::cout << primalValue_d << " " << primalStep_d << " " << dualValue_d << " " << dualStep_d << " -> " << maxAlpha_d << std::endl;
+	   std::cout << primalValue_p << " " << primalStep_p << " " << dualValue_p << " " << dualStep_p << " -> " << maxAlpha_p << " " << primalBlocking << std::endl;
+	   std::cout << primalValue_d << " " << primalStep_d << " " << dualValue_d << " " << dualStep_d << " -> " << maxAlpha_d << " " << dualBlocking << std::endl;
 	}
 	const double mufull = iterate->mustep_pd( step, maxAlpha_p, maxAlpha_d) / gamma_a;
 
