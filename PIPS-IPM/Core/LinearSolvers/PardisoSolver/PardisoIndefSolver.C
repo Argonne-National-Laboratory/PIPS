@@ -612,7 +612,7 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
       }
 
       iparm[30] = 0;
-#if 1
+#if 0
       const double b2norm = sv.twonorm();
       const double binfnorm = sv.infnorm();
       double mat_max = 0.0;

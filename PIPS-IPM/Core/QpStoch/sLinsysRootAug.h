@@ -38,7 +38,6 @@ class sLinsysRootAug : public sLinsysRoot {
   void finalizeKKT( sData* prob, Variables* vars) override;
   void finalizeKKTdist(sData* prob) override;
 
-  void dumpKKT(int index) const;
  protected:
   void solveReduced( sData *prob, SimpleVector& b) override;
   void solveReducedLinkCons( sData *prob, SimpleVector& b) override;

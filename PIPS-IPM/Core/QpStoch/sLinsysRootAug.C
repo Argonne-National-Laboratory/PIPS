@@ -67,33 +67,6 @@ sLinsysRootAug::sLinsysRootAug(sFactory* factory_,
   redRhs = new SimpleVector(locnx+locmy+locmz);
 }
 
-void sLinsysRootAug::dumpKKT(int index) const
-{
-   std::ofstream myfile;
-   myfile.open("../sparse_dist_kkt");
-
-   int zerocount = 0;
-   const int sizeKkt = locnx + locmy + locmyl + locmzl;
-
-   for( int r = 0; r < sizeKkt; r++ )
-   {
-      for( int i = kktDist->krowM()[r]; i < kktDist->krowM()[r + 1]; i++ )
-      {
-         const double val = kktDist->M()[i];
-         const double col = kktDist->jcolM()[i];
-         if( val != 0.0 )
-            myfile << r << " " << col << " " << val << std::endl;
-         else
-            zerocount++;
-      }
-   }
-
-   std::cout << "zero-count " << zerocount << " of " << kktDist->krowM()[sizeKkt] << std::endl;
-
-   myfile.close();
-   exit(1);
-}
-
 sLinsysRootAug::~sLinsysRootAug()
 {
   if(CtDC) delete CtDC;
@@ -1285,7 +1258,6 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 
 void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
 {
-   exit(1);// TODO remove!
    SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
 
 #ifndef NDEBUG

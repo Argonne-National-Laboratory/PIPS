@@ -39,7 +39,6 @@ using namespace std;
 #include "mpi.h"
 #include "QpGenVars.h"
 #include "QpGenResiduals.h"
-#include "sLinsysRootAug.h"
 
 #include <fstream>
 #include <string>
@@ -295,39 +294,12 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       // We've finally decided on a step direction, now calculate the
       // length using Mehrotra's heuristic.x
-      temp_step->copy(iterate);
       finalStepLength_PD(iterate, step, alpha_pri, alpha_dual);
+
       // actually take the step and calculate the new mu
 
       iterate->saxpy_pd(step, alpha_pri, alpha_dual);
       mu = iterate->mu();
-
-      if( mu < 0 )
-      {
-         double alp = alpha_pri;
-         double ald = alpha_dual;
-         double norm_it = temp_step->infnorm();
-         temp_step->stepbound_pd( step, alp, ald);
-         temp_step->saxpy_pd(step, alp, ald);
-         double norm_step = step->infnorm();
-         double norm_after_step = temp_step->infnorm();
-         double muc = temp_step->mu();
-         if( PIPS_MPIgetRank() == 0 )
-         {
-            std::cout << "mu: " << mu << " != " << muc << std::endl;
-            std::cout << "alp: " << alpha_pri << " != " << alp << std::endl;
-            std::cout << "ald: " << alpha_dual << " != " << ald << std::endl;
-            std::cout << "norm iterate before " << norm_it << std::endl;
-            std::cout << "norm step " << norm_step << std::endl;
-            std::cout << "norm iterate after " << norm_after_step << std::endl;
-         }
-      }
-      if( PIPS_MPIgetRank() == 0 && mu < 0 )
-      {
-         std::cout << "SOMETHING WENT TERRIBLY WRONG..." << std::endl;
-         // dump sc
-         dynamic_cast<sLinsysRootAug*>(sys)->dumpKKT(iter);
-      }
 
       stochFactory->iterateEnded();
    }
