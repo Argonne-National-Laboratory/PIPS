@@ -299,11 +299,11 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
          temp_step->saxpy_pd(step, alpha_pri, alpha_dual);
 
-         if( PIPS_MPIgetRank() == 0 && temp_step->mu() < 0 )
+         if( PIPS_MPIgetRank() == 0 && mu < 0 )
          {
             std::cout << "SOMETHING WENT TERRIBLY WRONG IN THE CORRECTORS ..." << std::endl;
             // dump sc
-            dynamic_cast<sLinsysRootAug*>(sys)->dumpKKT(iter);
+            //dynamic_cast<sLinsysRootAug*>(sys)->dumpKKT(iter);
          }
 
       }
@@ -317,7 +317,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       iterate->saxpy_pd(step, alpha_pri, alpha_dual);
       mu = iterate->mu();
 
-      if( PIPS_MPIgetRank() == 0 && iterate->mu() < 0 )
+      if( PIPS_MPIgetRank() == 0 && mu < 0 )
       {
          std::cout << "SOMETHING WENT TERRIBLY WRONG..." << std::endl;
          // dump sc
