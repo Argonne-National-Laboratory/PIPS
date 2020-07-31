@@ -272,8 +272,6 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
       }
       else
       {
-         if( PIPS_MPIgetRank() == 0 )
-            std::cout << "dualValueEstim_p " << dualValueEstim_p << "\tprimalStep_p " << primalStep_p << std::endl;
          alpha_primal = ( - primalValue_p + mufull / ( dualValueEstim_p ) ) /
                   primalStep_p;
       }
