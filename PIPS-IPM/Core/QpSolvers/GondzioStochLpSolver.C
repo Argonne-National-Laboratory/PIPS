@@ -312,6 +312,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
          double norm_step = step->infnorm();
          double norm_after_step = temp_step->infnorm();
          double muc = temp_step->mu();
+
          if( PIPS_MPIgetRank() == 0 )
          {
             std::cout << "mu: " << mu << " != " << muc << std::endl;
