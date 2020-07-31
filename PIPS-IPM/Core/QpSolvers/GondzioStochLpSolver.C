@@ -291,33 +291,32 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
             // exit Gondzio correction loop
             break;
          }
-
-         temp_step->copy(iterate);
-         double alpha_pri_copy = alpha_pri;
-         double alpha_dual_copy = alpha_dual;
-         finalStepLength_PD(temp_step, step, alpha_pri_copy, alpha_dual_copy);
-
-         temp_step->saxpy_pd(step, alpha_pri, alpha_dual);
-
-         if( PIPS_MPIgetRank() == 0 && temp_step->mu() < 0 )
-         {
-            std::cout << "SOMETHING WENT TERRIBLY WRONG IN THE CORRECTORS ..." << std::endl;
-            // dump sc
-            dynamic_cast<sLinsysRootAug*>(sys)->dumpKKT(iter);
-         }
-
       }
 
       // We've finally decided on a step direction, now calculate the
       // length using Mehrotra's heuristic.x
+      temp_step->copy(iterate);
       finalStepLength_PD(iterate, step, alpha_pri, alpha_dual);
-
       // actually take the step and calculate the new mu
 
       iterate->saxpy_pd(step, alpha_pri, alpha_dual);
       mu = iterate->mu();
 
-      if( PIPS_MPIgetRank() == 0 && iterate->mu() < 0 )
+      if( mu < 0 )
+      {
+         double alp = alpha_pri;
+         double ald = alpha_dual;
+         temp_step->stepbound_pd( step, alp, ald);
+         temp_step->saxpy_pd(step, alp, ald);
+         double muc = temp_step->mu();
+         if( PIPS_MPIgetRank() == 0 )
+         {
+            std::cout << "mu: " << mu << " != " << muc << std::endl;
+            std::cout << "alp: " << alpha_pri << " != " << alp << std::endl;
+            std::cout << "ald: " << alpha_dual << " != " << ald << std::endl;
+         }
+      }
+      if( PIPS_MPIgetRank() == 0 && mu < 0 )
       {
          std::cout << "SOMETHING WENT TERRIBLY WRONG..." << std::endl;
          // dump sc
