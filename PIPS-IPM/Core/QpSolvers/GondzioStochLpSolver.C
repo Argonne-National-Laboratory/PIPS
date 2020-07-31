@@ -291,6 +291,21 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
             // exit Gondzio correction loop
             break;
          }
+
+         temp_step->copy(iterate);
+         double alpha_pri_copy = alpha_pri;
+         double alpha_dual_copy = alpha_dual;
+         finalStepLength_PD(temp_step, step, alpha_pri_copy, alpha_dual_copy);
+
+         temp_step->saxpy_pd(step, alpha_pri, alpha_dual);
+
+         if( PIPS_MPIgetRank() == 0 && temp_step->mu() < 0 )
+         {
+            std::cout << "SOMETHING WENT TERRIBLY WRONG IN THE CORRECTORS ..." << std::endl;
+            // dump sc
+            dynamic_cast<sLinsysRootAug*>(sys)->dumpKKT(iter);
+         }
+
       }
 
       // We've finally decided on a step direction, now calculate the
@@ -302,13 +317,14 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       iterate->saxpy_pd(step, alpha_pri, alpha_dual);
       mu = iterate->mu();
 
-      stochFactory->iterateEnded();
-   }
+      if( PIPS_MPIgetRank() == 0 && iterate->mu() < 0 )
+      {
+         std::cout << "SOMETHING WENT TERRIBLY WRONG..." << std::endl;
+         // dump sc
+         dynamic_cast<sLinsysRootAug*>(sys)->dumpKKT(iter);
+      }
 
-   if( PIPS_MPIgetRank() == 0 && resid->residualNorm() / dnorm > 1e10 )
-   {
-      // dump sc
-      dynamic_cast<sLinsysRootAug*>(sys)->dumpKKT(iter);
+      stochFactory->iterateEnded();
    }
 
    resid->calcresids(prob, iterate);
