@@ -39,6 +39,7 @@ using namespace std;
 #include "mpi.h"
 #include "QpGenVars.h"
 #include "QpGenResiduals.h"
+#include "sLinsysRootAug.h"
 
 #include <fstream>
 #include <string>
@@ -302,6 +303,12 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       mu = iterate->mu();
 
       stochFactory->iterateEnded();
+   }
+
+   if( PIPS_MPIgetRank() == 0 && resid->residualNorm() / dnorm > 1e10 )
+   {
+      // dump sc
+      dynamic_cast<sLinsysRootAug*>(sys)->dumpKKT(iter);
    }
 
    resid->calcresids(prob, iterate);
