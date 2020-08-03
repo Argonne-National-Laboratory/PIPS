@@ -308,6 +308,9 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	if( alpha_primal < gamma_f * maxAlpha_p ) alpha_primal = gamma_f * maxAlpha_p;
 	if( alpha_dual < gamma_f * maxAlpha_d ) alpha_dual = gamma_f * maxAlpha_d;
 
+	alpha_primal = std::max( alpha_primal, maxAlpha_p );
+	alpha_dual = std::max( alpha_dual, maxAlpha_d );
+	
 	// back off just a touch (or a bit more)
 	#ifdef STEPLENGTH_CONSERVATIVE
 		alpha_primal *= 0.99;
