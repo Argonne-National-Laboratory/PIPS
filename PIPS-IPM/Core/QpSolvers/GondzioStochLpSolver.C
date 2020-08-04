@@ -409,71 +409,27 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       if( numerical_troubles )
       {
          if( !precond_limit )
-         {
-            /** try reduce error through preconditioner */
-            bool success = false;
-            dynamic_cast<sLinsysRoot*>(sys)->precondSC.decreaseDiagDomBound(success);
-            if( !success )
-            {
-               precond_limit = true;
-               if( my_rank == 0 )
-                  std::cout << "Cannot increase precision in preconditioner anymore" << std::endl;
-            }
-         }
+            precond_limit = decreasePreconditionerImpact(sys);
 
          const double mu_last = iterate->mu();
          const double resids_norm_last = resid->residualNorm();
 
-         /* compute probing step */
-         temp_step->copy(iterate);
-         temp_step->saxpy_pd(step, alpha_pri, alpha_dual);
-         resid->calcresids(prob, temp_step, false);
+         computeProbingStep_pd(temp_step, iterate, step, alpha_pri, alpha_dual);
 
+         resid->calcresids(prob, temp_step, false);
          const double mu_probing = temp_step->mu();
          const double resids_norm_probing = resid->residualNorm();
 
-         double factor = 1.0;
-         double limit_resids = std::max( artol * dnorm, resids_norm_last );
-
-         if( resids_norm_probing > limit_resids )
-         {
-            const double resids_diff = (resids_norm_probing - resids_norm_last);
-            const double resids_max_change = (limit_resids - resids_norm_last);
-            assert( resids_diff > 0 ); assert( resids_max_change > 0 );
-            assert( resids_max_change < resids_diff );
-
-            factor = std::min(factor, resids_max_change / resids_diff * 0.9995 );
-         }
-
-         if( mu_probing > 10 * mu_last )
-         {
-            const double mu_diff = mu_probing - mu_diff;
-            const double mu_max_change = 10 * mu_last - mu_probing;
-            assert( mu_diff > 0 ); assert( mu_max_change > 0 );
-            assert( mu_max_change < mu_diff );
-
-            factor = std::min(factor, mu_max_change / mu_diff * 0.9995 );
-         }
+         const double factor = computeStepFactorProbing(resids_norm_last, resids_norm_probing,
+               mu_last, mu_probing);
 
          alpha_pri = factor * alpha_pri;
          alpha_dual = factor * alpha_dual;
 
          const double alpha_max = std::max(alpha_pri, alpha_dual);
 
-         // if step was poor try pure centering step
-         if( !pure_centering_step && alpha_max < mutol * 1e-2 )
-         {
-            if( my_rank == 0 )
-               std::cout << "poor step computed - trying pure centering step" << std::endl;
-            pure_centering_step = true;
+         if( restartIterateBecauseOfPoorStep( pure_centering_step, precond_limit, alpha_max ) )
             continue;
-         }
-         else if( alpha_max < mutol * 1e-2 && pure_centering_step && !precond_limit )
-         {
-            if( my_rank == 0 )
-               std::cout << "refactorization" << std::endl;
-            continue;
-         }
       }
 
       // actually take the step and calculate the new mu
@@ -493,6 +449,13 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    }
 
    return status_code;
+}
+
+void GondzioStochLpSolver::computeProbingStep_pd(Variables* probing_step, const Variables* iterate, const Variables* step,
+        double alpha_primal, double alpha_dual) const
+{
+   probing_step->copy(iterate);
+   probing_step->saxpy_pd(step, alpha_primal, alpha_dual);
 }
 
 

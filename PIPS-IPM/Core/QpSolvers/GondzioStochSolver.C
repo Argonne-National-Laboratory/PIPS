@@ -384,68 +384,24 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       if( numerical_troubles )
       {
          if( !precond_limit )
-         {
-            /** try reduce error through preconditioner */
-            bool success = false;
-            dynamic_cast<sLinsysRoot*>(sys)->precondSC.decreaseDiagDomBound(success);
-            if( !success )
-            {
-               precond_limit = true;
-               if( my_rank == 0 )
-                  std::cout << "Cannot increase precision in preconditioner anymore" << std::endl;
-            }
-         }
+            precond_limit = decreasePreconditionerImpact(sys);
 
          const double mu_last = iterate->mu();
          const double resids_norm_last = resid->residualNorm();
 
-         /* compute probing step */
-         temp_step->copy(iterate);
-         temp_step->saxpy(step, alpha);
-         resid->calcresids(prob, temp_step, false);
+         computeProbingStep(temp_step, iterate, step, alpha);
 
+         resid->calcresids(prob, temp_step, false);
          const double mu_probing = temp_step->mu();
          const double resids_norm_probing = resid->residualNorm();
 
-         double factor = 1.0;
-         double limit_resids = std::max( artol * dnorm, resids_norm_last );
-
-         if( resids_norm_probing > limit_resids )
-         {
-            const double resids_diff = (resids_norm_probing - resids_norm_last);
-            const double resids_max_change = (limit_resids - resids_norm_last);
-            assert( resids_diff > 0 ); assert( resids_max_change > 0 );
-            assert( resids_max_change < resids_diff );
-
-            factor = std::min(factor, resids_max_change / resids_diff * 0.9995 );
-         }
-
-         if( mu_probing > 10 * mu_last )
-         {
-            const double mu_diff = mu_probing - mu_diff;
-            const double mu_max_change = 10 * mu_last - mu_probing;
-            assert( mu_diff > 0 ); assert( mu_max_change > 0 );
-            assert( mu_max_change < mu_diff );
-
-            factor = std::min(factor, mu_max_change / mu_diff * 0.9995 );
-         }
+         const double factor = computeStepFactorProbing(resids_norm_last, resids_norm_probing,
+               mu_last, mu_probing);
 
          alpha = factor * alpha;
 
-         // if step was poor try pure centering step
-         if( !pure_centering_step && alpha < mutol * 1e-2 )
-         {
-            if( my_rank == 0 )
-               std::cout << "poor step computed - trying pure centering step" << std::endl;
-            pure_centering_step = true;
+         if( restartIterateBecauseOfPoorStep( pure_centering_step, precond_limit, alpha ) )
             continue;
-         }
-         else if( alpha < mutol * 1e-2 && pure_centering_step && !precond_limit )
-         {
-            if( my_rank == 0 )
-               std::cout << "refactorization" << std::endl;
-            continue;
-         }
       }
 
       // actually take the step (at last!) and calculate the new mu
@@ -454,9 +410,6 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
       pure_centering_step = false;
       numerical_troubles = false;
-
-      if( 0 == my_rank )
-         std::cout << "final alpha: " << alpha << " mu: " << mu <<   std::endl;
 
       stochFactory->iterateEnded();
    }
@@ -527,6 +480,75 @@ void GondzioStochSolver::adjustLimitGondzioCorrectors()
          NumberGondzioCorrections = 1;
    }
 }
+
+bool GondzioStochSolver::decreasePreconditionerImpact(LinearSystem* sys) const
+{
+   bool success = false;
+   dynamic_cast<sLinsysRoot*>(sys)->precondSC.decreaseDiagDomBound(success);
+   if( !success )
+   {
+      if( PIPS_MPIgetRank() == 0 )
+         std::cout << "Cannot increase precision in preconditioner anymore" << std::endl;
+   }
+   return success;
+}
+
+void GondzioStochSolver::computeProbingStep(Variables* probing_step, const Variables* iterate, const Variables* step,
+      double alpha) const
+{
+   probing_step->copy(iterate);
+   probing_step->saxpy(step, alpha);
+}
+
+double GondzioStochSolver::computeStepFactorProbing(double resids_norm_last, double resids_norm_probing,
+      double mu_last, double mu_probing) const
+{
+   double factor = 1.0;
+   const double limit_resids = std::max( artol * dnorm, resids_norm_last );
+
+   if( resids_norm_probing > limit_resids )
+   {
+      const double resids_diff = resids_norm_probing - resids_norm_last;
+      const double resids_max_change = limit_resids - resids_norm_last;
+      assert( resids_diff > 0 ); assert( resids_max_change > 0 );
+      assert( resids_max_change < resids_diff );
+
+      factor = std::min(factor, resids_max_change / resids_diff * 0.9995 );
+   }
+
+   if( mu_probing > 10 * mu_last )
+   {
+      const double mu_diff = mu_probing - mu_last;
+      const double mu_max_change = 10 * mu_last - mu_probing;
+      assert( mu_diff > 0 ); assert( mu_max_change > 0 );
+      assert( mu_max_change < mu_diff );
+
+      factor = std::min(factor, mu_max_change / mu_diff * 0.9995 );
+   }
+   return factor;
+}
+
+bool GondzioStochSolver::restartIterateBecauseOfPoorStep( bool& pure_centering_step,
+      bool precond_limit, double alpha_max) const
+{
+   const int my_rank = PIPS_MPIgetRank();
+
+   if( !pure_centering_step && alpha_max < mutol * 1e-2 )
+   {
+      if( my_rank == 0 )
+         std::cout << "poor step computed - trying pure centering step" << std::endl;
+      pure_centering_step = true;
+      return true;
+   }
+   else if( alpha_max < mutol * 1e-2 && pure_centering_step && !precond_limit )
+   {
+      if( my_rank == 0 )
+         std::cout << "refactorization" << std::endl;
+      return true;
+   }
+   return false;
+}
+
 
 GondzioStochSolver::~GondzioStochSolver()
 {

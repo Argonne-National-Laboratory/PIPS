@@ -60,6 +60,15 @@ protected:
 
   void adjustLimitGondzioCorrectors();
 
+  bool decreasePreconditionerImpact(LinearSystem* sys) const;
+
+  double computeStepFactorProbing(double resids_norm_last, double resids_norm_probing,
+        double mu_last, double mu_probing) const;
+
+  void computeProbingStep(Variables* probing_step, const Variables* iterate, const Variables* step,
+        double alpha) const;
+
+  bool restartIterateBecauseOfPoorStep( bool& pure_centering_step, bool precond_limit, double alpha_max) const;
 public:
 
   GondzioStochSolver( ProblemFormulation * of, Data * prob);
