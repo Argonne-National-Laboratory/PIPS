@@ -219,12 +219,11 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	  assert( 0 && "Can't get here" );
           break;
 	}
+   // safeguard against numerical troubles in the above computations
+	alpha = std::min( maxAlpha, alpha );
 
 	// make it at least gamma_f * maxStep
 	if( alpha < gamma_f * maxAlpha ) alpha = gamma_f * maxAlpha;
-
-   // safeguard against numerical troubles in the above computations
-	alpha = std::min( maxAlpha, alpha );
 
 	// back off just a touch (or a bit more)
 #ifdef STEPLENGTH_CONSERVATIVE
@@ -307,14 +306,14 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	assert(alpha_primal <= 1.0);
    assert(alpha_dual <= 1.0);
 
+	// safeguard against numerical troubles in the above computations
+	alpha_primal = std::min( alpha_primal, maxAlpha_p );
+	alpha_dual = std::min( alpha_dual, maxAlpha_d );
+
 	// make it at least gamma_f * maxAlpha and no bigger than 1
 	if( alpha_primal < gamma_f * maxAlpha_p ) alpha_primal = gamma_f * maxAlpha_p;
 	if( alpha_dual < gamma_f * maxAlpha_d ) alpha_dual = gamma_f * maxAlpha_d;
 
-	// safeguard against numerical troubles in the above computations
-	alpha_primal = std::min( alpha_primal, maxAlpha_p );
-	alpha_dual = std::min( alpha_dual, maxAlpha_d );
-	
 	// back off just a touch (or a bit more)
 	#ifdef STEPLENGTH_CONSERVATIVE
 		alpha_primal *= 0.99;
