@@ -403,15 +403,14 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   int stop_code = NOT_FINISHED;
   int idx;
 
-  double gap   = fabs( resids->dualityGap() );
-  double rnorm = resids->residualNorm();
+  const double gap   = fabs( resids->dualityGap() );
+  const double rnorm = resids->residualNorm();
 
-  int myrank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  const int myrank = PIPS_MPIgetRank();
 
-  idx = iterate-1;
-  if(idx <  0     ) idx=0;
-  if(idx >= maxit ) idx=maxit-1;
+  idx = iterate - 1;
+  if( idx <  0     ) idx = 0;
+  if( idx >= maxit ) idx = maxit-1;
 
   // store the historical record
   mu_history[idx] = mu;
@@ -419,16 +418,15 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   phi = (rnorm + gap) / dnorm;
   phi_history[idx] = phi;
 
-
   if(idx > 0) {
-    phi_min_history[idx] = phi_min_history[idx-1];
+    phi_min_history[idx] = phi_min_history[idx - 1];
     if(phi < phi_min_history[idx]) phi_min_history[idx] = phi;
   } else
     phi_min_history[idx] = phi;
 
   if ( iterate >= maxit ) {
     stop_code = MAX_ITS_EXCEEDED;
-  } else if ( mu <= mutol && rnorm <= artol*dnorm ) {
+  } else if ( mu <= mutol && rnorm <= artol * dnorm ) {
     stop_code = SUCCESSFUL_TERMINATION;
   }
 
