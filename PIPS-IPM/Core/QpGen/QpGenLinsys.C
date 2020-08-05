@@ -485,7 +485,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    bicg_conv_flag = -1;
    int normrNDiv = 0;
    int nstags = 0;
-   double rho = 1., omega = 1., alpha;
+   double rho = 1., omega = 1., alpha = 1.;
 
    //main loop
    for( bicg_niterations = 0; bicg_niterations  < outer_bicg_max_iter; bicg_niterations ++ )
