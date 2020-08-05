@@ -211,6 +211,8 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	  assert( 0 && "Can't get here" );
           break;
 	}
+   // safeguard against numerical troubles in the above computations
+	alpha = std::min( maxAlpha, alpha );
 
 	// make it at least gamma_f * maxStep
 	if( alpha < gamma_f * maxAlpha ) alpha = gamma_f * maxAlpha;
@@ -291,6 +293,10 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 
 	assert(alpha_primal <= 1.0);
    assert(alpha_dual <= 1.0);
+
+	// safeguard against numerical troubles in the above computations
+	alpha_primal = std::min( alpha_primal, maxAlpha_p );
+	alpha_dual = std::min( alpha_dual, maxAlpha_d );
 
 	// make it at least gamma_f * maxAlpha and no bigger than 1
 	if( alpha_primal < gamma_f * maxAlpha_p ) alpha_primal = gamma_f * maxAlpha_p;
@@ -379,14 +385,15 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   int stop_code = NOT_FINISHED;
   int idx;
 
-  double gap   = fabs( resids->dualityGap() );
-  double rnorm = resids->residualNorm();
+  const double gap   = fabs( resids->dualityGap() );
+  const double rnorm = resids->residualNorm();
 
   const int myrank = PIPS_MPIgetRank();
 
-  idx = iterate-1;
-  if( idx <  0     ) idx=0;
-  if( idx >= maxit ) idx=maxit-1;
+  idx = iterate - 1;
+  if( idx <  0     ) idx = 0;
+  if( idx >= maxit ) idx = maxit - 1;
+  if( idx >= maxit ) idx = maxit - 1;
 
   // store the historical record
   mu_history[idx] = mu;
@@ -394,9 +401,8 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   phi = (rnorm + gap) / dnorm;
   phi_history[idx] = phi;
 
-
   if(idx > 0) {
-    phi_min_history[idx] = phi_min_history[idx-1];
+    phi_min_history[idx] = phi_min_history[idx - 1];
     if(phi < phi_min_history[idx]) phi_min_history[idx] = phi;
   } else
     phi_min_history[idx] = phi;

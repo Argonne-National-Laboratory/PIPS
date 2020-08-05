@@ -167,7 +167,7 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in, bool print_re
      if( 0 == myRank )
         std::cout << " rC norm = " << componentNorm << std::endl;
   }
-  if( componentNorm > norm ) norm = componentNorm; // TODO : this was commented out - I assume by mistake?
+  if( componentNorm > norm ) norm = componentNorm;
 
   rz->copyFrom( *vars->z );
 
