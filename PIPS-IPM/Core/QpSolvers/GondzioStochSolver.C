@@ -469,15 +469,15 @@ void GondzioStochSolver::adjustLimitGondzioCorrectors()
    if( dynamic_corrector_schedule )
    {
       if( bicgstab_skipped )
-         NumberGondzioCorrections = 4;
-      else if( bicg_iterations < 1 )
-         NumberGondzioCorrections = 4;
-      else if( bicg_iterations <= 25 )
-         NumberGondzioCorrections = 3;
-      else if( bicg_iterations > 25 )
-         NumberGondzioCorrections = 2;
-//      else if( bicg_iterations > 20 )
-//         NumberGondzioCorrections = 1;
+         maximum_correctors = 5;
+      else if( bicg_iterations < 2 )
+         maximum_correctors = 4;
+      else if( bicg_iterations <= 15 )
+         maximum_correctors = 3;
+      else if( bicg_iterations < 25 )
+         maximum_correctors = 2;
+      else if( bicg_iterations > 35 )
+         maximum_correctors = 1;
    }
 }
 
