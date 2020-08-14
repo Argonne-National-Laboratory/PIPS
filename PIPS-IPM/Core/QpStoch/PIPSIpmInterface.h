@@ -236,6 +236,19 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("scaler created\n");
 #endif
 
+  if( scaler )
+  {
+     MPI_Barrier(comm);
+     const double t0_scaling = MPI_Wtime();
+
+     scaler->scale();
+
+     MPI_Barrier(comm);
+     const double t_scaling = MPI_Wtime();
+     if( mype == 0 )
+        std::cout << "---scaling time (in sec.): " << t_scaling - t0_scaling << std::endl;
+  }
+
   solver  = new IPMSOLVER( factory, data );
   solver->addMonitor(new StochMonitor( factory, scaler ));
 #ifdef TIMING
@@ -278,19 +291,6 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 #ifdef TIMING
   double tmElapsed=MPI_Wtime();
 #endif
-
-  if( scaler )
-  {
-     MPI_Barrier(comm);
-     const double t0_scaling = MPI_Wtime();
-
-     scaler->scale();
-
-     MPI_Barrier(comm);
-     const double t_scaling = MPI_Wtime();
-     if( mype == 0 )
-        std::cout << "---scaling time (in sec.): " << t_scaling - t0_scaling << std::endl;
-  }
 
 #if defined(PRESOLVE_POSTSOLVE_ONLY) && !defined(NDEBUG)
   const int result = 0;
