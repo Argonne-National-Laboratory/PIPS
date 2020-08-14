@@ -444,7 +444,7 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   if(stop_code != NOT_FINISHED)  return stop_code;
 
   // check infeasibility condition
-  if(idx >= 10 && phi >= 1.e-8 && phi >= 1.e4*phi_min_history[idx]) {
+  if(idx >= 10 && phi >= 1.e-8 && phi >= 1.e4 * phi_min_history[idx]) {
 #ifdef TIMING
     if( myrank == 0 )
        std::cout << "possible INFEASIBLITY detected, phi: " << phi << std::endl;
@@ -454,25 +454,25 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   if(stop_code != NOT_FINISHED)  return stop_code;
 
   // check for unknown status: slow convergence first
-  if(idx >= 350 && phi_min_history[idx] >= .5 * phi_min_history[idx-30]) {
+  if(idx >= 350 && phi_min_history[idx] >= 0.5 * phi_min_history[idx - 30]) {
     stop_code = UNKNOWN;
     printf("hehe dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
   }
 
-  if(idx >= 350 && rnorm / dnorm > artol &&
-     (rnorm_history[idx]/mu_history[idx]) / (rnorm_history[0]/mu_history[0]) 
-     >= 1.e8) {
+  if(idx >= 350 && rnorm > artol * dnorm &&
+     rnorm_history[idx] * mu_history[0] >= 1.e8 * mu_history[idx] * rnorm_history[0])
+  {
     stop_code = UNKNOWN;
     printf("dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
   }
 
-  //if(mu<50*rnorm/dnorm || mu<1e-5) {
-  if(mu<1.0e5*rnorm/dnorm) {
+  //if(dnorm * mu < 50 * rnorm || mu < 1e-5) {
+  if( mu * dnorm < 1.0e5 * rnorm) {
     //if(!onSafeSolver) {
     gLackOfAccuracy=1;
     //cout << "Lack of accuracy detected ---->" << mu << ":" << rnorm/dnorm << endl;
   } else {
-      //if(mu>1e7*rnorm/dnorm && mu>1.0e4)
+      //if(dnorm * mu > 1e7 * rnorm && mu > 1.0e4)
       //gLackOfAccuracy=-1;
       //else
       gLackOfAccuracy=1;
