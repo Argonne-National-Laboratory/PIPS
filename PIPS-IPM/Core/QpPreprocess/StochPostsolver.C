@@ -1281,10 +1281,11 @@ bool StochPostsolver::postsolveFixedEmptyColumn(sVars& original_vars, int reduct
    assert( reductions.at(reduction_idx) == FIXED_EMPTY_COLUMN );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
-   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
    const unsigned int first_index = start_idx_indices.at(reduction_idx);
 
 #ifndef NDEBUG
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
+
    const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
    const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
    const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
