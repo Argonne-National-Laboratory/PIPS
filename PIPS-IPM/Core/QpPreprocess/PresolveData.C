@@ -4149,10 +4149,13 @@ void PresolveData::printVarBoundStatistics(std::ostream& out) const
 void PresolveData::printRowColStats() const
 {
    const int nnzs_cols = nnzs_col->onenorm();
+
+#ifndef NDEBUG
    const int nnzs_A = nnzs_row_A->onenorm();
    const int nnzs_C = nnzs_row_C->onenorm();
 
    assert( nnzs_cols == nnzs_A + nnzs_C );
+#endif
 
    const int cols = nnzs_col->getNnzs();
    const int rows_A = nnzs_row_A->getNnzs();
