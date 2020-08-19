@@ -15,29 +15,29 @@ class Residuals;
 class StochMonitor : public OoqpMonitor 
 {
  private:
-  void doItStoch( Solver * solver, Data * data, Variables * vars,
-        Residuals * resids,
+  void doItStoch( const Solver * solver, const Data * data, const Variables * vars,
+        const Residuals * resids,
         double alpha_primal, double alpha_dual, double sigma,
         int i, double mu,
                   int status_code,
-        int level );
+        int level ) const;
 
  public:  
   StochMonitor(QpGenStoch* qp, Scaler* scaler = nullptr);
   StochMonitor(sFactory* qp, Scaler* scaler = nullptr);
-  virtual void doIt( Solver * solver, Data * data, Variables * vars,
-		     Residuals * resids,
+  void doIt( const Solver * solver, const Data * data, const Variables * vars,
+		     const Residuals * resids,
 		     double alpha, double sigma,
 		     int i, double mu,
-                     int status_code,
-		     int level );
+		     int status_code,
+		     int level ) override;
 
-  virtual void doItPd( Solver * solver, Data * data, Variables * vars,
-                Residuals * resids,
+  void doItPd( const Solver * solver, const Data * data, const Variables * vars,
+                const Residuals * resids,
                 double alpha_primal, double alpha_dual, double sigma,
                 int i, double mu,
-                     int status_code,
-                int level );
+                int status_code,
+                int level ) override;
 
  protected:
   QpGenStoch* qp;

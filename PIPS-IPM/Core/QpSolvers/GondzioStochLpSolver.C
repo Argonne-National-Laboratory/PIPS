@@ -50,8 +50,8 @@ extern double g_iterNumber;
 extern bool ipStartFound;
 
 
-GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob)
-  : GondzioStochSolver(opt, prob)
+GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob, const Scaler* scaler)
+  : GondzioStochSolver(opt, prob, scaler)
 {
 }
 
@@ -117,7 +117,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    QpGenStoch* stochFactory = reinterpret_cast<QpGenStoch*>(factory);
    g_iterNumber = 0.0;
 
-   dnorm = prob->datanorm();
+   setDnorm(*prob);
    // initialization of (x,y,z) and factorization routine.
    sys = factory->makeLinsys(prob);
 

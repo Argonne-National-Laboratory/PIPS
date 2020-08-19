@@ -39,11 +39,11 @@ protected:
 
 public:
 
-  GondzioStochSolver( ProblemFormulation * of, Data * prob);
+  GondzioStochSolver( ProblemFormulation * of, Data * prob, const Scaler* scaler = nullptr );
 
   virtual ~GondzioStochSolver();
 
-  virtual int solve( Data *prob, Variables *iterate, Residuals * resid );
+  int solve( Data *prob, Variables *iterate, Residuals * resid ) override;
 };
 
 #endif /* PIPS_IPM_GONDZIOSTOCHSOLVER_H */

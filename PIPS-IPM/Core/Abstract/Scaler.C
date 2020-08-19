@@ -6,9 +6,11 @@
  */
 
 #include "Scaler.h"
+#include "Data.h"
 
 Scaler::Scaler(Data* prob, bool bitshifting, bool usesides)
-: problem(prob), do_bitshifting(bitshifting), with_sides(usesides)
+: problem(prob), do_bitshifting(bitshifting), with_sides(usesides),
+  dnorm_orig(prob->datanorm())
 {
 }
 

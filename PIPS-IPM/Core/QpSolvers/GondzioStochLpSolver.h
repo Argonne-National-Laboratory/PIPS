@@ -32,7 +32,7 @@ private:
 
 public:
 
-  GondzioStochLpSolver( ProblemFormulation * of, Data * prob );
+  GondzioStochLpSolver( ProblemFormulation * of, Data * prob, const Scaler* scaler = nullptr );
 
   virtual ~GondzioStochLpSolver();
 

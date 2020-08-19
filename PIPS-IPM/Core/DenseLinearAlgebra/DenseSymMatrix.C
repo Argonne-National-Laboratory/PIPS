@@ -176,7 +176,7 @@ void DenseSymMatrix::transMult ( double beta,  double y[], int incy,
 }
 
 
-double DenseSymMatrix::abmaxnorm()
+double DenseSymMatrix::abmaxnorm() const
 {
   double norm = 0;
   
@@ -187,8 +187,9 @@ double DenseSymMatrix::abmaxnorm()
 
   for ( i = 0; i < m; i++ ) {
     for ( j = 0; j <= i; j++ ) {
-      eltNorm = fabs( M[i][j] );
-      if ( eltNorm > norm ) norm = eltNorm;
+      eltNorm = std::fabs( M[i][j] );
+      if ( eltNorm > norm )
+        norm = eltNorm;
     }
   }
   return norm;

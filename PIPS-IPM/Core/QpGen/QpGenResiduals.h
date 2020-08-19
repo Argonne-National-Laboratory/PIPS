@@ -70,6 +70,8 @@ public:
   
   void calcresids(Data *problem, Variables *vars, bool print_resids = false) override;
 
+  double recomputeResidualNorm() override;
+
   virtual void add_r3_xz_alpha(Variables *vars, double alpha);
 
   virtual void set_r3_xz_alpha(Variables *vars, double alpha);

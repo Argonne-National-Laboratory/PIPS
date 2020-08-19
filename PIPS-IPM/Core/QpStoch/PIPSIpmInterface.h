@@ -144,7 +144,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 
   scaler = nullptr;
 
-  solver  = new IPMSOLVER( factory, data );
+  solver  = new IPMSOLVER( factory, data, scaler );
   solver->addMonitor(new StochMonitor( factory ));
 #ifdef TIMING
   if(mype==0) printf("solver created\n");
@@ -248,7 +248,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
         std::cout << "---scaling time (in sec.): " << t_scaling - t0_scaling << std::endl;
   }
 
-  solver  = new IPMSOLVER( factory, data );
+  solver  = new IPMSOLVER( factory, data, scaler );
   solver->addMonitor(new StochMonitor( factory, scaler ));
 #ifdef TIMING
   if(mype==0) printf("solver created\n");

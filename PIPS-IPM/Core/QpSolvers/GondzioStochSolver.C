@@ -45,8 +45,8 @@ extern double g_iterNumber;
 extern bool ipStartFound;
 
 
-GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob )
-  : GondzioSolver(opt, prob),
+GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, const Scaler* scaler )
+  : GondzioSolver(opt, prob, scaler),
     n_linesearch_points( pips_options::getIntParameter("GONDZIO_N_LINESEARCH")),
     dynamic_bicg_tol(pips_options::getBoolParameter("OUTER_BICG_DYNAMIC_TOL"))
 {
@@ -117,7 +117,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
    QpGenStoch* stochFactory = reinterpret_cast<QpGenStoch*>(factory);
    g_iterNumber = 0.0;
 
-   dnorm = prob->datanorm();
+   setDnorm(*prob);
 
    // initialization of (x,y,z) and factorization routine.
    sys = factory->makeLinsys(prob);

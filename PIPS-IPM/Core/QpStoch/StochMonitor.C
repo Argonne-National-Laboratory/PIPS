@@ -26,82 +26,91 @@ StochMonitor::StochMonitor(sFactory* qp_, Scaler* scaler)
   MPI_Comm_rank(MPI_COMM_WORLD, &myGlobRank);
 }
 
-void StochMonitor::doIt( Solver * solver, Data * data, Variables * vars,
-			 Residuals * resids,
+void StochMonitor::doIt( const Solver * solver, const Data * data, const Variables * vars,
+			 const Residuals * resids,
 			 double alpha, double sigma,
 			 int i, double mu,
 			 int status_code,
-			 int level ) 
+			 int level )
 {
    StochMonitor::doItStoch(solver, data, vars, resids, alpha, -1.0, sigma, i, mu, status_code, level);
 }
 
-void StochMonitor::doItPd( Solver * solver, Data * data, Variables * vars,
-              Residuals * resids,
+void StochMonitor::doItPd( const Solver * solver, const Data * data, const Variables * vars,
+              const Residuals * resids,
               double alpha_primal, double alpha_dual, double sigma,
               int i, double mu,
-                   int status_code,
+              int status_code,
               int level )
 {
    StochMonitor::doItStoch(solver, data, vars, resids, alpha_primal, alpha_dual, sigma, i, mu, status_code, level);
 }
 
-void StochMonitor::doItStoch( Solver * solver, Data * data, Variables * vars,
-              Residuals * resids,
+void StochMonitor::doItStoch( const Solver * solver, const Data * data, const Variables * vars,
+              const Residuals * resids,
               double alpha_primal, double alpha_dual, double sigma,
               int i, double mu,
-                   int status_code,
-              int level )
+              int status_code,
+              int level ) const
 {
-  double objective = dynamic_cast<QpGenData*>(data)->objectiveValue(dynamic_cast<QpGenVars*>(vars));
+  double objective = dynamic_cast<const QpGenData*>(data)->objectiveValue(dynamic_cast<const QpGenVars*>(vars));
+
+  const Residuals* resids_unscaled = resids;
+  if( scaler )
+  {
+     objective = scaler->getObjUnscaled(objective);
+     resids_unscaled = scaler->getResidualsUnscaled(*resids);
+  }
+
+  const double dnorm = solver->dataNormOrig();
+  const double rnorm = resids_unscaled->residualNorm();
+  const double gap = resids_unscaled->dualityGap();
 
   if( scaler )
-     objective = scaler->getObjUnscaled(objective);
+     delete resids_unscaled;
 
-  //log only on the first proc
+  // log only on the first proc
    if( myRank > 0 )
       return;
 
-  double dnorm = solver->dataNorm();
-
   switch( level ) {
-  case 0 : case 1: { 
-    cout << " --- Iteration " << i << " --- (rank " << myGlobRank << ")" << endl;
-    if(i==1)
+     case 0 : case 1: {
+        std::cout << " --- Iteration " << i << " --- (rank " << myGlobRank << ")" << std::endl;
+    if( i == 1 )
       printf(" mu = %16.12e  rel.res.norm=%16.12e  datanorm=%16.12e\n", 
-	     mu, resids->residualNorm() / dnorm, dnorm);
+	     mu, rnorm / dnorm, dnorm);
     else
       printf(" mu = %16.12e  rel.res.norm=%16.12e\n",
-             mu, resids->residualNorm() / dnorm);
+             mu, rnorm / dnorm);
     //cout << " mu = " << mu << " relative residual norm = " 
     //cout << resids->residualNorm() / dnorm << endl;
-    cout << " Duality Gap:  " << resids->dualityGap() << endl;
+    std::cout << " Duality Gap:  " << gap << std::endl;
     if( i > 1 )
     {
        if( alpha_dual != -1.0 )
        {
-          cout << " alpha primal = " << alpha_primal << endl;
-          cout << " alpha dual = " << alpha_dual << endl;
+          std::cout << " alpha primal = " << alpha_primal << std::endl;
+          std::cout << " alpha dual = " << alpha_dual << std::endl;
        }
        else
-          cout << " alpha = " << alpha_primal << endl;
+          std::cout << " alpha = " << alpha_primal << std::endl;
     }
-    cout << " Objective: " << objective << endl;
-    cout << endl;
+    std::cout << " Objective: " << objective << std::endl;
+    std::cout << std::endl;
     if( level == 1) { 
       // Termination has been detected by the status check; print
       // appropriate message
       switch( status_code ) {
       case SUCCESSFUL_TERMINATION:
-	cout << endl << " *** SUCCESSFUL TERMINATION ***" << endl;
+	std::cout << std::endl << " *** SUCCESSFUL TERMINATION ***" << std::endl;
 	break;
       case MAX_ITS_EXCEEDED:
-	cout << endl << " *** MAXIMUM ITERATIONS REACHED *** " << endl;
+	std::cout << std::endl << " *** MAXIMUM ITERATIONS REACHED *** " << std::endl;
 	break;
       case INFEASIBLE:
-	cout << endl << " *** TERMINATION: PROBABLY INFEASIBLE *** " << endl;
+	std::cout << std::endl << " *** TERMINATION: PROBABLY INFEASIBLE *** " << std::endl;
       case UNKNOWN:
-	cout << endl << " *** TERMINATION: STATUS UNKNOWN *** " << endl;
+	std::cout << std::endl << " *** TERMINATION: STATUS UNKNOWN *** " << std::endl;
 	break;
       } // end switch(statusCode)
     }

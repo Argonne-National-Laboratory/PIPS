@@ -31,8 +31,6 @@ public:
 
   void getSize( int& m, int& n ) const override;
 
-
-
   virtual void getDiagonal( OoqpVector& vec );
   virtual void setToDiagonal( OoqpVector& vec );
 
@@ -54,6 +52,8 @@ public:
   virtual void fromGetSpRow( int row, int col,
 			     double A[], int lenA, int irowA[], int& nnz,
 			     int rowExtent, int& info );
+
+  double abmaxnorm() const override;
 
   virtual void ColumnScale( OoqpVector& vec );
   virtual void RowScale( OoqpVector& vec );

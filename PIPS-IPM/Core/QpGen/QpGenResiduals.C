@@ -285,6 +285,58 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in, bool print_re
 }
   
 
+double QpGenResiduals::recomputeResidualNorm()
+{
+   mResidualNorm = 0.0;
+
+   double componentNorm = 0.0;
+   componentNorm = rQ->infnorm();
+
+   if( componentNorm > mResidualNorm )
+      mResidualNorm = componentNorm;
+
+   componentNorm = rA->infnorm();
+   if( componentNorm > mResidualNorm )
+      mResidualNorm = componentNorm;
+
+   componentNorm = rC->infnorm();
+   if( componentNorm > mResidualNorm )
+      mResidualNorm= componentNorm;
+
+   if( mclow > 0 )
+   {
+     componentNorm = rt->infnorm();
+     if( componentNorm > mResidualNorm )
+        mResidualNorm = componentNorm;
+   }
+
+   if( mcupp > 0 )
+   {
+     componentNorm = ru->infnorm();
+     if( componentNorm > mResidualNorm )
+        mResidualNorm = componentNorm;
+   }
+
+   componentNorm = rz->infnorm();
+   if( componentNorm > mResidualNorm )
+      mResidualNorm = componentNorm;
+
+   if( nxlow > 0 )
+   {
+     componentNorm = rv->infnorm();
+     if( componentNorm > mResidualNorm )
+        mResidualNorm = componentNorm;
+   }
+
+   if( nxupp > 0 )
+   {
+     componentNorm = rw->infnorm();
+     if( componentNorm > mResidualNorm )
+        mResidualNorm = componentNorm;
+   }
+   return mResidualNorm;
+}
+
 void QpGenResiduals::add_r3_xz_alpha(Variables *vars_in, double alpha)
 {
   QpGenVars * vars = (QpGenVars *) vars_in;

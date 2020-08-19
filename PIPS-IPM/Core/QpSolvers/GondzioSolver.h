@@ -50,7 +50,7 @@ protected:
 
 public:
 
-  GondzioSolver( ProblemFormulation * of, Data * prob );
+  GondzioSolver( ProblemFormulation * of, Data * prob, const Scaler * = nullptr );
 
   virtual ~GondzioSolver();
 
@@ -59,12 +59,12 @@ public:
   /** reset parameters to their default values */
   virtual void reset_parameters() {};
 
-  virtual void defaultMonitor( Data * data, Variables * vars,
-							   Residuals * resids,
-							   double alpha, double sigma,
-							   int i, double mu, 
-							   int status_code,
-							   int level ) ;
+  void defaultMonitor( const Data * data, const Variables * vars,
+        const Residuals * resids,
+        double alpha, double sigma,
+        int i, double mu,
+        int status_code,
+        int level ) const override;
 
 };
 

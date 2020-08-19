@@ -29,8 +29,8 @@ extern const char * TerminationStrings[];
 class Status
 {
 public:
-  virtual int doIt(  Solver * solver, Data * data, Variables * vars, 
-		     Residuals * resids,
+  virtual int doIt(  const Solver * solver, const Data * data, const Variables * vars,
+		     const Residuals * resids,
 		     int i, double mu,
 		     int level ) = 0;
   virtual ~Status();
@@ -67,10 +67,10 @@ protected:
   void * ctx;
 public:
   CStatus( StatusCFunc doItC_, void * ctx );
-  virtual int doIt(  Solver * solver, Data * data, Variables * vars, 
-		     Residuals * resids,
+  int doIt( const Solver * solver, const Data * data, const Variables * vars,
+		     const Residuals * resids,
 		     int i, double mu, 
-		     int level );
+		     int level ) override;
 };
 
 #endif
