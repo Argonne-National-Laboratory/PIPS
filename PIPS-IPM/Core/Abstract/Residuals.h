@@ -30,6 +30,9 @@ public:
   /** The norm of the residuals, ommiting the complementariy conditions */
   double residualNorm() const { return mResidualNorm; }
 
+  /** recompute residual norm */
+  virtual double recomputeResidualNorm() = 0;
+
   /** A quantity that measures progress toward feasibility. IN terms
    *  of the abstract problem formulation, this quantity is defined as
    *  @code 

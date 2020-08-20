@@ -34,7 +34,7 @@ private:
         double alpha_primal, double alpha_dual) const;
 public:
 
-  GondzioStochLpSolver( ProblemFormulation * of, Data * prob );
+  GondzioStochLpSolver( ProblemFormulation * of, Data * prob, const Scaler* scaler = nullptr );
 
   virtual ~GondzioStochLpSolver();
 

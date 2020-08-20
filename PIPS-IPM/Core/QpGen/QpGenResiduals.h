@@ -72,6 +72,8 @@ public:
 
   void add_r3_xz_alpha(const Variables *vars, double alpha) override;
 
+  double recomputeResidualNorm() override;
+
   void set_r3_xz_alpha(const Variables *vars, double alpha) override;
   
   void clear_r3() override;

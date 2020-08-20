@@ -112,7 +112,7 @@ public:
   /** C = this * this^T */
   virtual void matMultTrans(SymMatrix** res);
 
-  virtual double abmaxnorm();
+  double abmaxnorm() const override;
 
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamDense(ostream& out) const;

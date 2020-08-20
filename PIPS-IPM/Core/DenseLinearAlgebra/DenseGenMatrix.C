@@ -196,7 +196,7 @@ void DenseGenMatrix::matTransDinvMultMat(OoqpVector& d, SymMatrix** res)
   assert(false && "not implemented");
 }
 
-double DenseGenMatrix::abmaxnorm()
+double DenseGenMatrix::abmaxnorm() const
 {
   double norm = 0;
   
@@ -207,7 +207,7 @@ double DenseGenMatrix::abmaxnorm()
 
   for ( i = 0; i < m; i++ ) {
     for ( j = 0; j < n; j++ ) {
-      eltNorm = fabs( M[i][j] );
+      eltNorm = std::fabs( M[i][j] );
       if ( eltNorm > norm ) norm = eltNorm;
     }
   }

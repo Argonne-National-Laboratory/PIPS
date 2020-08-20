@@ -281,7 +281,7 @@ void SparseSymMatrix::transMult ( double beta,  double y[], int incy,
   this->mult( beta, y, incy, alpha, x, incx );
 }
 
-double SparseSymMatrix::abmaxnorm()
+double SparseSymMatrix::abmaxnorm() const
 {
   return mStorage->abmaxnorm();
 }

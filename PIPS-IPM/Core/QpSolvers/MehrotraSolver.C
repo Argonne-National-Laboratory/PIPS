@@ -34,11 +34,12 @@ static double gmu;
 // double grnorm;
 extern int gOoqpPrintLevel;
 
-MehrotraSolver::MehrotraSolver( ProblemFormulation * opt, Data * prob )
+MehrotraSolver::MehrotraSolver( ProblemFormulation * opt, Data * prob, const Scaler * scaler ) :
+      Solver( scaler )
 {
   factory = opt;
-  sys   = 0;
-  step  = factory->makeVariables( prob );
+  sys = 0;
+  step = factory->makeVariables( prob );
   
   maxit      = 300;
   printlevel = 0;   // has no meaning right now 
@@ -64,7 +65,7 @@ int MehrotraSolver::solve(Data *prob, Variables *iterate, Residuals * resid )
 
   gmu = 1000;
   //  grnorm = 1000;
-  dnorm = prob->datanorm();
+  setDnorm( *prob );
 
   // initialization of (x,y,z) and factorization routine.
   sys = factory->makeLinsys( prob );
@@ -138,39 +139,48 @@ int MehrotraSolver::solve(Data *prob, Variables *iterate, Residuals * resid )
   return status_code;
 }
 
-void MehrotraSolver::defaultMonitor( Data * /* data */, Variables * /* vars */,
-				     Residuals * resids,
+void MehrotraSolver::defaultMonitor( const Data * /* data */, const Variables * /* vars */,
+				     const Residuals * resids,
 				     double alpha, double /* sigma */,
 				     int i, double mu, 
 				     int statusCode,
-				     int level )
+				     int level ) const
 {
   switch( level ) {
   case 0 : case 1: { 
 
-    cout << " *** Iteration " << i << " *** " << endl;
-    printf(" mu = %16.12e  relative residual norm = %16.12e\n", mu, resids->residualNorm() / dnorm);
+    const Residuals* resids_unscaled = resids;
+    if( scaler )
+       resids_unscaled = scaler->getResidualsUnscaled(*resids);
 
-    cout << " Duality Gap: " << resids->dualityGap() << endl;
-    if( i > 1 ) {
-      cout << " alpha = " << alpha << endl;
-    }
-    cout << endl;
+    const double resid_norm = resids_unscaled->residualNorm();
+    const double resids_gap = resids_unscaled->dualityGap();
+    if( scaler )
+       delete resids_unscaled;
+
+    std::cout << " *** Iteration " << i << " *** " << std::endl;
+    printf(" mu = %16.12e  relative residual norm = %16.12e\n", mu, resid_norm / dnorm_orig);
+
+    std::cout << " Duality Gap: " << resids_gap << std::endl;
+    if( i > 1 )
+      std::cout << " alpha = " << alpha << std::endl;
+
+    std::cout << endl;
 
     if( level == 1) { 
       // Termination has been detected by the status check; print
       // appropriate message
       switch( statusCode ) {
       case SUCCESSFUL_TERMINATION:
-	cout << endl << " *** SUCCESSFUL TERMINATION ***" << endl;
+	std::cout << std::endl << " *** SUCCESSFUL TERMINATION ***" << std::endl;
 	break;
       case MAX_ITS_EXCEEDED:
-	cout << endl << " *** MAXIMUM ITERATIONS REACHED *** " << endl;
+	std::cout << std::endl << " *** MAXIMUM ITERATIONS REACHED *** " << std::endl;
 	break;
       case INFEASIBLE:
-	cout << endl << " *** TERMINATION: PROBABLY INFEASIBLE *** " << endl;
+	std::cout << std::endl << " *** TERMINATION: PROBABLY INFEASIBLE *** " << std::endl;
       case UNKNOWN:
-	cout << endl << " *** TERMINATION: STATUS UNKNOWN *** " << endl;
+	std::cout << std::endl << " *** TERMINATION: STATUS UNKNOWN *** " << std::endl;
 	break;
       } // end switch(statusCode)
     }

@@ -75,7 +75,7 @@ public:
   void transMult ( double beta,   OoqpVector& y,
                            double alpha,  const OoqpVector& x ) const override;
 
-  virtual double abmaxnorm();
+  double abmaxnorm() const override;
 
   void writeToStream( std::ostream& out ) const override;
   void writeToStreamDense( std::ostream& out ) const override;

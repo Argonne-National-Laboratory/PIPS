@@ -21,7 +21,7 @@ public:
   virtual ~Data();
   
   /** compute the norm of the problem data */
-  virtual double datanorm() = 0;
+  virtual double datanorm() const = 0;
 
   /** print the problem data */
   virtual void print() = 0;

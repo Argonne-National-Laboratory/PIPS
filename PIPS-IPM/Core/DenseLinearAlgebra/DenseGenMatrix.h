@@ -77,7 +77,7 @@ public:
   virtual void SymmetricScale( OoqpVector &vec);
   virtual void scalarMult( double num);
 
-  virtual double abmaxnorm();
+  double abmaxnorm() const override;
   void writeToStream( std::ostream& out ) const override;
   void writeToStreamDense( std::ostream& out ) const override;
   virtual void randomize( double alpha, double beta, double * seed );

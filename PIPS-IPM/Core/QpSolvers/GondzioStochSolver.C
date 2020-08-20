@@ -45,9 +45,8 @@ extern int gOoqpPrintLevel;
 extern double g_iterNumber;
 extern bool ipStartFound;
 
-
-GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob )
-  : GondzioSolver(opt, prob),
+GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, const Scaler* scaler )
+  : GondzioSolver(opt, prob, scaler),
     n_linesearch_points( pips_options::getIntParameter("GONDZIO_STOCH_N_LINESEARCH")),
     dynamic_corrector_schedule( pips_options::getBoolParameter("GONDZIO_STOCH_USE_DYNAMIC_CORRECTOR_SCHEDULE") ),
     additional_correctors_small_comp_pairs( pips_options::getBoolParameter("GONDZIO_STOCH_ADDITIONAL_CORRECTORS_SMALL_VARS") ),
@@ -134,7 +133,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
    bool numerical_troubles = false;
    bool precond_limit = false;
 
-   dnorm = prob->datanorm();
+   setDnorm(*prob);
 
    // initialization of (x,y,z) and factorization routine.
    sys = factory->makeLinsys(prob);

@@ -51,8 +51,8 @@ extern double g_iterNumber;
 extern bool ipStartFound;
 
 
-GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob)
-  : GondzioStochSolver(opt, prob)
+GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob, const Scaler* scaler)
+  : GondzioStochSolver(opt, prob, scaler)
 {
 }
 
@@ -125,7 +125,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    bool numerical_troubles = false;
    bool precond_limit = false;
 
-   dnorm = prob->datanorm();
+   setDnorm(*prob);
    // initialization of (x,y,z) and factorization routine.
    sys = factory->makeLinsys(prob);
 

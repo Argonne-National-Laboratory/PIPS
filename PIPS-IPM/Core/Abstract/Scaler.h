@@ -33,12 +33,17 @@ protected:
   const bool do_bitshifting; // only scale by power of two factors?
   const bool with_sides; // consider lhs/rhs?
 
+  const double dnorm_orig;
+
 public:
   Scaler(Data * prob, bool bitshifting = false, bool usesides = false);
   virtual ~Scaler();
 
   /** scale */
   virtual void scale() = 0;
+
+  /** return norm of unscaled problem */
+  virtual double getDnormOrig() const { return dnorm_orig; }
 
   /** unscale given objective value */
   virtual double getObjUnscaled(double objval) const = 0;
