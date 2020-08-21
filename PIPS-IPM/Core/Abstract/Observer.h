@@ -48,9 +48,9 @@ class Subject
       void registerObserver(Observer* observer);
       void unregisterObserver(Observer* observer);
 
-      virtual int getIntValue(const std::string& s) = 0;
-      virtual double getDoubleValue(const std::string& s) = 0;
-      virtual bool getBoolValue(const std::string& s) = 0;
+      virtual int getIntValue(const std::string& s) const = 0;
+      virtual double getDoubleValue(const std::string& s) const = 0;
+      virtual bool getBoolValue(const std::string& s) const = 0;
 
       void notifyObservers();
 };

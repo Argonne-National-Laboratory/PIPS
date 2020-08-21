@@ -9,6 +9,7 @@
 #include "Status.h"
 #include "Data.h"
 #include "ProblemFormulation.h"
+#include "QpGenOptions.h"
 
 #include <cstring>
 #include <iostream>
@@ -38,7 +39,7 @@ GondzioSolver::GondzioSolver( ProblemFormulation * of, Data * prob, const Scaler
 
   NumberGondzioCorrections = 0;
 
-  maximum_correctors = 3; // maximum number of Gondzio correctors
+  maximum_correctors = qpgen_options::getIntParameter("GONDZIO_MAX_CORRECTORS");
 
   // the two StepFactor constants set targets for increase in step
   // length for each corrector

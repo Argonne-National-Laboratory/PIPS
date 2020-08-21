@@ -189,9 +189,9 @@ double QpGenVars::mu()
   }
 }
 
-double QpGenVars::mustep(Variables * step_in, double alpha)
+double QpGenVars::mustep(const Variables * step_in, double alpha)
 {
-	QpGenVars * step = (QpGenVars *) step_in;
+	const QpGenVars * step = (const QpGenVars *) step_in;
 	double mu = 0.0;
 	if (nComplementaryVariables == 0) {
 		return 0.0;
@@ -217,9 +217,9 @@ double QpGenVars::mustep(Variables * step_in, double alpha)
 	}
 }
 
-double QpGenVars::mustep_pd( Variables *step_in, double alpha_primal, double alpha_dual )
+double QpGenVars::mustep_pd( const Variables *step_in, double alpha_primal, double alpha_dual )
 {
-	QpGenVars * step = (QpGenVars *) step_in;
+	const QpGenVars * step = (const QpGenVars *) step_in;
 	double mu = 0.0;
 	if (nComplementaryVariables == 0) {
 		return 0.0;
@@ -245,9 +245,9 @@ double QpGenVars::mustep_pd( Variables *step_in, double alpha_primal, double alp
 	}
 }
 
-void QpGenVars::saxpy( Variables *b_in, double alpha )
+void QpGenVars::saxpy( const Variables *b_in, double alpha )
 {
-	QpGenVars * b = (QpGenVars *) b_in;
+	const QpGenVars * b = (const QpGenVars *) b_in;
 
 	x->axpy(alpha, *b->x);
 	y->axpy(alpha, *b->y);
@@ -287,9 +287,9 @@ void QpGenVars::saxpy( Variables *b_in, double alpha )
 	}
 }
 
-void QpGenVars::saxpy_pd( Variables *b_in, double alpha_primal, double alpha_dual)
+void QpGenVars::saxpy_pd( const Variables *b_in, double alpha_primal, double alpha_dual)
 {
-	QpGenVars * b = (QpGenVars *) b_in;
+	const QpGenVars * b = ( const QpGenVars *) b_in;
 
 	x->axpy(alpha_primal, *b->x);
 	y->axpy(alpha_dual, *b->y);
@@ -354,9 +354,9 @@ void QpGenVars::negate()
   }
 }
 
-double QpGenVars::stepbound( Variables * b_in )
+double QpGenVars::stepbound( const Variables * b_in )
 {
-	QpGenVars * b = (QpGenVars *) b_in;
+	const QpGenVars * b = (const QpGenVars *) b_in;
 	double maxStep;
 
 	maxStep = 1.0;
@@ -396,9 +396,9 @@ double QpGenVars::stepbound( Variables * b_in )
 	return maxStep;
 }
 
-void QpGenVars::stepbound_pd( Variables *b_in, double & alpha_primal, double & alpha_dual )
+void QpGenVars::stepbound_pd( const Variables *b_in, double & alpha_primal, double & alpha_dual )
 {
-	QpGenVars * b = (QpGenVars *) b_in;
+	const QpGenVars * b = (const QpGenVars *) b_in;
 	double maxStep_primal, maxStep_dual;
 
 	maxStep_primal = 1.0;
@@ -470,7 +470,7 @@ int QpGenVars::isInteriorPoint()
   return interior;
 }
 
-double QpGenVars::findBlocking( Variables * step, 
+double QpGenVars::findBlocking( const Variables * step,
 				double & primalValue,
 				double & primalStep,
 				double & dualValue,
@@ -480,7 +480,7 @@ double QpGenVars::findBlocking( Variables * step,
   double alpha = 1.0;
   firstOrSecond = 0;
 
-  QpGenVars * d = (QpGenVars *) step;
+  const QpGenVars * d = (const QpGenVars *) step;
 
   if( mclow > 0 ) {
     alpha = t->findBlocking( *d->t, *lambda, *d->lambda, alpha,
@@ -513,7 +513,7 @@ double QpGenVars::findBlocking( Variables * step,
   return alpha;
 }
 
-void QpGenVars::findBlocking_pd( Variables * step,
+void QpGenVars::findBlocking_pd( const Variables * step,
 				double & primalValue,
 				double & primalStep,
 				double & dualValue,
@@ -525,7 +525,7 @@ void QpGenVars::findBlocking_pd( Variables * step,
   alphaPrimal = 1.0, alphaDual = 1.0;
   primalBlocking = false, dualBlocking = false;
 
-  QpGenVars * d = (QpGenVars *) step;
+  const QpGenVars * d = (const QpGenVars *) step;
 
   if( mclow > 0 ) {
     t->findBlocking_pd( *d->t, *lambda, *d->lambda, alphaPrimal, alphaDual,
@@ -865,9 +865,9 @@ void QpGenVars::print()
   */
 }
   
-void QpGenVars::copy(Variables *b_in)
+void QpGenVars::copy(const Variables *b_in)
 {
-  QpGenVars * b = (QpGenVars *) b_in;
+  const QpGenVars * b = (const QpGenVars *) b_in;
   
   s->copyFrom( *b->s );
   if( nxlow > 0 ) {
@@ -948,6 +948,26 @@ double QpGenVars::infnorm()
   if(temp > norm) norm = temp;
 
   return norm;
+}
+
+void QpGenVars::setToZero()
+{
+   x->setToZero();
+   s->setToZero();
+   y->setToZero();
+   z->setToZero();
+
+   v->setToZero();
+   gamma->setToZero();
+
+   w->setToZero();
+   phi->setToZero();
+
+   t->setToZero();
+   lambda->setToZero();
+
+   u->setToZero();
+   pi->setToZero();
 }
 
 QpGenVars::~QpGenVars()

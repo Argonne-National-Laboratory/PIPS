@@ -476,7 +476,6 @@ int Solver::defaultStatus( const Data * /* data */, const Variables * /* vars */
   //onSafeSolver=1;
   //}  
   //gLackOfAccuracy=-1; //disable iter refin in sLinsysRootAug
-  
   return stop_code;
 }
 

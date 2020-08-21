@@ -50,7 +50,7 @@ namespace base_options
       }
 
       bool isIdentifierUnique( const std::string& identifier ) const;
-
+      bool identifierExists( const std::string& identifier ) const;
       void fillOptionsFromFile(const std::string& filename);
 
       int getIntParam(const std::string& identifier) const;

@@ -35,12 +35,12 @@ public:
 
   /** compute the complementarity gap resulting from a step of length
    * "alpha" along direction "step" */
-  virtual double mustep(Variables *step, double alpha) = 0;
+  virtual double mustep(const Variables *step, double alpha) = 0;
 
   /** compute the complementarity gap resulting from a step of length
    * "alpha_primal" along primal direction of "step" and
    * "alpha_dual" along dual direction of "step" */
-  virtual double mustep_pd( Variables *step, double alpha_primal, double alpha_dual )
+  virtual double mustep_pd( const Variables *step, double alpha_primal, double alpha_dual )
   {
     assert(0 && "not implemented here");
     return 0;
@@ -51,14 +51,14 @@ public:
 
   /** given variables b, compute a <- a + alpha b, where a are the
       variables in this class */
-  virtual void saxpy( Variables *b, double alpha) = 0;
+  virtual void saxpy( const Variables *b, double alpha) = 0;
   
   /** given variables b, compute a <- a + alpha_primal * b_primal + alpha_dual * b_dual,
    *  where a are the variables in this class
    *
    *  @see saxpy
    */
-  virtual void saxpy_pd( Variables *b, double alpha_primal, double alpha_dual)
+  virtual void saxpy_pd( const Variables *b, double alpha_primal, double alpha_dual)
   {
     assert(0 && "not implemented here");
   }
@@ -70,16 +70,16 @@ public:
    *
    * @see findBlocking
    */
-  virtual double stepbound( Variables *b ) = 0;
+  virtual double stepbound( const Variables *b ) = 0;
 
   /** calculate the largest alpha_primal and alpha_dual in (0,1] such that the nonnegative
      * variables stay nonnegative in the given search direction b. In the
      * abstract problem formulation, this is the largest value of alpha
-     * such that (s,z) + alpha_primal * (b->s,0) + alpha_dual * (0,b->z) >= 0.
+     * such that (s,z) + alpha_primal * (b->s, 0) + alpha_dual * (0, b->z) >= 0.
      *
      * @see stepbound
      */
-  virtual void stepbound_pd( Variables *b, double & alpha_primal, double & alpha_dual )
+  virtual void stepbound_pd( const Variables *b, double & alpha_primal, double & alpha_dual )
   {
     assert(0 && "not implemented here");
   }
@@ -107,14 +107,14 @@ public:
    *
    * @see stepbound
    * */
-  virtual double findBlocking( Variables * step, 
+  virtual double findBlocking( const Variables * step,
 			       double & primalValue,
 			       double & primalStep,
 			       double & dualValue,
 			       double & dualStep,
 			       int& firstOrSecond ) = 0;
 
-  virtual void findBlocking_pd( Variables * step,
+  virtual void findBlocking_pd( const Variables * step,
   				double & primalValue,
   				double & primalStep,
   				double & dualValue,
@@ -141,13 +141,16 @@ public:
   virtual void print();
 
   /** copy the variables */
-  virtual void copy(Variables *b) = 0;
+  virtual void copy(const Variables *b) = 0;
 
   /** compute the 1-norm of the variables */
   virtual double onenorm() = 0;
 
   /** compute the inf-norm of the variables */
   virtual double infnorm() = 0;
+
+  /** set variables to zero */
+  virtual void setToZero() = 0;
 
   virtual ~Variables() {};
 };

@@ -70,17 +70,17 @@ public:
   
   void calcresids(Data *problem, Variables *vars, bool print_resids = false) override;
 
+  void add_r3_xz_alpha(const Variables *vars, double alpha) override;
+
   double recomputeResidualNorm() override;
 
-  virtual void add_r3_xz_alpha(Variables *vars, double alpha);
-
-  virtual void set_r3_xz_alpha(Variables *vars, double alpha);
+  void set_r3_xz_alpha(const Variables *vars, double alpha) override;
   
-  virtual void clear_r3();
+  void clear_r3() override;
   
-  virtual void clear_r1r2();
+  void clear_r1r2() override;
 
-  virtual void project_r3(double rmin, double rmax);
+  void project_r3(double rmin, double rmax) override;
 
   virtual int  validNonZeroPattern();
   

@@ -49,13 +49,13 @@ public:
    * adding the pairwise products of the complementary variables plus
    * a constant alpha to this term.  
    */
-  virtual void add_r3_xz_alpha(Variables *vars, double alpha) = 0;
+  virtual void add_r3_xz_alpha(const Variables *vars, double alpha) = 0;
 
   /** Set the "complementarity" component of the residuals to the
    * pairwise products of the complementary variables plus a constant
    * alpha 
    */
-  virtual void set_r3_xz_alpha(Variables *vars, double alpha) = 0;
+  virtual void set_r3_xz_alpha(const Variables *vars, double alpha) = 0;
 
   /** set the complementarity component of the residuals to 0. */
   virtual void clear_r3() = 0;

@@ -41,9 +41,9 @@ protected:
   double bicg_resnorm;
   double bicg_relresnorm;
 
-  int getIntValue(const std::string& s) override;
-  double getDoubleValue(const std::string& s) override;
-  bool getBoolValue(const std::string& s) override;
+  int getIntValue(const std::string& s) const override;
+  double getDoubleValue(const std::string& s) const override;
+  bool getBoolValue(const std::string& s) const override;
 
   /** stores a critical diagonal matrix as a vector */
   OoqpVector* nomegaInv;

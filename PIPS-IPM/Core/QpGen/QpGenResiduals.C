@@ -105,7 +105,7 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in, bool print_re
 #ifdef TIMING
   print_resids = true;
 #endif
-  const int myRank = PIPS_MPIgetRank(MPI_COMM_WORLD);
+  const int myRank = PIPS_MPIgetRank();
   QpGenVars * vars = (QpGenVars *) vars_in;
   QpGenData * prob = (QpGenData *) prob_in;
 
@@ -283,7 +283,6 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in, bool print_re
      std::cout << "Norm residuals: " << mResidualNorm << "\tduality gap: " << mDualityGap << std::endl;
   }
 }
-  
 
 double QpGenResiduals::recomputeResidualNorm()
 {
@@ -337,7 +336,7 @@ double QpGenResiduals::recomputeResidualNorm()
    return mResidualNorm;
 }
 
-void QpGenResiduals::add_r3_xz_alpha(Variables *vars_in, double alpha)
+void QpGenResiduals::add_r3_xz_alpha(const Variables *vars_in, double alpha)
 {
   QpGenVars * vars = (QpGenVars *) vars_in;
 
@@ -354,7 +353,7 @@ void QpGenResiduals::add_r3_xz_alpha(Variables *vars_in, double alpha)
   }
 }
 
-void QpGenResiduals::set_r3_xz_alpha(Variables *vars, double alpha)
+void QpGenResiduals::set_r3_xz_alpha(const Variables *vars, double alpha)
 {
   this->clear_r3();
   this->add_r3_xz_alpha( vars, alpha );

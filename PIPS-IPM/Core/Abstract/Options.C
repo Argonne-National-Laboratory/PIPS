@@ -113,9 +113,17 @@ namespace base_options
             continue;
          }
 
+         if( identifier.length() == 0 || identifier[0] == '#' )
+            continue;
+
          try
          {
-            if( type.compare("int") == 0 || type.compare("integer") == 0 )
+            if( !identifierExists(identifier) )
+            {
+               if( my_rank == 0 )
+                  std::cout << "Warning - unknown identifier - skipping it: " << identifier << std::endl;
+            }
+            else if( type.compare("int") == 0 || type.compare("integer") == 0 )
             {
    #ifdef PRE_CPP11
                int_options[identifier] = atoi(value.c_str());
@@ -154,6 +162,13 @@ namespace base_options
                    identifier << " " << value << " - skipping that line" << std::endl;
          }
       }
+   }
+
+   bool Options::identifierExists( const std::string& identifier ) const
+   {
+      return int_options.find(identifier) != int_options.end()
+            || bool_options.find(identifier) != bool_options.end()
+            || double_options.find(identifier) != double_options.end();
    }
 
    bool Options::isIdentifierUnique( const std::string& identifier ) const

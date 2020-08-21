@@ -37,7 +37,6 @@ public:
   OoqpVectorHandle icupp;
   OoqpVectorHandle iclow;
   QpGenVars(){};
-public:  
 
   OoqpVectorHandle x;
   OoqpVectorHandle s;
@@ -81,13 +80,13 @@ public:
   /** computes mu = (t'lambda +u'pi + v'gamma + w'phi)/(mclow+mcupp+nxlow+nxupp) */
   virtual double mu();
 
-  virtual double mustep(Variables *step_in, double alpha);
+  virtual double mustep( const Variables *step_in, double alpha);
 
-  virtual double mustep_pd( Variables *step, double alpha_primal, double alpha_dual );
+  virtual double mustep_pd( const Variables *step, double alpha_primal, double alpha_dual );
 
-  virtual void saxpy( Variables *b, double alpha );
+  virtual void saxpy( const Variables *b, double alpha );
 
-  virtual void saxpy_pd( Variables *b, double alpha_primal, double alpha_dual);
+  virtual void saxpy_pd( const Variables *b, double alpha_primal, double alpha_dual);
 
   virtual void negate();
   
@@ -98,7 +97,7 @@ public:
    * (b->t,b->u,b->v,b->w,b->lambda,b->pi,b->phi,b->gamma) >= 0.
    *
    * @see findBlocking */
-  virtual double stepbound( Variables *b );
+  virtual double stepbound( const Variables *b );
 
   /** calculate the largest alpha_primal and alpha_dual in (0,1] such that the nonnegative
    * variables stay nonnegative in the given search direction b. In the
@@ -107,7 +106,7 @@ public:
    *
    * @see stepbound
    */
-  virtual void stepbound_pd( Variables *b, double & alpha_primal, double & alpha_dual );
+  virtual void stepbound_pd( const Variables *b, double & alpha_primal, double & alpha_dual );
 
   /** Performs the same function as stepbound, and supplies additional
    * information about which component of the nonnegative variables is
@@ -131,14 +130,14 @@ public:
    *
    * @see stepbound
    * */
-  virtual double findBlocking( Variables * step, 
+  virtual double findBlocking( const Variables * step,
 			       double & primalValue,
 			       double & primalStep,
 			       double & dualValue,
 			       double & dualStep,
 			       int& firstOrSecond );
 
-  virtual void findBlocking_pd( Variables * step,
+  virtual void findBlocking_pd( const Variables * step,
   				double & primalValue,
   				double & primalStep,
   				double & dualValue,
@@ -169,10 +168,13 @@ public:
 
   virtual int  validNonZeroPattern();
   
-  virtual void copy(Variables *b);
+  virtual void copy(const Variables *b);
 
   virtual double onenorm();
+
   virtual double infnorm();
+
+  void setToZero() override;
 };
 
 /** Indicates what type is the blocking variable in the step length

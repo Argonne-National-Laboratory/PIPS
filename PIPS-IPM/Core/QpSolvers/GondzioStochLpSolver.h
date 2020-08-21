@@ -30,6 +30,8 @@ private:
          double& alpha_primal_candidate, double& alpha_dual_candidate,
          double& weight_primal_candidate, double& weight_dual_candidate);
 
+  void computeProbingStep_pd(Variables* probing_step, const Variables* iterate, const Variables* step,
+        double alpha_primal, double alpha_dual) const;
 public:
 
   GondzioStochLpSolver( ProblemFormulation * of, Data * prob, const Scaler* scaler = nullptr );
