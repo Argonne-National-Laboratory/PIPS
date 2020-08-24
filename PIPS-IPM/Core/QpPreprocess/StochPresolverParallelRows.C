@@ -1327,8 +1327,9 @@ bool StochPresolverParallelRows::twoNearlyParallelInequalityRows( const INDEX& r
 bool StochPresolverParallelRows::nearlyParallelEqualityAndInequalityRow(const INDEX& row_eq, const INDEX& row_ineq) const
 {
    assert( rowContainsSingletonVariable(row_eq) );
-   assert( !rowContainsSingletonVariable( row_ineq) );
+   assert( !rowContainsSingletonVariable(row_ineq) );
 
+   // TODO - don't do anything if a_col is far too small...
    /* compute the new variable bounds for row_eq */
    const INDEX col = getRowSingletonVariable(row_eq);
    const double a_col = getSingletonCoefficient(col);
@@ -1342,17 +1343,19 @@ bool StochPresolverParallelRows::nearlyParallelEqualityAndInequalityRow(const IN
    const double s = (*norm_factorA)[row_eq_index] / (*norm_factorC)[row_ineq_index];
    const double faq =  s * a_col;
 
-   double xlow_new = (s < 0) ? INF_POS : INF_NEG;
-   double xupp_new = (s < 0) ? INF_NEG : INF_POS;
+   assert( faq != 0.0 );
 
-   if( PIPSisLT(0.0, faq) )
+   double xlow_new = INF_NEG;
+   double xupp_new = INF_POS;
+
+   if( 0 < faq )
    {
       if( !PIPSisZero((*norm_iclow)[row_ineq_index]) )
          xupp_new = ( (*norm_b)[row_eq_index] - (*norm_clow)[row_ineq_index] ) * (*norm_factorA)[row_eq_index] / a_col;
       if( !PIPSisZero((*norm_icupp)[row_ineq_index]) )
          xlow_new = ( (*norm_b)[row_eq_index] - (*norm_cupp)[row_ineq_index] ) * (*norm_factorA)[row_eq_index] / a_col ;
    }
-   else if( PIPSisLT(faq, 0.0) )
+   else if( 0 > faq )
    {
       if( !PIPSisZero((*norm_iclow)[row_ineq_index]) )
          xlow_new = ( (*norm_b)[row_eq_index] - (*norm_clow)[row_ineq_index] ) * (*norm_factorA)[row_eq_index] / a_col;
@@ -1360,13 +1363,9 @@ bool StochPresolverParallelRows::nearlyParallelEqualityAndInequalityRow(const IN
          xupp_new = ( (*norm_b)[row_eq_index] - (*norm_cupp)[row_ineq_index] ) * (*norm_factorA)[row_eq_index] / a_col;
    }
 
-   /* if the normalization factor was smaller equal 0 bounds have to be swapped */
-   if( s < 0 )
-      std::swap(xupp_new, xlow_new);
-
    presData.tightenBoundsNearlyParallelRows( row_eq, row_ineq, col, INDEX(), xlow_new, xupp_new, INF_POS, INF_POS, s ) ;
 
-   presData.removeRedundantParallelRow( row_ineq, row_eq);
+   presData.removeRedundantParallelRow( row_ineq, row_eq );
 
    return true;
 }
