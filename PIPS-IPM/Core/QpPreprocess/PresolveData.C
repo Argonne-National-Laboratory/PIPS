@@ -1615,7 +1615,7 @@ void PresolveData::checkBoundsInfeasible(const INDEX& col, double xlow_new, doub
 
    if( !PIPSisLE( std::max(xlow_new, xlow), std::min(xupp_new, xupp)) )
    {
-      std::cout << "[" << xlow_new << ", " << xupp_new << "] not in [" << xlow << ", " << xupp << "]" << std::endl;
+      std::cout << "[" << std::max(xlow_new, xlow) << ", " << std::min(xupp_new, xupp) << "] not in [" << xlow << ", " << xupp << "] for " << col << std::endl;
       PIPS_MPIabortInfeasible("Detected infeasible new bounds!", "PresolveData.C", "checkBoundsInfeasible");
    }
 }
@@ -1945,6 +1945,8 @@ void PresolveData::removeColumnFromMatrix(const INDEX& dummy_row, const INDEX& c
 void PresolveData::tightenBoundsNearlyParallelRows( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double xlow_new, double xupp_new, double scalar,
       double translation, double parallel_factor )
 {
+   // TODO track row and col..
+
    assert( row1.isRow() );
    assert( row2.isRow() );
    assert( !row1.isLinkingRow() );
@@ -3444,7 +3446,7 @@ void PresolveData::updateRowActivities(const INDEX& col, double xlow_new, double
    if( track_col && tracked_col == col )
    {
       std::cout << "TRACKING_COLUMN: " << col << " gets it's activities updated" << std::endl;
-      std::cout << "\t bounds changed from [" << xlow_old << ", " << xupp_old << "] to [" << xlow_new << ", " << xupp_new << "]" << std::endl;
+      std::cout << "\t bounds changed from [" << xlow_old << ", " << xupp_old << "] to [" << std::max(xlow_new, xlow_old) << ", " << std::min(xupp_old, xupp_new) << "]" << std::endl;
    }
 
    /* if node == -1 go through all linking var blocks of both systems */
@@ -3895,8 +3897,8 @@ bool PresolveData::updateColBounds( const INDEX& col, double xlow, double xupp)
    getColBounds( col, xlow_old, xupp_old );
 
    if( track_col && tracked_col == col )
-      std::cout << "TRACKING_COLUMN: updating column bounds from [" << xlow << ", " << xupp << "] for " << col << " with [" <<
-         xlow << ", " << xupp << "]" << std::endl;
+      std::cout << "TRACKING_COLUMN: updating column bounds from [" << xlow_old << ", " << xupp_old << "] for " << col << " to [" <<
+         std::max(xlow, xlow_old) << ", " << std::min(xupp, xupp_old) << "]" << std::endl;
 
    checkBoundsInfeasible(col, xlow, xupp);
 
