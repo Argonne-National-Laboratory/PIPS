@@ -144,8 +144,14 @@ sVars::sVars(const sVars& vars) : QpGenVars(vars)
 }
 
 sVars::sVars(const sVars& vars, OoqpVectorHandle ixlow_, OoqpVectorHandle ixupp_,
-      OoqpVectorHandle iclow_, OoqpVectorHandle icupp_) : sVars(vars)
+      OoqpVectorHandle iclow_, OoqpVectorHandle icupp_) : QpGenVars(vars)
 {
+   stochNode = vars.stochNode;
+   for(unsigned int i = 0; i < children.size(); ++i)
+   {
+      children.push_back( new sVars(*vars.children[i]));
+   }
+
    ixlow = ixlow_;
    ixupp = ixupp_;
    iclow = iclow_;

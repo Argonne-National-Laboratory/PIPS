@@ -115,8 +115,15 @@ sResiduals::sResiduals( const sResiduals& res ) : QpGenResiduals( res )
 }
 
 sResiduals::sResiduals( const sResiduals& res, OoqpVectorHandle ixlow_, OoqpVectorHandle ixupp_,
-      OoqpVectorHandle iclow_, OoqpVectorHandle icupp_ ) : sResiduals(res)
+      OoqpVectorHandle iclow_, OoqpVectorHandle icupp_ ) : QpGenResiduals(res)
 {
+   stochNode = res.stochNode;
+
+   for(unsigned int i = 0; i < res.children.size(); ++i)
+   {
+       children.push_back( new sResiduals(*children[i]) );
+   }
+
    ixlow = ixlow_;
    ixupp = ixupp_;
    iclow = iclow_;
