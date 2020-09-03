@@ -450,6 +450,20 @@ void SparseStorageDynamic::writeToStreamDenseRow( stringstream& out, int rowidx)
    }
 }
 
+double SparseStorageDynamic::abmaxnorm() const
+{
+   double max = 0.0;
+   for( int i = 0; i < m; ++i )
+   {
+      for( int j = rowptr[m].start; j < rowptr[m].end; ++j )
+      {
+         if( std::fabs(M[j]) > max )
+            max = std::fabs(M[j]);
+      }
+   }
+   return max;
+}
+
 void SparseStorageDynamic::restoreOrder()
 {
    for(int i = 0; i < m; i++)  // row i

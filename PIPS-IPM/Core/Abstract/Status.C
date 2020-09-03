@@ -27,8 +27,8 @@ CStatus::CStatus( StatusCFunc doItC_, void * ctx_ )
   ctx    = ctx_;
 }
 
-int CStatus::doIt(  Solver * solver, Data * qpdata, Variables * vars, 
-		    Residuals * resids,
+int CStatus::doIt(  const Solver * solver, const Data * qpdata, const Variables * vars,
+		    const Residuals * resids,
 		    int i, double mu, 
 		    int level )
 {

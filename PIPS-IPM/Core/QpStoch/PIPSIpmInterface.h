@@ -144,7 +144,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 
   scaler = nullptr;
 
-  solver  = new IPMSOLVER( factory, data );
+  solver  = new IPMSOLVER( factory, data, scaler );
   solver->addMonitor(new StochMonitor( factory ));
 #ifdef TIMING
   if(mype==0) printf("solver created\n");
@@ -216,9 +216,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 #endif
 
   dataUnperm = data->cloneFull();
-#ifdef WITH_PARDISOINDEF
-  data->activateLinkStructureExploitation();
-#endif
+  if( pips_options::getBoolParameter("PARDISO_FOR_GLOBAL_SC") )
+     data->activateLinkStructureExploitation();
 
   vars   = dynamic_cast<sVars*>( factory->makeVariables( data ) );
 #ifdef TIMING
@@ -249,7 +248,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
         std::cout << "---scaling time (in sec.): " << t_scaling - t0_scaling << std::endl;
   }
 
-  solver  = new IPMSOLVER( factory, data );
+  solver  = new IPMSOLVER( factory, data, scaler );
   solver->addMonitor(new StochMonitor( factory, scaler ));
 #ifdef TIMING
   if(mype==0) printf("solver created\n");
@@ -360,7 +359,8 @@ double PIPSIpmInterface<FORMULATION,SOLVER>::getObjective() {
 
 
 template<typename FORMULATION, typename SOLVER>
-double PIPSIpmInterface<FORMULATION,SOLVER>::getFirstStageObjective() const {
+double PIPSIpmInterface<FORMULATION,SOLVER>::getFirstStageObjective() const
+{
   OoqpVector& x = *(dynamic_cast<StochVector&>(*vars->x).vec);
   OoqpVector& c = *(dynamic_cast<StochVector&>(*data->g).vec);
   return c.dotProductWith(x);
@@ -767,7 +767,7 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::printComplementarityResiduals(con
 template<class FORMULATION, class IPMSOLVER>
 void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
 {
-//  const bool print_resudial = true; // TODO make PIPSoption
+  const bool print_residuals = pips_options::getBoolParameter("POSTSOLVE_PRINT_RESIDS");
   const int my_rank = PIPS_MPIgetRank(comm);
 
   assert(origData);
@@ -794,18 +794,21 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
     return;
   }
 
+  if( print_residuals )
+  {
+     if( my_rank == 0 )
+        std::cout << std::endl << "Residuals before postsolve:" << std::endl;
+     resids->calcresids(data, vars, print_residuals);
+     printComplementarityResiduals(*vars);
+
+     if( my_rank == 0 )
+        std::cout << "Residuals after unscaling/permuting:" << std::endl;
+     unscaleUnpermResids->calcresids(dataUnperm, unscaleUnpermVars, print_residuals);
+     printComplementarityResiduals(*unscaleUnpermVars);
+  }
+
   MPI_Barrier(comm);
   const double t0_postsolve = MPI_Wtime();
-
-  if( my_rank == 0 )
-     std::cout << std::endl << "Residuals before postsolve:" << std::endl;
-  resids->calcresids(data, vars, true);
-  printComplementarityResiduals(*vars);
-
-  if( my_rank == 0 )
-     std::cout << "Residuals after unscaling/permuting:" << std::endl;
-  unscaleUnpermResids->calcresids(dataUnperm, unscaleUnpermVars, true);
-  printComplementarityResiduals(*unscaleUnpermVars);
 
   sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*origData->stochNode);
   callbackTree.switchToOriginalData();
@@ -829,10 +832,14 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   }
 
   /* compute residuals for postprocessed solution and check for feasibility */
-  if( my_rank == 0 )
-     std::cout << std::endl << "Residuals after postsolve:" << std::endl;
-  postsolvedResids->calcresids(origData, postsolvedVars, true);
+  if( print_residuals )
+  {
+     if( my_rank == 0 )
+        std::cout << std::endl << "Residuals after postsolve:" << std::endl;
+     postsolvedResids->calcresids(origData, postsolvedVars, print_residuals);
 
-  printComplementarityResiduals(*postsolvedVars);
+     printComplementarityResiduals(*postsolvedVars);
+  }
 }
+
 #endif

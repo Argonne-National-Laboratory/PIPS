@@ -21,15 +21,15 @@ public:
 
   OoqpMonitor() { nextMonitor = 0; };
 
-  virtual void doIt( Solver * solver, Data * data, Variables * vars,
-					 Residuals * resids,
+  virtual void doIt( const Solver * solver, const Data * data, const Variables * vars,
+					 const Residuals * resids,
 					 double alpha, double sigma,
 					 int i, double mu, 
                      int status_code,
 					 int level ) = 0;
 
-  virtual void doItPd( Solver * solver, Data * data, Variables * vars,
-                Residuals * resids,
+  virtual void doItPd( const Solver * solver, const Data * data, const Variables * vars,
+                const Residuals * resids,
                 double alpha_primal, double alpha_dual, double sigma,
                 int i, double mu,
                      int status_code,
@@ -48,12 +48,12 @@ public:
  */
 class OoqpSelfMonitor : public OoqpMonitor {
 public:
-  virtual void doIt( Solver * solver, Data * data, Variables * vars,
-					 Residuals * resids,
+  void doIt( const Solver * solver, const Data * data, const Variables * vars,
+					 const Residuals * resids,
 					 double alpha, double sigma,
 					 int i, double mu,
                      int status_code,
-					 int level );
+					 int level ) override;
 };
 
 #include "OoqpMonitorData.h"
@@ -69,12 +69,12 @@ protected:
   void * ctx;
 public:
   COoqpMonitor( DoItCFunc doItC_, void * ctx_ );
-  virtual void doIt( Solver * solver, Data * data, Variables * vars,
-					 Residuals * resids,
+  void doIt( const Solver * solver, const Data * data, const Variables * vars,
+					 const Residuals * resids,
 					 double alpha, double sigma,
 					 int i, double mu,
                      int status_code,
-					 int level );
+					 int level ) override;
 };
 
 

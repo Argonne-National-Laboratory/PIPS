@@ -53,6 +53,8 @@ build_pips
 # no additional .gitignore file for that
 ThirdPartyLibs/PARDISO
 ThirdPartyLibs/MUMPS
+ThirdPartyLibs/METIS
+ThirdPartyLibs/LUSOL
 pipstmp
 GAMSsmall
 PIPS-IPM/Drivers/simple/simple_data_12.gdx

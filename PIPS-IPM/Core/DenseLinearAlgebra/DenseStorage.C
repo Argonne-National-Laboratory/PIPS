@@ -273,6 +273,21 @@ void DenseStorage::atPutDiagonal( int idiag,
   }
 }
 
+double DenseStorage::abmaxnorm() const
+{
+   double max = 0.0;
+
+   for( int i = 0; i < m; ++i )
+   {
+      for( int j = 0; j < n; ++j )
+      {
+         if( std::fabs(M[i][j]) > max )
+            max = std::fabs(M[i][j]);
+      }
+   }
+   return max;
+}
+
 void DenseStorage::ColumnScale( OoqpVector& scale_in )
 {
   SimpleVector & scale = dynamic_cast<SimpleVector &>(scale_in);

@@ -15,37 +15,67 @@
 #include "Singleton.h"
 
 /**
- * Abstract base class for options class.
+ * base class for options class.
  */
 
-enum OptionType
+namespace base_options
 {
-   INT = 0,
-   DOUBLE = 1,
-   BOOL = 2
-};
+   int getIntParameter(const std::string& identifier);
+   double getDoubleParameter(const std::string& identifier);
+   bool getBoolParameter(const std::string& identifier);
 
-class Options : public Singleton
-{
-private:
-   virtual void setDefaults() = 0;
+   class Options : public Singleton
+   {
+   private:
+      virtual void setDefaults(){};
 
-protected:
-   // TODO : there is no hash_map in C++03 I think
-   std::map<std::string, double> double_options;
-   std::map<std::string, int> int_options;
-   std::map<std::string, bool> bool_options;
+   protected:
+      // not thread safe when modified..
+      // TODO : there is no hash_map in C++03 I think
+      static std::map<std::string, double> double_options;
+      static std::map<std::string, int> int_options;
+      static std::map<std::string, bool> bool_options;
 
-   Options() {};
-   virtual ~Options() {};
+      friend int base_options::getIntParameter(const std::string& identifier);
+      friend double base_options::getDoubleParameter(const std::string& identifier);
+      friend bool base_options::getBoolParameter(const std::string& identifier);
 
-   bool isIdentifierUnique( const std::string& identifier ) const;
+      Options();
+      virtual ~Options() {};
 
-   void fillOptionsFromFile(const std::string& filename);
+      static Options& getInstance()
+      {
+         static Options opt;
+         return opt;
+      }
 
-   int getIntParam(const std::string& identifier) const;
-   double getDoubleParam(const std::string& identifier) const;
-   bool getBoolParam(const std::string& identifier) const;
-};
+      bool isIdentifierUnique( const std::string& identifier ) const;
+      bool identifierExists( const std::string& identifier ) const;
+      void fillOptionsFromFile(const std::string& filename);
+
+      int getIntParam(const std::string& identifier) const;
+      double getDoubleParam(const std::string& identifier) const;
+      bool getBoolParam(const std::string& identifier) const;
+
+      void setIntParam(const std::string& param, int value);
+      void setBoolParam(const std::string& param, int value);
+      void setDoubleParam(const std::string& param, int value);
+   };
+
+   inline int getIntParameter(const std::string& identifier)
+   {
+      return Options::getInstance().getIntParam(identifier);
+   }
+
+   inline bool getBoolParameter(const std::string& identifier)
+   {
+      return Options::getInstance().getBoolParam(identifier);
+   }
+
+   inline double getDoubleParameter(const std::string& identifier)
+   {
+      return Options::getInstance().getDoubleParam(identifier);
+   }
+}
 
 #endif /* PIPS_IPM_CORE_ABSTRACT_OPTIONS_H_ */

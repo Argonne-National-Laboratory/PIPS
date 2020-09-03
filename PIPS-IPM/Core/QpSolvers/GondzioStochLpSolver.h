@@ -10,8 +10,6 @@
 
 #include "GondzioStochSolver.h"
 
-
-
 class Data;
 class Variables;
 class ProblemFormulation;
@@ -32,12 +30,11 @@ private:
          double& alpha_primal_candidate, double& alpha_dual_candidate,
          double& weight_primal_candidate, double& weight_dual_candidate);
 
+  void computeProbingStep_pd(Variables* probing_step, const Variables* iterate, const Variables* step,
+        double alpha_primal, double alpha_dual) const;
 public:
 
-  GondzioStochLpSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10,
-        bool adaptive_linesearch = false );
-  	    // todo we want to have a paraamter for this one! also in parent class! should also be
-        // tested
+  GondzioStochLpSolver( ProblemFormulation * of, Data * prob, const Scaler* scaler = nullptr );
 
   virtual ~GondzioStochLpSolver();
 

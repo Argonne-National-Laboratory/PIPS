@@ -81,46 +81,46 @@ QpGenData::QpGenData( )
 }
 
 void QpGenData::Qmult( double beta,  OoqpVector& y,
-		       double alpha, OoqpVector& x )
+		       double alpha, const OoqpVector& x ) const
 {
   Q->mult( beta, y, alpha, x );
 }
 
 void QpGenData::Amult( double beta,  OoqpVector& y,
-		       double alpha, OoqpVector& x)
+		       double alpha, const OoqpVector& x) const
 {
   A->mult( beta, y, alpha, x );
 }
 
 void QpGenData::Cmult( double beta,  OoqpVector& y,
-		       double alpha, OoqpVector& x )
+		       double alpha, const OoqpVector& x ) const
 {
   C->mult( beta, y, alpha, x );
 }
 
 void QpGenData::ATransmult( double beta,  OoqpVector& y,
-			    double alpha, OoqpVector& x )
+			    double alpha, const OoqpVector& x ) const
 {
   A->transMult( beta, y, alpha, x );
 }
 
 void QpGenData::CTransmult( double beta,  OoqpVector& y,
-			    double alpha, OoqpVector& x )
+			    double alpha, const OoqpVector& x ) const
 {
   C->transMult( beta, y, alpha, x );
 }
 
-void QpGenData::getg( OoqpVector& myG )
+void QpGenData::getg( OoqpVector& myG ) const
 {
   myG.copyFrom( *g );
 }
 
-void QpGenData::getbA( OoqpVector& bout )
+void QpGenData::getbA( OoqpVector& bout ) const
 {
   bout.copyFrom( *bA );
 }
 
-double QpGenData::datanorm()
+double QpGenData::datanorm() const
 {
   double norm = 0.0;
   double componentNorm;
@@ -477,7 +477,7 @@ void QpGenData::getDiagonalOfQ( OoqpVector& dq )
   Q->fromGetDiagonal(0, dq);
 }
 
-double QpGenData::objectiveValue( QpGenVars * vars )
+double QpGenData::objectiveValue( const QpGenVars * vars ) const
 {
   OoqpVectorHandle temp( la->newVector( nx ) );
 

@@ -8,6 +8,7 @@
 #include "LinearSystem.h"
 #include "DoubleMatrixHandle.h"
 #include "OoqpVector.h"
+#include "Observer.h"
 
 class Data;
 class QpGenData;
@@ -31,8 +32,18 @@ class LinearAlgebraPackage;
  * @ingroup QpGen 
  */
 
-class QpGenLinsys : public LinearSystem {
+class QpGenLinsys : public LinearSystem, public Subject {
 protected:
+  /** observer pattern for convergence status of BiCGStab when calling solve */
+  int bicg_conv_flag;
+  int bicg_niterations;
+
+  double bicg_resnorm;
+  double bicg_relresnorm;
+
+  int getIntValue(const std::string& s) const override;
+  double getDoubleValue(const std::string& s) const override;
+  bool getBoolValue(const std::string& s) const override;
 
   /** stores a critical diagonal matrix as a vector */
   OoqpVector* nomegaInv;
@@ -60,10 +71,20 @@ protected:
   /** Work vectors for iterative refinement of the XYZ linear system */
   OoqpVector *sol, *res, *resx, *resy, *resz;
   /** Work vectors for BiCGStab */
-  OoqpVector *sol2, *res2, *res3, *res4, *res5;
+  OoqpVector *sol2, *sol3, *res2, *res3, *res4, *res5;
 
-  bool printStatistics;
-  int ipIterations;
+  /// error absorbtion in linear system outer level
+  const int outerSolve;
+  const int innerSCSolve;
+
+  /// parameters for the bicg solve
+  const bool outer_bicg_print_statistics;
+
+  const double outer_bicg_eps;
+
+  const int outer_bicg_max_iter;
+  const int outer_bicg_max_normr_divergences;
+  const int outer_bicg_max_stagnations;
 
 public:
   QpGenLinsys(  QpGen * factory,

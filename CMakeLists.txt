@@ -50,10 +50,6 @@ option(WITH_MAKETEST "Enable 'make test'" ON)
 option(WITH_MKL_PARDISO "Use mkl_pardiso from Intel for PIPS-IPM" OFF)
 message(STATUS "WITH_MKL_PARDISO=${WITH_MKL_PARDISO}")
 
-#use (sparse) Pardiso solver for summed Schur complement
-option(WITH_PARDISOINDEF "Use Pardiso (if available) for summed Schur complement" ON)
-message(STATUS "WITH_PARDISOINDEF=${WITH_PARDISOINDEF}")
-
 #use (sparse) MUMPS solver for local Schur complement
 option(WITH_MUMPS_LEAF "Use MUMPS (if available) for (local) Schur complement at each leaf" OFF)
 message(STATUS "WITH_MUMPS_LEAF=${WITH_MUMPS_LEAF}")
@@ -62,23 +58,7 @@ message(STATUS "WITH_MUMPS_LEAF=${WITH_MUMPS_LEAF}")
 option(WITH_MUMPS_ROOT "Use MUMPS (if available) for (global) Schur complement at root" OFF)
 message(STATUS "WITH_MUMPS_ROOT=${WITH_MUMPS_ROOT}")
 
-#use sparse preconditioner for global Schur complement
-option(WITH_DIST_PRECOND "use sparse preconditioner for global Schur complement" ON)
-message(STATUS "WITH_DIST_PRECOND=${WITH_DIST_PRECOND}")
-
-#use conserative step lengths in interior point algorithm
-option(WITH_STEPLENGTH_CONSERVATIVE "use conserative step lengths in interior point algorithm" OFF)
-message(STATUS "WITH_STEPLENGTH_CONSERVATIVE=${WITH_STEPLENGTH_CONSERVATIVE}")
-
-option(WITH_SPARSE_PRECOND "use sparse preconditioner for global Schur complement" ON)
-message(STATUS "WITH_SPARSE_PRECOND=${WITH_SPARSE_PRECOND}")
-
-option(WITH_REDUCED_ACCURACY "reduce accuracy for accepting solution" OFF)
-message(STATUS "WITH_REDUCED_ACCURACY=${WITH_REDUCED_ACCURACY}")
-
-option(WITH_INNER_BICGSTAB "use inner bicgstab" OFF)
-message(STATUS "WITH_INNER_BICGSTAB=${WITH_INNER_BICGSTAB}")
-
+#compute local schur complement blockwise with pardiso
 option(WITH_PARDISO_BLOCKSC "Use Pardiso (if available) for comuting the Schur complement in blocks" OFF)
 message(STATUS "WITH_PARDISO_BLOCKSC=${WITH_PARDISO_BLOCKSC}")
 
@@ -478,34 +458,11 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   #  set(MA86_LIBRARY "")
   #endif(HAVE_MA86)
 
-  if(WITH_STEPLENGTH_CONSERVATIVE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSTEPLENGTH_CONSERVATIVE")
-  endif(WITH_STEPLENGTH_CONSERVATIVE)
-
-  if(WITH_SPARSE_PRECOND)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSPARSE_PRECOND")
-  endif(WITH_SPARSE_PRECOND)
-
-  if(WITH_DIST_PRECOND)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDIST_PRECOND")
-  endif(WITH_DIST_PRECOND)
-
-  if(WITH_REDUCED_ACCURACY)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DREDUCED_ACCURACY")
-  endif(WITH_REDUCED_ACCURACY)
-
-  if(WITH_INNER_BICGSTAB)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINNER_BICGSTAB")
-  endif(WITH_INNER_BICGSTAB)
-
   if(HAVE_PARDISO)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PARDISO")
-    if(WITH_PARDISOINDEF)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PARDISOINDEF")
-    endif(WITH_PARDISOINDEF)
     if(WITH_PARDISO_BLOCKSC)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPARDISO_BLOCKSC")
-    endif(WITH_PARDISO_BLOCKSC)
+    endif(WITH_PARDISO_BLOCKSC)    
   else(HAVE_PARDISO)
     set(PARDISO_LIBRARY "")
   endif(HAVE_PARDISO)

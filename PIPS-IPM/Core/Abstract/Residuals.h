@@ -28,7 +28,10 @@ public:
   int m, n;
 
   /** The norm of the residuals, ommiting the complementariy conditions */
-  double residualNorm() { return mResidualNorm; }
+  double residualNorm() const { return mResidualNorm; }
+
+  /** recompute residual norm */
+  virtual double recomputeResidualNorm() = 0;
 
   /** A quantity that measures progress toward feasibility. IN terms
    *  of the abstract problem formulation, this quantity is defined as
@@ -36,7 +39,7 @@ public:
    * x' * Q * x - b' * y + c' * x - d' * z
    *  @endcode 
    */
-  double dualityGap() { return mDualityGap; };
+  double dualityGap() const { return mDualityGap; };
 
   /** calculate residuals, their norms, and duality/complementarity
    * gap, given a problem and variable set.  */
@@ -46,13 +49,13 @@ public:
    * adding the pairwise products of the complementary variables plus
    * a constant alpha to this term.  
    */
-  virtual void add_r3_xz_alpha(Variables *vars, double alpha) = 0;
+  virtual void add_r3_xz_alpha(const Variables *vars, double alpha) = 0;
 
   /** Set the "complementarity" component of the residuals to the
    * pairwise products of the complementary variables plus a constant
    * alpha 
    */
-  virtual void set_r3_xz_alpha(Variables *vars, double alpha) = 0;
+  virtual void set_r3_xz_alpha(const Variables *vars, double alpha) = 0;
 
   /** set the complementarity component of the residuals to 0. */
   virtual void clear_r3() = 0;

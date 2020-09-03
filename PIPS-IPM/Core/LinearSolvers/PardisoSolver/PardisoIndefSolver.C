@@ -20,6 +20,7 @@
 #include "omp.h"
 #include "pipsport.h"
 #include "pipsdef.h"
+#include "StochOptions.h"
 
 
 #define CHECK_PARDISO
@@ -172,22 +173,8 @@ void PardisoIndefSolver::initPardiso()
 
    useSparseRhs = useSparseRhsDefault;
 
-   // todo proper parameter
-   char* var = getenv("PARDISO_SPARSE_RHS_ROOT");
-   if( var != nullptr )
-   {
-      int use;
-      sscanf(var, "%d", &use);
-      if( use == 0 )
-         useSparseRhs = false;
-      else if( use == 1 )
-         useSparseRhs = true;
-   }
-
    nThreads = PIPSgetnOMPthreads();
-
-   // todo proper parameter
-   var = getenv("OMP_NUM_THREADS_PIPS_ROOT");
+   char* var = getenv("OMP_NUM_THREADS_PIPS_ROOT");
    if( var != nullptr )
    {
       int n = -1;
@@ -198,73 +185,17 @@ void PardisoIndefSolver::initPardiso()
       nThreads = n;
    }
 
-   pivotPerturbationExp = pivotPerturbationExpDefault;
-
-   // todo proper parameter
-   var = getenv("PARDISO_PIVOT_PERTURBATION_ROOT");
-   if( var != nullptr )
-   {
-      int exp;
-      sscanf(var, "%d", &exp);
-      if( exp >= 1 )
-         pivotPerturbationExp = exp;
-   }
+   pivotPerturbationExp = pips_options::getIntParameter("PARDISO_PIVOT_PERTURBATION_ROOT");
+   if( pivotPerturbationExp < 0 )
+	   pivotPerturbationExp = pivotPerturbationExpDefault;
 
    highAccuracy = highAccuracyDefault;
-
-   // todo proper parameter
-   var = getenv("PARDISO_HIGH_ACCURACY_ROOT");
-   if( var != nullptr )
-   {
-      int n;
-      sscanf(var, "%d", &n);
-      if( n == 0 )
-         highAccuracy = false;
-      else if( n == 1 )
-         highAccuracy = true;
-   }
-
    parallelForwardBackward = parallelForwardBackwardDefault,
-
-   // todo proper parameter
-   var = getenv("PARDISO_PARALLEL_SOLVE_ROOT");
-   if( var != nullptr )
-   {
-      int n;
-      sscanf(var, "%d", &n);
-      if( n == 0 )
-         parallelForwardBackward = false;
-      else if( n == 1 )
-         parallelForwardBackward = true;
-   }
-
    factorizationTwoLevel = factorizationTwoLevelDefault,
 
-   // todo proper parameter
-   var = getenv("PARDISO_FACTORIZE_TWOLEVEL_ROOT");
-   if( var != nullptr )
-   {
-      int n;
-      sscanf(var, "%d", &n);
-      if( n == 0 )
-         factorizationTwoLevel = false;
-      else if( n == 1 )
-         factorizationTwoLevel = true;
-   }
-
-   nIterativeRefins = nIterativeRefinsDefault;
-
-   // todo proper parameter
-   var = getenv("PARDISO_NITERATIVE_REFINS_ROOT");
-   if( var != nullptr )
-   {
-      int n;
-      sscanf(var, "%d", &n);
-      assert(n >= 0);
-
-      if( n >= 0 )
-         nIterativeRefins = n;
-   }
+   nIterativeRefins = pips_options::getIntParameter("PARDISO_NITERATIVE_REFINS_ROOT");
+   if( nIterativeRefins < 0 )
+ 	  nIterativeRefins = nIterativeRefinsDefault;
 
    if( myRank == 0 )
    {
@@ -398,6 +329,7 @@ void PardisoIndefSolver::factorizeFromSparse()
    const int* const iaStorage = mStorageSparse->krowM;
    const int* const jaStorage = mStorageSparse->jcolM;
    const double* const aStorage = mStorageSparse->M;
+   const bool usePrecondSparse = pips_options::getBoolParameter("PRECONDITION_SPARSE");
 
    // first call?
    if( ia == nullptr )
@@ -412,20 +344,21 @@ void PardisoIndefSolver::factorizeFromSparse()
 
    assert(n >= 0);
 
-   // todo the sparse precond. stuff should be moved out and handled by Sparsifier class
-#ifdef SPARSE_PRECOND
    std::vector<double>diag(n);
 
-   const double t = precondDiagDomBound;
-
-   for( int r = 0; r < n; r++ )
+   // todo the sparse precond. stuff should be moved out and handled by Sparsifier class
+   if( usePrecondSparse )
    {
-      const int j = iaStorage[r];
-      assert(jaStorage[j] == r);
+	  const double t = precondDiagDomBound;
 
-      diag[r] = fabs(aStorage[j]) * t;
+	  for( int r = 0; r < n; r++ )
+	  {
+		  const int j = iaStorage[r];
+		  assert(jaStorage[j] == r);
+
+		  diag[r] = fabs(aStorage[j]) * t;
+	  }
    }
-#endif
 
    ia[0] = 1;
    int nnznew = 0;
@@ -436,21 +369,23 @@ void PardisoIndefSolver::factorizeFromSparse()
       {
          if( aStorage[j] != 0.0 || jaStorage[j] == r )
          {
-#ifdef SPARSE_PRECOND
-            if( (fabs(aStorage[j]) >= diag[r] || fabs(aStorage[j]) >= diag[jaStorage[j]]) )
-            {
+        	if( usePrecondSparse )
+        	{
+				if( (fabs(aStorage[j]) >= diag[r] || fabs(aStorage[j]) >= diag[jaStorage[j]]) )
+				{
+				   ja[nnznew] = jaStorage[j] + 1;
+				   a[nnznew++] = aStorage[j];
+				}
+				else
+				{
+				   assert(jaStorage[j] != r);
+				}
+        	}
+        	else
+        	{
                ja[nnznew] = jaStorage[j] + 1;
                a[nnznew++] = aStorage[j];
-            }
-            else
-            {
-               assert(jaStorage[j] != r);
-            }
-#else
-            ja[nnznew] = jaStorage[j] + 1;
-            a[nnznew++] = aStorage[j];
-#endif
-
+        	}
          }
       }
       ia[r + 1] = nnznew + 1;

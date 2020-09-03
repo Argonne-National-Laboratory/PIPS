@@ -1211,7 +1211,7 @@ void SparseStorage::randomize( double alpha, double beta, double * seed )
 
 }
 
-double SparseStorage::abmaxnorm()
+double SparseStorage::abmaxnorm() const
 {
   double norm = 0.0;
   int nnz = this->numberOfNonZeros();

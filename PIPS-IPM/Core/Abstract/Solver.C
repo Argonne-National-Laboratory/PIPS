@@ -12,9 +12,10 @@
 #include "Residuals.h"
 #include "LinearSystem.h"
 #include "OoqpStartStrategy.h"
+#include "Options.h"
+
 #include <cmath>
 #include <limits>
-
 #include "mpi.h"
 
 bool ipStartFound = false;
@@ -28,52 +29,43 @@ int gOuterBiCGIter=0;
 int gInnerBiCGIter=0;
 int gInnerBiCGFails=0;
 
-//controls the type of error absortion at the outer level
-// - 0:no error absortion (OOQP works just fine)
-// - 1:iterative refinement (used when error absortion is 
-// also done at a lower level, for example in the solve with 
-// the dense Schur complement
-// - 2:BiCGStab with the factorization as preconditioner
-int gOuterSolve=0; 
-
-//controls the type of error absortion/correction when solving
-//with the dense Schur complement
-// - 0: no error correction
-// - 1: iter. refin.
-// - 2: BiCGStab
-int gInnerSCsolve=0;
-
 //number of iterative refinements in the 2nd stage sparse systems
-int gInnerStg2solve=3;
+//int gInnerStg2solve=3; not used
 
-Solver::Solver() : itsMonitors(0), status(0), startStrategy(0), dnorm(0.0),
-		   mutol(1.e-6), artol(1e-4), phi(0.0), maxit(0), mu_history(0), rnorm_history(0),
-		   phi_history(0), phi_min_history(0), iter(0), sys(0)
+Solver::Solver(const Scaler* scaler) : itsMonitors(0), status(0), startStrategy(0), scaler(scaler), dnorm(0.0),
+      dnorm_orig(dnorm), mutol(1.e-6), artol(1.e-4), phi(0.0), maxit(0), mu_history(0), rnorm_history(0),
+      phi_history(0), phi_min_history(0), iter(0), sys(0)
 {
   // define parameters associated with the step length heuristic
-#ifdef STEPLENGTH_CONSERVATIVE
-  gamma_f = 0.95;
-#else
-  gamma_f = 0.99;
-#endif
-  gamma_a = 1.0 / (1.0 - gamma_f);
 
+   if( base_options::getBoolParameter("IP_STEPLENGTH_CONSERVATIVE") )
+   {
+      steplength_factor = 0.99;
+      gamma_f = 0.95;
+   }
+   else
+   {
+      steplength_factor = 0.99999999;
+      gamma_f = 0.99;
+   }
+   gamma_a = 1.0 / (1.0 - gamma_f);
 
-  printTimeStamp = false;
-  startTime = 0.0;
+   if( base_options::getBoolParameter("IP_ACCURACY_REDUCED")  )
+   {
+      artol = 1.e-3;
+      mutol = 1.e-5;
+   }
+   else
+   {
+      artol = 1.e-4;
+      mutol = 1.e-6;
+   }
 
-  // todo proper parameter
-  char* var = getenv("PARDISO_PRINT_TIMESTAMP");
-  if( var != nullptr )
-  {
-     int use;
-     sscanf(var, "%d", &use);
-     if( use == 1 )
-     {
-        printTimeStamp = true;
-        startTime = MPI_Wtime();
-     }
-  }
+   if( base_options::getBoolParameter("IP_PRINT_TIMESTAMP") )
+   {
+      printTimeStamp = true;
+      startTime = MPI_Wtime();
+   }
 }
 
 void Solver::start( ProblemFormulation * formulation,
@@ -96,7 +88,7 @@ void Solver::defaultStart( ProblemFormulation * /* formulation */,
 			   Variables * iterate, Data * prob,
 			   Residuals * resid, Variables * step  )
 {
-  double sdatanorm = sqrt(dnorm);
+  double sdatanorm = std::sqrt(dnorm);
   double a  = sdatanorm;
   double b  = sdatanorm;
   iterate->interiorPoint( a, b );
@@ -120,7 +112,7 @@ void Solver::stevestart(  ProblemFormulation * /* formulation */,
 			  Variables * iterate, Data * prob,
 			  Residuals * resid, Variables * step  )
 {
-  double sdatanorm = sqrt(dnorm);
+  double sdatanorm = std::sqrt(dnorm);
   double a = 0.0, b = 0.0;  
 
   iterate->interiorPoint( a, b );
@@ -163,11 +155,11 @@ void Solver::dumbstart(  ProblemFormulation * /* formulation */,
 			 Variables * iterate, Data * /* prob */,
 			 Residuals * /*resid*/, Variables * /*step*/  )
 {
-  double sdatanorm = dnorm;
-  double a, b, bigstart;
-  a = 1.e3; b = 1.e5;
-  bigstart = a*sdatanorm + b;
-  iterate->interiorPoint( bigstart, bigstart );
+   const double a = 1.e3;
+   const double b = 1.e5;
+
+   const double bigstart = a * dnorm + b;
+   iterate->interiorPoint( bigstart, bigstart );
 }
 
 double Solver::finalStepLength( Variables *iterate, Variables *step )
@@ -226,11 +218,7 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	if( alpha < gamma_f * maxAlpha ) alpha = gamma_f * maxAlpha;
 
 	// back off just a touch (or a bit more)
-#ifdef STEPLENGTH_CONSERVATIVE
-	alpha *= 0.99;
-#else
-	alpha *= .99999999;
-#endif
+	alpha *= steplength_factor;
 
 	assert(alpha < 1.0);
 
@@ -314,22 +302,16 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	if( alpha_primal < gamma_f * maxAlpha_p ) alpha_primal = gamma_f * maxAlpha_p;
 	if( alpha_dual < gamma_f * maxAlpha_d ) alpha_dual = gamma_f * maxAlpha_d;
 
-	// back off just a touch (or a bit more)
-	#ifdef STEPLENGTH_CONSERVATIVE
-		alpha_primal *= 0.99;
-		alpha_dual *= 0.99;
-	#else
-		alpha_primal *= .99999999;
-		alpha_dual *= .99999999;
-	#endif
+	alpha_primal *= steplength_factor;
+	alpha_dual *= steplength_factor;
 
 	assert(alpha_primal < 1.0 && alpha_dual < 1.0);
-	assert(alpha_primal >= 0 && alpha_dual >= 0 );
+	assert(alpha_primal >= 0 && alpha_dual >= 0);
 }
 
 
-void Solver::doMonitor( Data * data, Variables * vars,
-			Residuals * resids,
+void Solver::doMonitor( const Data * data, const Variables * vars,
+			const Residuals * resids,
 			double alpha, double sigma,
 			int i, double mu,
                         int stop_code,
@@ -343,8 +325,8 @@ void Solver::doMonitor( Data * data, Variables * vars,
   }
 }
 
-void Solver::doMonitorPd( Data * data, Variables * vars,
-         Residuals * resids,
+void Solver::doMonitorPd( const Data * data, const Variables * vars,
+         const Residuals * resids,
          double alpha_primal, double alpha_dual, double sigma,
          int i, double mu,
                         int stop_code,
@@ -359,8 +341,8 @@ void Solver::doMonitorPd( Data * data, Variables * vars,
 }
 
 
-int Solver::doStatus( Data * data, Variables * vars,
-		       Residuals * resids,
+int Solver::doStatus( const Data * data, const Variables * vars,
+		       const Residuals * resids,
 		       int i, double mu,
 		       int level )
 {
@@ -395,44 +377,51 @@ Solver::~Solver()
 }
 
 
-int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
-				 Residuals * resids,
+int Solver::defaultStatus( const Data * /* data */, const Variables * /* vars */,
+				 const Residuals * resids,
 				 int iterate, double mu, 
 				 int /* level */)
 {
+  const int myrank = PIPS_MPIgetRank();
   int stop_code = NOT_FINISHED;
   int idx;
 
-  const double gap   = fabs( resids->dualityGap() );
-  const double rnorm = resids->residualNorm();
+  const Residuals* resids_unscaled = resids;
+  if( scaler )
+     resids_unscaled = scaler->getResidualsUnscaled(*resids);
 
-  const int myrank = PIPS_MPIgetRank();
+  const double gap   = std::fabs( resids_unscaled->dualityGap() );
+  const double rnorm = resids_unscaled->residualNorm();
+
+  if( scaler )
+     delete resids_unscaled;
 
   idx = iterate - 1;
   if( idx <  0     ) idx = 0;
-  if( idx >= maxit ) idx = maxit-1;
+  if( idx >= maxit ) idx = maxit - 1;
 
   // store the historical record
   mu_history[idx] = mu;
   rnorm_history[idx] = rnorm;
-  phi = (rnorm + gap) / dnorm;
+  phi = (rnorm + gap) / dnorm_orig;
   phi_history[idx] = phi;
 
-  if(idx > 0) {
+  if(idx > 0)
+  {
     phi_min_history[idx] = phi_min_history[idx - 1];
     if(phi < phi_min_history[idx]) phi_min_history[idx] = phi;
-  } else
+  }
+  else
     phi_min_history[idx] = phi;
 
-  if ( iterate >= maxit ) {
+  if ( iterate >= maxit )
     stop_code = MAX_ITS_EXCEEDED;
-  } else if ( mu <= mutol && rnorm <= artol * dnorm ) {
+  else if ( mu <= mutol && rnorm <= artol * dnorm_orig )
     stop_code = SUCCESSFUL_TERMINATION;
-  }
 
   if( myrank == 0 )
   {
-     std::cout << "mu/mutol: " << mu << "  " << mutol << "  ....   rnorm/limit: " << rnorm << " " << artol * dnorm << std::endl;
+     std::cout << "mu/mutol: " << mu << "  " << mutol << "  ....   rnorm/limit: " << rnorm << " " << artol * dnorm_orig << std::endl;
 
      if( printTimeStamp )
      {
@@ -441,47 +430,62 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
      }
   }
 
-  if(stop_code != NOT_FINISHED)  return stop_code;
+  if( stop_code != NOT_FINISHED )
+     return stop_code;
 
   // check infeasibility condition
-  if(idx >= 10 && phi >= 1.e-8 && phi >= 1.e4 * phi_min_history[idx]) {
+  if(idx >= 10 && phi >= 1.e-8 && phi >= 1.e4 * phi_min_history[idx])
+  {
 #ifdef TIMING
     if( myrank == 0 )
        std::cout << "possible INFEASIBLITY detected, phi: " << phi << std::endl;
 #endif
     stop_code = INFEASIBLE;
   }
-  if(stop_code != NOT_FINISHED)  return stop_code;
+
+  if(stop_code != NOT_FINISHED)
+     return stop_code;
 
   // check for unknown status: slow convergence first
   if(idx >= 350 && phi_min_history[idx] >= 0.5 * phi_min_history[idx - 30]) {
     stop_code = UNKNOWN;
-    printf("hehe dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
+    printf("hehe dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm_orig, artol);
   }
 
-  if(idx >= 350 && rnorm > artol * dnorm &&
+  if(idx >= 350 && rnorm > artol * dnorm_orig &&
      rnorm_history[idx] * mu_history[0] >= 1.e8 * mu_history[idx] * rnorm_history[0])
   {
     stop_code = UNKNOWN;
-    printf("dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
+    printf("dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm_orig, artol);
   }
 
   //if(dnorm * mu < 50 * rnorm || mu < 1e-5) {
-  if( mu * dnorm < 1.0e5 * rnorm) {
-    //if(!onSafeSolver) {
-    gLackOfAccuracy=1;
-    //cout << "Lack of accuracy detected ---->" << mu << ":" << rnorm/dnorm << endl;
-  } else {
-      //if(dnorm * mu > 1e7 * rnorm && mu > 1.0e4)
-      //gLackOfAccuracy=-1;
-      //else
-      gLackOfAccuracy=1;
+  if( mu * dnorm_orig < 1.0e5 * rnorm)
+  {
+     //if(!onSafeSolver) {
+     gLackOfAccuracy=1;
+     //cout << "Lack of accuracy detected ---->" << mu << ":" << rnorm/dnorm << endl;
+  }
+  else
+  {
+     //if(dnorm_orig * mu > 1e7 * rnorm && mu > 1.0e4)
+     //gLackOfAccuracy=-1;
+     //else
+     gLackOfAccuracy=1;
   }
   //onSafeSolver=1;
   //}  
   //gLackOfAccuracy=-1; //disable iter refin in sLinsysRootAug
-  
   return stop_code;
 }
 
+void Solver::setDnorm(const Data& data)
+{
+   dnorm = data.datanorm();
+
+   if( scaler )
+      dnorm_orig = scaler->getDnormOrig();
+   else
+      dnorm_orig = dnorm;
+}
 

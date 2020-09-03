@@ -123,6 +123,10 @@ void QpScaler::unscaleResids( Residuals& resids ) const
    if( qp_resids.getMcupp() > 0)
       qp_resids.ru->componentDiv(*vec_rowscaleC);
    // nothing to to for rgamma, rphi, rlambda, rpi;
+
+   // gap is scaling resistant
+
+   qp_resids.recomputeResidualNorm();
 }
 
 OoqpVector* QpScaler::getPrimalUnscaled(const OoqpVector& solprimal) const

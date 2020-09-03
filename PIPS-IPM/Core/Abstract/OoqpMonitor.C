@@ -8,8 +8,8 @@
 using namespace std;
 #include "Residuals.h"
 
-void OoqpSelfMonitor::doIt( Solver * solver, Data * qpdata, Variables * vars,
-							Residuals * resids,
+void OoqpSelfMonitor::doIt( const Solver * solver, const Data * qpdata, const Variables * vars,
+							const Residuals * resids,
 							double alpha, double sigma,
 							int i, double mu, 
                             int status_code,
@@ -25,8 +25,8 @@ COoqpMonitor::COoqpMonitor( DoItCFunc doItC_, void * ctx_ )
   ctx   = ctx_;
 }
 
-void COoqpMonitor::doIt( Solver * solver, Data * qpdata, Variables * vars,
-						 Residuals * resids,
+void COoqpMonitor::doIt( const Solver * solver, const Data * qpdata, const Variables * vars,
+						 const Residuals * resids,
 						 double alpha, double sigma,
 						 int i, double mu,
 						 int status_code,

@@ -138,7 +138,7 @@ void sLinsys::factor(Data *prob_, Variables *vars)
   double tTot=MPI_Wtime();
 #endif
   // the call to the the parent's method takes care of all necessary updates
-  // to the KKT system (updating diagonals mainly). This is done reccursevely,
+  // to the KKT system (updating diagonals mainly). This is done recursively,
   // we don't have to worry about it anymore. 
   QpGenLinsys::factor(prob_, vars);
 

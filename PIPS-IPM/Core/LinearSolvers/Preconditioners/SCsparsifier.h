@@ -14,34 +14,34 @@
 
 class sData;
 
+const static double diagDomBounds[] = {   0.001,
+										  0.0002,
+										  0.000025,
+										  0.000005,
+										  0.000001   };
 
-/** Schur complement sparsifier (based comparison with diagonal entries) */
+/** Schur complement sparsifier (based on comparison with diagonal entries) */
 class SCsparsifier
 {
    public:
-      constexpr static double diagDomBoundAggressive        = 0.001;
-      constexpr static double diagDomBoundNormal            = 0.0002;
-      constexpr static double diagDomBoundConservative      = 0.000025;
-      constexpr static double diagDomBoundUltraConservative = 0.000005;
-      constexpr static double diagDomBoundHyperConservative = 0.000001;
 
-#ifdef PRE_CPP11
-      constexpr static double diagDomBoundDefault           = 0.001;
-#else
-      constexpr static double diagDomBoundDefault = diagDomBoundAggressive;
-#endif
+      unsigned diagDomBoundsPosition;
 
       constexpr static double epsilonZero = 1e-15;
 
-      SCsparsifier();
-
-      // for any diagDomBound with value <= 0.0 the default value will be taken
-      SCsparsifier(double diagDomBound, MPI_Comm mpiComm);
+      SCsparsifier(MPI_Comm mpiComm = MPI_COMM_NULL);
       ~SCsparsifier();
 
-      double getDiagDomBound() const { return diagDomBound; };
+      // returns sparsification bound
+      double getDiagDomBound() const;
 
-      // set CSR column marker col of dominated local Schur complement (distributed) entries to -col
+      // increases sparsification (more aggressive)
+      void increaseDiagDomBound(bool& success);
+
+      // decreases sparsification (less aggressive)
+      void decreaseDiagDomBound(bool& success);
+
+      // sets CSR column marker col of dominated local Schur complement (distributed) entries to -col
       void unmarkDominatedSCdistLocals(const sData& prob, SparseSymMatrix& sc) const;
 
       // resets unmarkDominatedSCdistEntries actions
@@ -50,12 +50,15 @@ class SCsparsifier
       // deletes dominated Schur complement entries and converts matrix to Fortran format
       void getSparsifiedSC_fortran(const sData& prob, SparseSymMatrix& sc);
 
+      // updates the bound according the convergence history of BICGStab
+      // todo this method should be removed and increaseDiagDomBound/decreaseDiagDomBound should be used instead
+      // by the solver
+      void updateDiagDomBound();
+
    private:
 
-      double diagDomBound;
       MPI_Comm mpiComm;
 
-      void updateDiagDomBound();
       std::vector<double> getDomDiagDist(const sData& prob, SparseSymMatrix& sc) const;
 
 };

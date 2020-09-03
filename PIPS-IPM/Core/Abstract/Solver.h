@@ -5,6 +5,8 @@
 #ifndef ALGORITHM_H
 #define ALGORITHM_H
 
+#include "Scaler.h"
+
 class Data;
 class Variables;
 class Residuals;
@@ -29,12 +31,19 @@ protected:
   OoqpMonitor * itsMonitors;
   Status *status;
   OoqpStartStrategy * startStrategy;
+  const Scaler *scaler;
 
   /** norm of problem data */
   double dnorm;
 
+  /** norm of original unscaled problem */
+  double dnorm_orig;
+
  /** termination parameters */
   double     mutol, artol;
+
+  /** number in (0,1) with which the step length is multiplied */
+  double steplength_factor;
 
   /** parameters associated with the step length heuristic */
   double gamma_f, gamma_a;
@@ -60,12 +69,15 @@ protected:
    *  encountered by the algorithm on or before iteration i */
   double *phi_min_history;
 
+  /** initialize dnorm and dnorm_orig */
+  void setDnorm( const Data& data );
+
 public:
 
   /** iteration counter */
   int iter;
 
-  Solver();
+  Solver( const Scaler* scaler = nullptr );
   virtual ~Solver();
 
   /** starting point heuristic */
@@ -101,16 +113,16 @@ public:
 		  	  	  	  	  	  	  double& alpha_primal, double& alpha_dual );
 
   /** perform monitor operation at each interior-point iteration */
-  virtual void doMonitor( Data * data, Variables * vars,
-						  Residuals * resids,
+  virtual void doMonitor( const Data * data, const Variables * vars,
+						  const Residuals * resids,
 						  double alpha, double sigma,
 						  int i, double mu,
 						  int stop_code,
 						  int level );
 
   /** perform monitor operation at each interior-point iteration */
-  virtual void doMonitorPd( Data * data, Variables * vars,
-                    Residuals * resids,
+  virtual void doMonitorPd( const Data * data, const Variables * vars,
+                    const Residuals * resids,
                     double alpha_primal, double alpha_dual, double sigma,
                     int i, double mu,
                     int stop_code,
@@ -118,24 +130,24 @@ public:
 
   /** default monitor: prints out one line of information on each
    * interior-point iteration */
-  virtual void defaultMonitor( Data * data, Variables * vars,
-							   Residuals * resids,
+  virtual void defaultMonitor( const Data * data, const Variables * vars,
+							   const Residuals * resids,
 							   double alpha, double sigma,
 							   int i, double mu, 
 							   int stop_code,
-							   int level ) = 0;
+							   int level ) const = 0;
 
   /** this method called to test for convergence status at the end of
    * each interior-point iteration */
-  virtual int doStatus( Data * data, Variables * vars, 
-			Residuals * resids,
+  virtual int doStatus( const Data * data, const Variables * vars,
+			const Residuals * resids,
 			int i, double mu, 
 			int level );
 
   /** default method for checking status. May be replaced by a
    * user-defined method */
-  virtual int defaultStatus( Data * data, Variables * vars, 
-			     Residuals * resids,
+  virtual int defaultStatus( const Data * data, const Variables * vars,
+			     const Residuals * resids,
 			     int i, double mu, 
 			     int level );
 
@@ -155,15 +167,18 @@ public:
   void monitorSelf();
  
   void setMuTol( double m ) { mutol = m; }
-  double getMuTol() { return mutol; }
+  double getMuTol() const { return mutol; }
 
   void setArTol( double ar ) { artol = ar; }
-  double getArTol() { return artol; }
+  double getArTol() const { return artol; }
 
-  double dataNorm() { return dnorm; }
+  double dataNorm() const { return dnorm; }
+
+  double dataNormOrig() const { return dnorm_orig; }
+
   /** returns a pointed to the linear system object stored in this
    *  class */
-  LinearSystem * getLinearSystem() { return sys; };
+  LinearSystem * getLinearSystem() const { return sys; };
 protected:
   LinearSystem *sys;
   bool printTimeStamp;

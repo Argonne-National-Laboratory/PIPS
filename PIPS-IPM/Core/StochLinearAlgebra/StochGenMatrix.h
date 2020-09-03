@@ -152,7 +152,7 @@ public:
   void transMult ( double beta,   OoqpVector& y,
                            double alpha,  const OoqpVector& x ) const override;
 
-  double abmaxnorm() override;
+  double abmaxnorm() const override;
 
   virtual void getLinkVarsNnz(std::vector<int>& vec) const;
 
@@ -316,7 +316,7 @@ public:
 		    double alpha,  StochVector& x,
 		    OoqpVector& yvecParent ) override {};
 
-  double abmaxnorm() override { return 0.0; };
+  double abmaxnorm() const override { return 0.0; };
 
   void permuteLinkingVarsChild(const std::vector<unsigned int>& permvec)  override {};
   void getLinkVarsNnzChild(std::vector<int>& vec) const override {};

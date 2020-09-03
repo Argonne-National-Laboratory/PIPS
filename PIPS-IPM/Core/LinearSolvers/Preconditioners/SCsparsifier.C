@@ -9,6 +9,7 @@
 #include "SCsparsifier.h"
 #include "pipsdef.h"
 #include "pipsport.h"
+#include "StochOptions.h"
 #include "mpi.h"
 #include <cassert>
 
@@ -18,44 +19,69 @@ extern int gOuterBiCGIter;
 extern int gInnerBiCGIter;
 extern int gInnerBiCGFails;
 
-SCsparsifier::SCsparsifier()
+
+SCsparsifier::SCsparsifier(MPI_Comm mpiComm_)
 {
-   mpiComm = MPI_COMM_NULL;
-   diagDomBound = diagDomBoundDefault;
-}
-
-SCsparsifier::SCsparsifier(double diagDomBound_, MPI_Comm mpiComm_)
-{
-   assert(diagDomBound_ < 1.0);
-
-   diagDomBound = diagDomBound_;
-
-   // use default value?
-   if( diagDomBound <= 0.0 )
-   {
-      char* var = getenv("PIPS_DIAG_DOM_BOUND");
-      if( var != nullptr )
-         sscanf(var, "%lf", &(diagDomBound));
-
-      if( diagDomBound <= 0.0 )
-         diagDomBound = diagDomBoundDefault;
-   }
-
    mpiComm = mpiComm_;
-
-   if( mpiComm != MPI_COMM_NULL )
-   {
-      int myRank; MPI_Comm_rank(mpiComm, &myRank);
-
-      if( myRank == 0 )
-         printf("SCsparsifier: diagDomBound=%f \n", diagDomBound);
-   }
+   diagDomBoundsPosition = 0;
 }
 
 
 SCsparsifier::~SCsparsifier()
 {
 
+}
+
+
+double
+SCsparsifier::getDiagDomBound() const
+{
+	assert(diagDomBoundsPosition < sizeof(diagDomBounds) / sizeof(diagDomBounds[0]));
+	return diagDomBounds[diagDomBoundsPosition];
+}
+
+
+void
+SCsparsifier::decreaseDiagDomBound(bool& success)
+{
+	const size_t positionUpperBound = sizeof(diagDomBounds) / sizeof(diagDomBounds[0]);
+
+	assert(positionUpperBound > 0);
+
+	if( diagDomBoundsPosition < positionUpperBound - 1 )
+	{
+	    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+		diagDomBoundsPosition++;
+		success = true;
+
+		if( myRank == 0 )
+			printf("\n SCsparsifier switched to sparsify factor %f (less aggressive) \n", diagDomBounds[diagDomBoundsPosition]);
+	}
+	else
+	{
+		success = false;
+	}
+}
+
+
+void
+SCsparsifier::increaseDiagDomBound(bool& success)
+{
+	if( diagDomBoundsPosition > 0 )
+	{
+	    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+		diagDomBoundsPosition--;
+		success = true;
+
+		if( myRank == 0 )
+			printf("\n SCsparsifier switched to sparsify factor %f (more aggressive)  \n", diagDomBounds[diagDomBoundsPosition]);
+	}
+	else
+	{
+		success = false;
+	}
 }
 
 
@@ -144,9 +170,8 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
 
    std::vector<double> diag(sizeSC);
 
-   updateDiagDomBound();
-
-   const double t = diagDomBound;
+// assert
+   const double t = diagDomBounds[diagDomBoundsPosition];
 
    assert(t > 0.0 && t < 1.0);
 
@@ -209,8 +234,10 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
 }
 
 
+// todo should be done properly and needs to be tested....
 void SCsparsifier::updateDiagDomBound()
 {
+   bool wasIncreased = false;
    const int nIter = std::max(gOuterBiCGIter, gInnerBiCGIter);
    const int nFails = std::max(gOuterBiCGFails, gInnerBiCGFails);
 
@@ -219,40 +246,41 @@ void SCsparsifier::updateDiagDomBound()
 
    if( nIter >= 5 && static_cast<int>(g_iterNumber) > 0 )
    {
-      if( diagDomBound > diagDomBoundNormal )
+      if( diagDomBoundsPosition == 0 )
       {
-         diagDomBound = diagDomBoundNormal;
-         printf("\n SCsparsifier switched to diagDomBoundNormal \n");
+    	 decreaseDiagDomBound(wasIncreased);
+    	 assert(wasIncreased);
       }
    }
 
    if( nFails >= 3 )
    {
-      if( diagDomBound > diagDomBoundConservative )
+      if( diagDomBoundsPosition == 1 )
       {
-         diagDomBound = diagDomBoundConservative;
-         printf("\n SCsparsifier switched to diagDomBoundConservative  \n");
+    	  decreaseDiagDomBound(wasIncreased);
+    	  assert(wasIncreased);
       }
    }
 
    if( nFails >= 20 )
    {
-      if( diagDomBound > diagDomBoundUltraConservative )
-      {
-         diagDomBound = diagDomBoundUltraConservative;
-         printf("\n SCsparsifier switched to diagDomBoundUltraConservative  \n");
-      }
+	   if( diagDomBoundsPosition == 2 )
+	   {
+		   decreaseDiagDomBound(wasIncreased);
+	  	   assert(wasIncreased);
+	   }
    }
 
    if( nFails >= 60 )
    {
-      if( diagDomBound > diagDomBoundHyperConservative )
-      {
-         diagDomBound = diagDomBoundHyperConservative;
-         printf("\n SCsparsifier switched to diagDomBoundHyperConservative  \n");
-      }
+	   if( diagDomBoundsPosition == 3 )
+	   {
+		   decreaseDiagDomBound(wasIncreased);
+		   assert(wasIncreased);
+	   }
    }
 }
+
 
 std::vector<double> SCsparsifier::getDomDiagDist(const sData& prob, SparseSymMatrix& sc) const
 {
@@ -278,6 +306,8 @@ std::vector<double> SCsparsifier::getDomDiagDist(const sData& prob, SparseSymMat
    }
 
    MPI_Allreduce(MPI_IN_PLACE, &diag[0], sizeSC, MPI_DOUBLE, MPI_SUM, mpiComm);
+
+   const double diagDomBound = getDiagDomBound();
 
    for( size_t i = 0; i < diag.size(); ++i )
       diag[i] = fabs(diag[i]) * diagDomBound;

@@ -9,6 +9,7 @@
 #include "Status.h"
 #include "Data.h"
 #include "ProblemFormulation.h"
+#include "QpGenOptions.h"
 
 #include <cstring>
 #include <iostream>
@@ -24,7 +25,8 @@ double gmu;
 // double grnorm;
 extern int gOoqpPrintLevel;
 
-GondzioSolver::GondzioSolver( ProblemFormulation * of, Data * prob )
+GondzioSolver::GondzioSolver( ProblemFormulation * of, Data * prob, const Scaler* scaler ) :
+      Solver(scaler)
 {
   factory              = of;
   step                 = factory->makeVariables( prob );
@@ -37,7 +39,7 @@ GondzioSolver::GondzioSolver( ProblemFormulation * of, Data * prob )
 
   NumberGondzioCorrections = 0;
 
-  maximum_correctors = 3; // maximum number of Gondzio correctors
+  maximum_correctors = qpgen_options::getIntParameter("GONDZIO_MAX_CORRECTORS");
 
   // the two StepFactor constants set targets for increase in step
   // length for each corrector
@@ -74,7 +76,7 @@ int GondzioSolver::solve(Data *prob, Variables *iterate, Residuals * resid )
 
   gmu = 1000;
   //  grnorm = 1000;
-  dnorm = prob->datanorm();
+  setDnorm(*prob);
   // initialization of (x,y,z) and factorization routine.
   sys = factory->makeLinsys( prob );
   this->start( factory, iterate, prob, resid, step );
@@ -217,47 +219,55 @@ int GondzioSolver::solve(Data *prob, Variables *iterate, Residuals * resid )
 }
 
 
-void GondzioSolver::defaultMonitor( Data * /* data */, Variables * /* vars */,
-									Residuals * resids,
+void GondzioSolver::defaultMonitor( const Data * /* data */, const Variables * /* vars */,
+									const Residuals * resids,
 									double alpha, double sigma,
 									int i, double mu, 
 									int status_code,
-									int level )
+									int level ) const
 {
-  switch( level ) {
-  case 0 : case 1: { 
-    cout << endl << "Duality Gap: " << resids->dualityGap() << endl;
-    if( i > 1 ) {
-      cout << " Number of Corrections = " <<  NumberGondzioCorrections
-	   << " alpha = " << alpha << endl;
-    }
-    cout << " *** Iteration " << i << " *** " << endl;
-    cout << " mu = " << mu << " relative residual norm = " 
-	 << resids->residualNorm() / dnorm << endl;
+   switch( level ) {
+      case 0 : case 1:
+      {
 
-    if( level == 1) { 
-      // Termination has been detected by the status check; print
-      // appropriate message
-      if(status_code == SUCCESSFUL_TERMINATION) {
-	cout << endl 
-	     << " *** SUCCESSFUL TERMINATION ***" 
-	     << endl;
-      } else if (status_code == MAX_ITS_EXCEEDED) {
-	cout << endl 
-	     << " *** MAXIMUM ITERATIONS REACHED *** " << endl;
-      } else if (status_code == INFEASIBLE) {
-	cout << endl 
-	     << " *** TERMINATION: PROBABLY INFEASIBLE *** " 
-	     << endl;
-      } else if (status_code == UNKNOWN) {
-	cout << endl 
-	     << " *** TERMINATION: STATUS UNKNOWN *** " << endl;
-      }
-    }
+         const Residuals* resids_unscaled = resids;
+         if( scaler )
+            resids_unscaled = scaler->getResidualsUnscaled(*resids);
+
+         const double gap = resids_unscaled->dualityGap();
+         const double rnorm = resids_unscaled->residualNorm();
+
+         if( scaler )
+            delete resids_unscaled;
+
+         std::cout << std::endl << "Duality Gap: " << gap << std::endl;
+
+         if( i > 1 )
+         {
+            std::cout << " Number of Corrections = " <<  NumberGondzioCorrections
+                  << " alpha = " << alpha << std::endl;
+         }
+         std::cout << " *** Iteration " << i << " *** " << std::endl;
+         std::cout << " mu = " << mu << " relative residual norm = "
+               << rnorm / dnorm_orig << std::endl;
+
+         if( level == 1)
+         {
+            // Termination has been detected by the status check; print
+            // appropriate message
+            if(status_code == SUCCESSFUL_TERMINATION)
+               std::cout << std::endl << " *** SUCCESSFUL TERMINATION ***" << std::endl;
+            else if (status_code == MAX_ITS_EXCEEDED)
+               std::cout << std::endl << " *** MAXIMUM ITERATIONS REACHED *** " << std::endl;
+            else if (status_code == INFEASIBLE)
+               std::cout << std::endl << " *** TERMINATION: PROBABLY INFEASIBLE *** " << std::endl;
+            else if (status_code == UNKNOWN)
+               std::cout << std::endl << " *** TERMINATION: STATUS UNKNOWN *** " << std::endl;
+         }
   } break;
   case 2:
-    cout << " *** sigma = " << sigma << endl;
-    break;
+     std::cout << " *** sigma = " << sigma << std::endl;
+     break;
   }
 }
 

@@ -411,8 +411,7 @@ void SparseGenMatrix::transMult( double beta,  double yv[], int incy,
   mStorage->transMult( beta, yv, incy, alpha, xv, incx );
 }
 
-
-double SparseGenMatrix::abmaxnorm()
+double SparseGenMatrix::abmaxnorm() const
 {
   return mStorage->abmaxnorm();
 }

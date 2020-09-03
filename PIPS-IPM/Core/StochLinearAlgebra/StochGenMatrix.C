@@ -555,17 +555,18 @@ void StochGenMatrix::transMult2 ( double beta,   StochVector& y,
 }
 
 
-double StochGenMatrix::abmaxnorm()
+double StochGenMatrix::abmaxnorm() const
 {
   double nrm = 0.0;
   
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     nrm = max(nrm, children[it]->abmaxnorm());
 
-  if(iAmDistrib) {
-    double nrmG=0;
+  if(iAmDistrib)
+  {
+    double nrmG = 0;
     MPI_Allreduce(&nrm, &nrmG, 1, MPI_DOUBLE, MPI_MAX, mpiComm);
-    nrm=nrmG;
+    nrm = nrmG;
   }
 
   nrm = max(nrm, max(Amat->abmaxnorm(), Bmat->abmaxnorm()));

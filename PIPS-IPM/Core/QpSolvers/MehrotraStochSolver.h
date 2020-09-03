@@ -15,11 +15,11 @@ class MehrotraStochSolver : public MehrotraSolver
 {
 
 public:
-  MehrotraStochSolver( ProblemFormulation * opt, Data * prob );
+  MehrotraStochSolver( ProblemFormulation * opt, Data * prob, const Scaler * scaler = nullptr );
 
   ~MehrotraStochSolver();
 
-  virtual int solve( Data *prob, Variables *iterate, Residuals * resids );
+  int solve( Data *prob, Variables *iterate, Residuals * resids ) override;
 
 };
 

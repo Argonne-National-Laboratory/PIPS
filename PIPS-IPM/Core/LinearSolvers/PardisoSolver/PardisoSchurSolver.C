@@ -15,6 +15,7 @@ using namespace std;
 #include "SimpleVector.h"
 #include "SimpleVectorHandle.h"
 #include "DenseGenMatrix.h"
+#include "StochOptions.h"
 #include "pipsdef.h"
 #include <cstdlib>
 #include <cmath>
@@ -113,87 +114,26 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   msglvl = pardiso_verbosity;
   solver = 0;
   mtype = -2;
-  useSparseRhs = false;
 
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-  // todo proper parameter
-  char* var = getenv("PARDISO_SPARSE_RHS_LEAF");
-  assert(!useSparseRhs);
-  if( var != nullptr )
-  {
-     int use;
-     sscanf(var, "%d", &use);
-     if( use == 1 )
-        useSparseRhs = true;
-  }
+  useSparseRhs = pips_options::getBoolParameter("PARDISO_SPARSE_RHS_LEAF");
 
-  // todo proper parameter
-  var = getenv("PARDISO_SYMB_INTERVAL");
-  symbFactorInterval = symbFactorIntervalDefault;
+  symbFactorInterval = pips_options::getIntParameter("PARDISO_SYMB_INTERVAL");
+  if( symbFactorInterval < 0 )
+	  symbFactorInterval = symbFactorIntervalDefault;
 
-  if( var != nullptr )
-  {
-     int interval;
-     sscanf(var, "%d", &interval);
-     if( interval >= 1 )
-        symbFactorInterval = interval;
-  }
+  pivotPerturbationExp = pips_options::getIntParameter("PARDISO_PIVOT_PERTURBATION");
+  if( pivotPerturbationExp < 0 )
+	  pivotPerturbationExp = pivotPerturbationExpDefault;
 
-  // todo proper parameter
-  var = getenv("PARDISO_PIVOT_PERTURBATION");
-  pivotPerturbationExp = pivotPerturbationExpDefault;
+  nIterativeRefins = pips_options::getIntParameter("PARDISO_NITERATIVE_REFINS");
+  if( nIterativeRefins < 0 )
+	  nIterativeRefins = nIterativeRefinsDefault;
 
-  if( var != nullptr )
-  {
-     int exp;
-     sscanf(var, "%d", &exp);
-     if( exp >= 1 )
-        pivotPerturbationExp = exp;
-  }
+  parallelForwardBackward = parallelForwardBackwardDefault;
 
-  // todo proper parameter
-  var = getenv("PARDISO_NITERATIVE_REFINS");
-  nIterativeRefins = nIterativeRefinsDefault;
-
-  if( var != nullptr )
-  {
-     int n;
-     sscanf(var, "%d", &n);
-     assert(n >= 0);
-
-     if( n >= 0 )
-        nIterativeRefins = n;
-  }
-
-  parallelForwardBackward = parallelForwardBackwardDefault,
-
-  // todo proper parameter
-  var = getenv("PARDISO_PARALLEL_SOLVE");
-  if( var != nullptr )
-  {
-     int n;
-     sscanf(var, "%d", &n);
-     if( n == 0 )
-        parallelForwardBackward = false;
-     else if( n == 1 )
-        parallelForwardBackward = true;
-  }
-
-  factorizationTwoLevel = factorizationTwoLevelDefault,
-
-  // todo proper parameter
-  var = getenv("PARDISO_FACTORIZE_TWOLEVEL");
-  if( var != nullptr )
-  {
-     int n;
-     sscanf(var, "%d", &n);
-     if( n == 0 )
-        factorizationTwoLevel = false;
-     else if( n == 1 )
-        factorizationTwoLevel = true;
-  }
-
+  factorizationTwoLevel = factorizationTwoLevelDefault;
 
   if( myRank == 0 )
   {
