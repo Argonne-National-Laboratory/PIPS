@@ -10,6 +10,7 @@
 
 #include <list>
 #include <string>
+#include "pipsport.h"
 /**
  * Abstract base classes for status based observer pattern - contains Subject and Observer
  * Observer can query Subject for ints, doubles, and bools defined via a std::string
@@ -20,9 +21,10 @@ class Subject;
 class Observer
 {
    private:
-      Subject *subj = nullptr;
+      Subject *subj/* = nullptr*/;
 
    public:
+      Observer();
       virtual ~Observer();
 
       bool hasSubject() const
