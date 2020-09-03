@@ -263,109 +263,128 @@ inline std::vector<int> PIPSallgathervInt(const std::vector<int>& vecLocal, MPI_
 }
 
 template <typename T>
-struct get_mpi_datatype_t;
+struct get_mpi_datatype_t
+{
+   static MPI_Datatype get();
+};
 
 // specialization for particular types:
 template <>
-struct get_mpi_datatype_t<int> {
-   static constexpr MPI_Datatype value = MPI_INT;
+MPI_Datatype get_mpi_datatype_t<int>::get()
+{
+   return MPI_INT;
 };
 
 template <>
-struct get_mpi_datatype_t<long> {
-   static constexpr MPI_Datatype value = MPI_LONG;
+MPI_Datatype get_mpi_datatype_t<long>::get()
+{
+   return MPI_LONG;
 };
 
 template <>
-struct get_mpi_datatype_t<long long> {
-   static constexpr MPI_Datatype value = MPI_LONG_LONG;
+MPI_Datatype get_mpi_datatype_t<long long>::get()
+{
+   return MPI_LONG_LONG;
 };
 
 template <>
-struct get_mpi_datatype_t<double> {
-   static constexpr MPI_Datatype value = MPI_DOUBLE;
+MPI_Datatype get_mpi_datatype_t<double>::get()
+{
+   return MPI_DOUBLE;
 };
 
 template <>
-struct get_mpi_datatype_t<char> {
-   static constexpr MPI_Datatype value = MPI_CHAR;
+MPI_Datatype get_mpi_datatype_t<char>::get()
+{
+   return MPI_CHAR;
 };
 
 template <>
-struct get_mpi_datatype_t<bool> {
-   static constexpr MPI_Datatype value = MPI_CXX_BOOL;
+MPI_Datatype get_mpi_datatype_t<bool>::get()
+{
+   return MPI_CXX_BOOL;
 };
 
 template <>
-struct get_mpi_datatype_t<unsigned int> {
-   static constexpr MPI_Datatype value = MPI_UNSIGNED;
+MPI_Datatype get_mpi_datatype_t<unsigned int>::get()
+{
+   return MPI_UNSIGNED;
 };
 
 template <typename T>
 MPI_Datatype get_mpi_datatype(const T& arg) {
-   return get_mpi_datatype_t<T>::value;
-}
+   return get_mpi_datatype_t<T>::get();
+};
 
 template <typename T>
 MPI_Datatype get_mpi_datatype(T* arg) {
-   return get_mpi_datatype_t<T>::value;
-}
+   return get_mpi_datatype_t<T>::get();
+};
 
 template <typename T>
 MPI_Datatype get_mpi_datatype(const T* const arg) {
-   return get_mpi_datatype_t<T>::value;
-}
+   return get_mpi_datatype_t<T>::get();
+};
 
 template <typename T>
-struct get_mpi_locdatatype_t;
-
-template <>
-struct get_mpi_locdatatype_t<float> {
-      static constexpr MPI_Datatype value = MPI_FLOAT_INT;
+struct get_mpi_locdatatype_t
+{
+   static MPI_Datatype get();
 };
 
 template <>
-struct get_mpi_locdatatype_t<double> {
-      static constexpr MPI_Datatype value = MPI_DOUBLE_INT;
+MPI_Datatype get_mpi_locdatatype_t<float>::get()
+{
+      return MPI_FLOAT_INT;
 };
 
 template <>
-struct get_mpi_locdatatype_t<long> {
-      static constexpr MPI_Datatype value = MPI_LONG_INT;
+MPI_Datatype get_mpi_locdatatype_t<double>::get()
+{
+      return MPI_DOUBLE_INT;
 };
 
 template <>
-struct get_mpi_locdatatype_t<int> {
-      static constexpr MPI_Datatype value = MPI_2INT;
+MPI_Datatype get_mpi_locdatatype_t<long>::get()
+{
+      return MPI_LONG_INT;
 };
 
 template <>
-struct get_mpi_locdatatype_t<short> {
-      static constexpr MPI_Datatype value = MPI_SHORT_INT;
+MPI_Datatype get_mpi_locdatatype_t<int>::get()
+{
+      return MPI_2INT;
 };
 
 template <>
-struct get_mpi_locdatatype_t<long double> {
-      static constexpr MPI_Datatype value = MPI_LONG_DOUBLE_INT;
+MPI_Datatype get_mpi_locdatatype_t<short>::get()
+{
+      return MPI_SHORT_INT;
+};
+
+template <>
+MPI_Datatype get_mpi_locdatatype_t<long double>::get()
+{
+      return MPI_LONG_DOUBLE_INT;
 };
 
 template <typename T>
 MPI_Datatype get_mpi_locdatatype(const T& arg)
 {
-   return get_mpi_locdatatype_t<T>::value;
-}
+   return get_mpi_locdatatype_t<T>::get();
+};
 
 template <typename T>
 MPI_Datatype get_mpi_locdatatype(const T* const arg)
 {
-   return get_mpi_locdatatype_t<T>::value;
-}
+   return get_mpi_locdatatype_t<T>::get();
+};
 
 template <typename T>
 MPI_Datatype get_mpi_locdatatype(T* arg)
 {
-   return get_mpi_locdatatype_t<T>::value;
-}
+   return get_mpi_locdatatype_t<T>::get();
+};
 
 
 inline int PIPS_MPIgetRank(MPI_Comm mpiComm = MPI_COMM_WORLD)
