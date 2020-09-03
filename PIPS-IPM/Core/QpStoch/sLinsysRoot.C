@@ -905,7 +905,8 @@ std::vector<sLinsysRoot::MatrixEntryTriplet> sLinsysRoot::packKKTdistOutOfRangeE
    std::vector<MatrixEntryTriplet> packedEntries(0);
 
    // add dummy value
-   packedEntries.push_back({-1.0, -1, -1});
+   const MatrixEntryTriplet entry_zero = {-1.0, -1, -1};
+   packedEntries.push_back(entry_zero);
 
    if( childStart > 0 )
    {
@@ -929,7 +930,8 @@ std::vector<sLinsysRoot::MatrixEntryTriplet> sLinsysRoot::packKKTdistOutOfRangeE
                   if( PIPSisZero(val) )
                      continue;
 
-                  packedEntries.push_back({val, r, col});
+                  const MatrixEntryTriplet entry = {val, r, col};
+                  packedEntries.push_back(entry);
                }
             }
          }
@@ -948,7 +950,8 @@ std::vector<sLinsysRoot::MatrixEntryTriplet> sLinsysRoot::packKKTdistOutOfRangeE
                if( PIPSisZero(val) )
                   continue;
 
-               packedEntries.push_back({val, r, col});
+               const MatrixEntryTriplet entry = {val, r, col};
+               packedEntries.push_back(entry);
             }
          }
       }
