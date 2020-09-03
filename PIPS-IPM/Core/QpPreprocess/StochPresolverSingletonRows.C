@@ -332,10 +332,10 @@ void StochPresolverSingletonRows::removeSingletonLinkingColsSynced()
 
    /* sync procs that found the best equality singleton rows */
    std::vector<int> was_singleton_equality_found(n_linking_vars, 0);
-   std::vector<std::pair<int,int>> maxloc_singleton_eqrows = PIPS_MPImaxlocArray(buffer_found_singleton_equality);
+   std::vector<std::pair<int,int> > maxloc_singleton_eqrows = PIPS_MPImaxlocArray(buffer_found_singleton_equality);
 
-   std::vector<std::pair<double, int>> minloc_xlows = PIPS_MPIminlocArray(buffer_xlows);
-   std::vector<std::pair<double, int>> maxloc_xupps = PIPS_MPImaxlocArray(buffer_xupps);
+   std::vector<std::pair<double, int> > minloc_xlows = PIPS_MPIminlocArray(buffer_xlows);
+   std::vector<std::pair<double, int> > maxloc_xupps = PIPS_MPImaxlocArray(buffer_xupps);
 
    /* check for infeasibility and remove the corresponding rows synced */
    for( int i = 0; i < n_linking_vars; ++i )
