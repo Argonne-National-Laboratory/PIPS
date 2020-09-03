@@ -409,7 +409,7 @@ void SimpleVectorBase<T>::writeToStreamAllStringStream(std::stringstream& sout) 
 template<typename T>
 void SimpleVectorBase<T>::writefToStream( std::ostream& out, const char format[] ) const
 {
-  SmartPointer<SimpleVectorBase<T>> empty( new SimpleVectorBase<T>(0) );
+  SmartPointer<SimpleVectorBase<T> > empty( new SimpleVectorBase<T>(0) );
   this->writefSomeToStream( out, format, *empty );
 }
 

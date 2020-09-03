@@ -141,7 +141,7 @@ void StochPresolverBoundStrengthening::communicateLinkingVarBounds()
    std::copy( lb_linking_var.begin(), lb_linking_var.end(), lbx_ubx.begin() );
    std::copy( ub_linking_var.begin(), ub_linking_var.end(), lbx_ubx.begin() + n_linking_vars );
 
-   std::vector<std::pair<double,int>> maxloc_bounds = PIPS_MPImaxlocArray(lbx_ubx);
+   std::vector<std::pair<double,int> > maxloc_bounds = PIPS_MPImaxlocArray(lbx_ubx);
 
    /* now that the best bounds and the respective processes are determined actually tighten the bounds */
    for( unsigned int i = 0; i < 2 * n_linking_vars; ++i )
