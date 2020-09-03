@@ -4,7 +4,7 @@
 
 #ifndef STATUS_H
 #define STATUS_H
-
+#include "pipsport.h"
 class Solver;
 class Data;
 class Variables;

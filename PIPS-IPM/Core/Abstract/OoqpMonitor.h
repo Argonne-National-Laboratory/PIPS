@@ -5,7 +5,7 @@
 #ifndef OOQPMONITOR
 #define OOQPMONITOR
 #include <cassert>
-
+#include "pipsport.h"
 class Solver;
 class Data;
 class Variables;
