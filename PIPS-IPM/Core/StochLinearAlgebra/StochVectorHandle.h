@@ -10,8 +10,8 @@
 	template<typename T>
 	using StochVectorBaseHandle = SmartPointer<StochVectorBase<T> >;
 #else
-	#define StochVectorBaseHandle<int> SmartPointer<StochVectorBase<int> >
-	#define StochVectorBaseHandle<double> SmartPointer<StochVectorBase<double> >
+//	#define StochVectorBaseHandle<int> SmartPointer<StochVectorBase<int> >
+//	#define StochVectorBaseHandle<double> SmartPointer<StochVectorBase<double> >
 #endif 
 
 typedef SmartPointer<StochVector> StochVectorHandle;
