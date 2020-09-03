@@ -383,13 +383,13 @@ inline int PIPS_MPIgetSize(MPI_Comm mpiComm = MPI_COMM_WORLD)
 }
 
 template <typename T>
-inline std::vector<std::pair<T, int>> PIPS_MPIminlocArray(const T* localmin, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
+inline std::vector<std::pair<T, int> > PIPS_MPIminlocArray(const T* localmin, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    if( length <= 0 )
-      return std::vector<std::pair<T, int>>();
+      return std::vector<std::pair<T, int> >();
 
    const int my_rank = PIPS_MPIgetRank(mpiComm);
-   std::vector<std::pair<T,int>> pairs(length);
+   std::vector<std::pair<T,int> > pairs(length);
 
    for(unsigned int i = 0; i < pairs.size(); ++i)
    {
@@ -403,13 +403,13 @@ inline std::vector<std::pair<T, int>> PIPS_MPIminlocArray(const T* localmin, int
 }
 
 template <typename T>
-inline std::vector<std::pair<T, int>> PIPS_MPIminlocArray(const std::vector<T>& localmin, MPI_Comm mpiComm = MPI_COMM_WORLD)
+inline std::vector<std::pair<T, int> > PIPS_MPIminlocArray(const std::vector<T>& localmin, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    if( localmin.size() == 0 )
-      return std::vector<std::pair<T, int>>();
+      return std::vector<std::pair<T, int> >();
 
    const int my_rank = PIPS_MPIgetRank(mpiComm);
-   std::vector<std::pair<T,int>> pairs(localmin.size());
+   std::vector<std::pair<T,int> > pairs(localmin.size());
 
    for(unsigned int i = 0; i < pairs.size(); ++i)
    {
@@ -423,13 +423,13 @@ inline std::vector<std::pair<T, int>> PIPS_MPIminlocArray(const std::vector<T>& 
 }
 
 template <typename T>
-inline std::vector<std::pair<T, int>> PIPS_MPImaxlocArray(const T* localmax, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
+inline std::vector<std::pair<T, int> > PIPS_MPImaxlocArray(const T* localmax, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    if( length <= 0 )
-      return std::vector<std::pair<T, int>>();
+      return std::vector<std::pair<T, int> >();
 
    const int my_rank = PIPS_MPIgetRank(mpiComm);
-   std::vector<std::pair<T,int>> pairs(length);
+   std::vector<std::pair<T,int> > pairs(length);
 
    for(unsigned int i = 0; i < pairs.size(); ++i)
    {
@@ -443,13 +443,13 @@ inline std::vector<std::pair<T, int>> PIPS_MPImaxlocArray(const T* localmax, int
 }
 
 template <typename T>
-inline std::vector<std::pair<T, int>> PIPS_MPImaxlocArray(const std::vector<T>& localmax, MPI_Comm mpiComm = MPI_COMM_WORLD)
+inline std::vector<std::pair<T, int> > PIPS_MPImaxlocArray(const std::vector<T>& localmax, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    if( localmax.size() == 0 )
-      return std::vector<std::pair<T, int>>();
+      return std::vector<std::pair<T, int> >();
 
    const int my_rank = PIPS_MPIgetRank(mpiComm);
-   std::vector<std::pair<T,int>> pairs(localmax.size());
+   std::vector<std::pair<T,int> > pairs(localmax.size());
 
    for(unsigned int i = 0; i < pairs.size(); ++i)
    {
