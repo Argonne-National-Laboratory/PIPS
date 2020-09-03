@@ -50,7 +50,7 @@ bool Options::getBoolParam(const std::string& identifier) const
 void Options::fillOptionsFromFile(const std::string& filename)
 {
    std::ifstream params;
-   params.open(filename, std::ios::in);
+   params.open(filename.c_str(), std::ios::in);
    const int my_rank = PIPS_MPIgetRank(MPI_COMM_WORLD);
 
    if( !params.good() )
