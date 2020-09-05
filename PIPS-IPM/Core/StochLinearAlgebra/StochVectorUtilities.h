@@ -67,7 +67,7 @@ inline SimpleVectorBase<T>& getSimpleVecFromColStochVec(const OoqpVectorBase<T>&
    { return getSimpleVecFromStochVec(dynamic_cast<const StochVectorBase<T>&>(ooqpvec), node, false); }
 
 template <typename T>
-inline T& getSimpleVecFromRowStochVec(const OoqpVectorBaseHandle<T>& ooqpvec_handle, const INDEX& row)
+inline T& getSimpleVecFromRowStochVec(const SmartPointer<OoqpVectorBase<T> >& ooqpvec_handle, const INDEX& row)
 {
    assert(row.isRow());
    const OoqpVectorBase<T>& ooqp_vec = *ooqpvec_handle;
@@ -86,7 +86,7 @@ inline T& getSimpleVecFromRowStochVec(const OoqpVectorBase<T>& ooqpvec, const IN
 }
 
 template <typename T>
-inline T& getSimpleVecFromColStochVec(const OoqpVectorBaseHandle<T>& ooqpvec_handle, const INDEX& col)
+inline T& getSimpleVecFromColStochVec(const SmartPointer<OoqpVectorBase<T> >& ooqpvec_handle, const INDEX& col)
 {
    assert(col.isCol());
    const OoqpVectorBase<T>& ooqp_vec = *ooqpvec_handle;

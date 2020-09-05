@@ -14,8 +14,9 @@
 	template<typename T>
 	using OoqpVectorBaseHandle = SmartPointer<OoqpVectorBase<T> >;
 #else
-	#define OoqpVectorBaseHandle<int> SmartPointer<StochVectorBase<int> >
-	#define OoqpVectorBaseHandle<double> SmartPointer<StochVectorBase<double> >
+//	typedef SmartPointer<OoqpVectorBase<int> > OoqpVectorBaseHandle<int>;
+//	typedef SmartPointer<OoqpVectorBase<int> > OoqpVectorBaseHandle<int>
+//	typedef SmartPointer<OoqpVectorBase<double> > OoqpVectorBaseHandle<double>
 #endif 
 
 typedef SmartPointer<OoqpVector> OoqpVectorHandle;

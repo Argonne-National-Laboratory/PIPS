@@ -18,6 +18,11 @@ void Subject::unregisterObserver(Observer* observer)
 }
 
 /// OBSERVER
+Observer::Observer()
+{
+   subj = nullptr;
+}
+
 const Subject* Observer::getSubject() const
 {
    return subj;
@@ -46,6 +51,6 @@ void Observer::removeSubject()
 
 void Subject::notifyObservers()
 {
-   for( Observer* o : observers )
-      o->notifyFromSubject();
+   for( std::list <Observer*>::iterator it = observers.begin(); it != observers.end(); ++it )
+      (*it)->notifyFromSubject();
 }

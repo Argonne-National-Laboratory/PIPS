@@ -14,8 +14,8 @@
 	template<typename T>
 	using SimpleVectorBaseHandle = SmartPointer<SimpleVectorBase<T> >;
 #else
-	#define SimpleVectorBaseHandle<int> SmartPointer<StochVectorBase<int> >
-	#define SimpleVectorBaseHandle<double> SmartPointer<StochVectorBase<double> >
+//	#define SimpleVectorBaseHandle<int> SmartPointer<StochVectorBase<int> >
+//	#define SimpleVectorBaseHandle<double> SmartPointer<StochVectorBase<double> >
 #endif 
 
 typedef SmartPointer<SimpleVector> SimpleVectorHandle;

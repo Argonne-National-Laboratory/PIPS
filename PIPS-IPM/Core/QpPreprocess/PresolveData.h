@@ -42,16 +42,16 @@ private:
       int linking_rows_need_act_computation;
 
       /* number of non-zero elements of each row / column */
-      StochVectorBaseHandle<int> nnzs_row_A;
-      StochVectorBaseHandle<int> nnzs_row_C;
-      StochVectorBaseHandle<int> nnzs_col;
+      SmartPointer<StochVectorBase<int> > nnzs_row_A;
+      SmartPointer<StochVectorBase<int> > nnzs_row_C;
+      SmartPointer<StochVectorBase<int> > nnzs_col;
 
       /* size of non-zero changes array = #linking rows A + #linking rows C + # linking variables */
       int length_array_nnz_chgs;
       int* array_nnz_chgs;
-      SimpleVectorBaseHandle<int> nnzs_row_A_chgs;
-      SimpleVectorBaseHandle<int> nnzs_row_C_chgs;
-      SimpleVectorBaseHandle<int> nnzs_col_chgs;
+      SmartPointer<SimpleVectorBase<int> > nnzs_row_A_chgs;
+      SmartPointer<SimpleVectorBase<int> > nnzs_row_C_chgs;
+      SmartPointer<SimpleVectorBase<int> > nnzs_col_chgs;
 
       /* In the constructor all unbounded entries will be counted.
        * Unbounded entries mean variables with non-zero multiplier that are unbounded in either upper or lower direction.
@@ -62,14 +62,14 @@ private:
       StochVectorHandle actmax_eq_part;
       StochVectorHandle actmin_eq_part;
 
-      StochVectorBaseHandle<int> actmax_eq_ubndd;
-      StochVectorBaseHandle<int> actmin_eq_ubndd;
+      SmartPointer<StochVectorBase<int> > actmax_eq_ubndd;
+      SmartPointer<StochVectorBase<int> > actmin_eq_ubndd;
 
       StochVectorHandle actmax_ineq_part;
       StochVectorHandle actmin_ineq_part;
 
-      StochVectorBaseHandle<int> actmax_ineq_ubndd;
-      StochVectorBaseHandle<int> actmin_ineq_ubndd;
+      SmartPointer<StochVectorBase<int> > actmax_ineq_ubndd;
+      SmartPointer<StochVectorBase<int> > actmin_ineq_ubndd;
 
       /// changes in boundedness and activities of linking rows get stored and synchronized
       int lenght_array_act_chgs;
@@ -80,10 +80,10 @@ private:
       SimpleVectorHandle actmin_ineq_chgs;
 
       int* array_act_unbounded_chgs;
-      SimpleVectorBaseHandle<int> actmax_eq_ubndd_chgs;
-      SimpleVectorBaseHandle<int> actmin_eq_ubndd_chgs;
-      SimpleVectorBaseHandle<int> actmax_ineq_ubndd_chgs;
-      SimpleVectorBaseHandle<int> actmin_ineq_ubndd_chgs;
+      SmartPointer<SimpleVectorBase<int> > actmax_eq_ubndd_chgs;
+      SmartPointer<SimpleVectorBase<int> > actmin_eq_ubndd_chgs;
+      SmartPointer<SimpleVectorBase<int> > actmax_ineq_ubndd_chgs;
+      SmartPointer<SimpleVectorBase<int> > actmin_ineq_ubndd_chgs;
 
       /* handling changes in bounds */
       int lenght_array_bound_chgs;
@@ -117,14 +117,14 @@ private:
       SimpleVectorHandle objective_vec_chgs;
 
       // store free variables which bounds are only implied by bound tightening to remove bounds later again
-      StochVectorBaseHandle<int> lower_bound_implied_by_system;
-      StochVectorBaseHandle<int> lower_bound_implied_by_row;
-      StochVectorBaseHandle<int> lower_bound_implied_by_node;
+      SmartPointer<StochVectorBase<int> > lower_bound_implied_by_system;
+      SmartPointer<StochVectorBase<int> > lower_bound_implied_by_row;
+      SmartPointer<StochVectorBase<int> > lower_bound_implied_by_node;
 
       // TODO a vector of INDEX would be nicer
-      StochVectorBaseHandle<int> upper_bound_implied_by_system;
-      StochVectorBaseHandle<int> upper_bound_implied_by_row;
-      StochVectorBaseHandle<int> upper_bound_implied_by_node;
+      SmartPointer<StochVectorBase<int> > upper_bound_implied_by_system;
+      SmartPointer<StochVectorBase<int> > upper_bound_implied_by_row;
+      SmartPointer<StochVectorBase<int> > upper_bound_implied_by_node;
 
       /* storing biggest and smallest absolute nonzero-coefficient in system matrix (including objective vector) */
       StochVectorHandle absmin_col;
