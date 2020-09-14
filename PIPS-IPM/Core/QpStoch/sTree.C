@@ -11,6 +11,7 @@
 #include "DoubleMatrixTypes.h"
 #include "pipsport.h"
 
+#include <algorithm>
 #include <cmath>
 
 StochIterateResourcesMonitor sTree::iterMon;
@@ -59,103 +60,113 @@ void sTree::assignProcesses(MPI_Comm comm)
 
 void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 {
-  int ierr;
-  commWrkrs = world;
-  myProcs = processes;
+   int ierr;
+   commWrkrs = world;
+   myProcs = processes;
 
-  int noProcs = processes.size();
+   const int n_procs = processes.size();
 
-  if(children.size()==0) {
-    //only one CPU assigned to leafs
-    assert(noProcs==1); 
-    return;
-  }
+   /* if we are at a leaf only one proc should be left */
+   if( children.size() == 0 )
+   {
+      assert( n_procs == 1 );
+      return;
+   }
 
-  if(1==noProcs) {
-    for(size_t c=0; c<children.size(); c++)
-      children[c]->assignProcesses(world, processes);
-    return;
-  }
-  //here noProcs >=2 so we have to assign children to them
+   /* if only one process is left anyway we just assign it to all children */
+   if( 1 == n_procs )
+   {
+      for( size_t c = 0; c < children.size(); c++)
+         children[c]->assignProcesses(world, processes);
+      return;
+   }
+
 #if 0
-  //what is the load for each children
-  vector<double> vecChildNodesLoad(children.size()); 
-  for(size_t i=0; i<children.size(); i++) {
-    vecChildNodesLoad[i] = children[i]->processLoad();
-  }
+   /* inactive but used to claculate loads that children would generate and then assign the processes */
+   vector<double> child_nodes_load( children.size() );
+   for(size_t i = 0; i < children.size(); i++)
+      child_nodes_load[i] = children[i]->processLoad();
 #endif
-  //**** solve the asignment problem ****
-  //here we'll have the mapping of children to processes
-  vector<vector<int> > mapChildNodesToProcs;
 
-  mapChildNodesToProcs.resize(children.size());
-  /* old mapping
-  assert(children.size() % noProcs == 0);
-  for(size_t i=0; i<children.size(); i++) {
-    mapChildNodesToProcs[i].resize(1);
-    mapChildNodesToProcs[i][0] = i % noProcs;
-  }
-  */
-  // new assignment to agree with BA.cpp. we'll see if this breaks anything
-  int nper = children.size()/noProcs;
+   //**** solve the assignment problem ****
+   vector<vector<int> > map_child_nodes_to_procs(children.size());
+   //  map_child_nodes_to_procs.resize(children.size());
 
-  /* too many MPI processes? */
-  if( nper == 0 )
-  {
-     std::cout << "too many MPI processes! (max: " << children.size() << ")" << std::endl;
-     MPI_Abort(world, 1);
-  }
+   const int n_children_per_process = children.size() / n_procs;
+   const int n_unassigned = children.size() % n_procs;
 
-  for(size_t i=0; i<children.size(); i++) {
-    mapChildNodesToProcs[i].resize(1);
-    mapChildNodesToProcs[i][0] = MIN(i/nper,(size_t)noProcs-1);
-  }
-  
-// #ifdef TIMING    
-//   //!log
-   // if(0==rankMe) {
+   /* too many MPI processes? */
+   if( n_children_per_process == 0 )
+   {
+      std::cout << "too many MPI processes! (max: " << children.size() << ")" << std::endl;
+      MPI_Abort(world, 1);
+   }
 
-   //   int* noduri = new int[noProcs];
-   //   for(int i=0; i<noProcs; i++) noduri[i]=0;
-    
-   //   for(size_t i=0; i<mapChildNodesToProcs.size(); i++)
-   //     noduri[mapChildNodesToProcs[i][0]]++;
-
-   //   printf("Nodes: ");
-   //   for(int i=0; i<noProcs; i++) {
-   //     printf("CPU[%5d]=%5d  ", i, noduri[i]);
-   //   }
-   //   printf("\n");   
-   //   delete[] noduri;
-   // }
-   //~log
-   // #endif 
+   for( size_t i = 0; i < children.size(); i++)
+   {
+      map_child_nodes_to_procs[i].resize(1);
+      map_child_nodes_to_procs[i][0] = -1;
+   }
 
 
-  MPI_Group mpiWorldGroup; 
-  ierr = MPI_Comm_group(commWrkrs, &mpiWorldGroup); assert(ierr == MPI_SUCCESS);
-  (void) ierr;
-  for( size_t i = 0; i < children.size(); i++ )
-  {
-     const int noRanks4ThisChild = mapChildNodesToProcs[i].size();
-     int * ranksToKeep = new int[noRanks4ThisChild];
+   /* assign n_children_per_process + one left out node to the first n_unassigned processes */
+   size_t pos = 0;
+   for( int i = 0; i < n_procs; ++i )
+   {
+      const int n_assign_to_proc = ( i < n_unassigned ) ? n_children_per_process + 1 : n_children_per_process;
+
+      for( int j = 0; j < n_assign_to_proc; ++j )
+      {
+         assert( pos < children.size() );
+         map_child_nodes_to_procs[pos++][0] = i;
+      }
+   }
+
+   assert( pos == children.size() );
+
+#ifndef NDEBUG
+   for( size_t i = 0; i < children.size(); i++ )
+   {
+      assert( map_child_nodes_to_procs[i][0] != -1 );
+      assert( map_child_nodes_to_procs[i][0] < n_procs );
+   }
+
+   for( size_t i = 1; i < children.size(); i++ )
+      assert( map_child_nodes_to_procs[i - 1][0] <= map_child_nodes_to_procs[i][0] );
+
+   std::vector<size_t> load_per_proc(n_procs, 0);
+   for( size_t i = 0; i < children.size(); ++i )
+      load_per_proc[ map_child_nodes_to_procs[i][0] ]++;
+
+   const size_t max_load = *std::max_element(load_per_proc.begin(), load_per_proc.end());
+   const size_t min_load = *std::min_element(load_per_proc.begin(), load_per_proc.end());
+   assert( max_load == min_load || max_load == min_load + 1 );
+#endif
+
+   MPI_Group mpiWorldGroup;
+   ierr = MPI_Comm_group(commWrkrs, &mpiWorldGroup);
+   assert(ierr == MPI_SUCCESS);
+   for( size_t i = 0; i < children.size(); i++ )
+   {
+     const int n_ranks_4_this_child = map_child_nodes_to_procs[i].size();
+     int* ranksToKeep = new int[n_ranks_4_this_child];
 
      bool isChildInThisProcess = false;
 
-     for( int proc = 0; proc < noRanks4ThisChild; proc++ )
+     for( int proc = 0; proc < n_ranks_4_this_child; proc++ )
      {
-        ranksToKeep[proc] = mapChildNodesToProcs[i][proc];
+        ranksToKeep[proc] = map_child_nodes_to_procs[i][proc];
         if( rankMe == ranksToKeep[proc] )
            isChildInThisProcess = true;
      }
 
-     vector<int> childRanks(noRanks4ThisChild);
-     for( int c = 0; c < noRanks4ThisChild; c++ )
+     vector<int> childRanks(n_ranks_4_this_child);
+     for( int c = 0; c < n_ranks_4_this_child; c++ )
         childRanks[c] = ranksToKeep[c];
 
      if( isChildInThisProcess )
      {
-        if( noRanks4ThisChild == 1 )
+        if( n_ranks_4_this_child == 1 )
         {
            children[i]->assignProcesses(MPI_COMM_SELF, childRanks);
         }
@@ -164,20 +175,20 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
            //create the communicator this child should use
            MPI_Comm childComm;
            MPI_Group childGroup;
-           ierr = MPI_Group_incl(mpiWorldGroup, noRanks4ThisChild, ranksToKeep,
+           ierr = MPI_Group_incl(mpiWorldGroup, n_ranks_4_this_child, ranksToKeep,
                  &childGroup);
-           assert(ierr==MPI_SUCCESS);
+           assert( ierr == MPI_SUCCESS );
 
            ierr = MPI_Comm_create(commWrkrs, childGroup, &childComm);
-           assert(ierr==MPI_SUCCESS);
-           MPI_Group_free(&childGroup); //MPI_Group_free(&mpiWorldGroup);
+           assert( ierr == MPI_SUCCESS );
+           MPI_Group_free(&childGroup);
 
            //!log printf("----Node [%d] is on proc [%d]\n", i, rankMe);fflush(stdout);
            children[i]->assignProcesses(childComm, childRanks);
-        } //END noRanks4ThisChild>1
+        }
      }
      else
-     { //this Child was not assigned to this CPU
+     {  //this Child was not assigned to this MPI process
         //!log printf("---Node [%d] not on  proc [%d] \n", i, rankMe);fflush(stdout);
         // continue solving the assignment problem so that
         // each node knows the CPUs the other nodes are on.
