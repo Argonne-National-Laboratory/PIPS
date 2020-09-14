@@ -145,6 +145,7 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 
    MPI_Group mpiWorldGroup;
    ierr = MPI_Comm_group(commWrkrs, &mpiWorldGroup);
+   (void) ierr;
    assert(ierr == MPI_SUCCESS);
    for( size_t i = 0; i < children.size(); i++ )
    {
