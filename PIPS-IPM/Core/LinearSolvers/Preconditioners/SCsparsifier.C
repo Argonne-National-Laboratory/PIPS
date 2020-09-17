@@ -135,7 +135,7 @@ SCsparsifier::unmarkDominatedSCdistLocals(const sData& prob,
    const double* const M = sc.M();
    const int sizeSC = sc.size();
 
-   std::vector<double> diag = getDomDiagDist(prob, sc, false);
+   std::vector<double> diag = getDomDiagDist(prob, sc, true);
 
 #ifdef SCSPARSIFIER_SAVE_STATS
    nEntriesLocal = 0;
@@ -309,6 +309,9 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
 // todo should be done properly and needs to be tested....
 void SCsparsifier::updateDiagDomBound()
 {
+   if( g_iterNumber <= 0.5 )
+      return;
+
    bool wasIncreased = false;
    const int nIter = std::max(gOuterBiCGIter, gInnerBiCGIter);
    const int nFails = std::max(gOuterBiCGFails, gInnerBiCGFails);
@@ -318,7 +321,7 @@ void SCsparsifier::updateDiagDomBound()
 
    int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
-   if( nIter >= 5 && static_cast<int>(g_iterNumber) > 0 )
+   if( nIter >= 2 )
    {
       if( diagDomBoundsPosition == 0 )
       {
@@ -327,9 +330,18 @@ void SCsparsifier::updateDiagDomBound()
       }
    }
 
-   if( nFails >= 3 )
+   if( nIter >= 5 )
    {
       if( diagDomBoundsPosition == 1 )
+      {
+    	 decreaseDiagDomBound(wasIncreased);
+    	 assert(wasIncreased);
+      }
+   }
+
+   if( nFails >= 3 )
+   {
+      if( diagDomBoundsPosition == 2 )
       {
     	  decreaseDiagDomBound(wasIncreased);
     	  assert(wasIncreased);
@@ -338,7 +350,7 @@ void SCsparsifier::updateDiagDomBound()
 
    if( nFails >= 20 )
    {
-	   if( diagDomBoundsPosition == 2 )
+	   if( diagDomBoundsPosition == 3 )
 	   {
 		   decreaseDiagDomBound(wasIncreased);
 	  	   assert(wasIncreased);
@@ -347,7 +359,7 @@ void SCsparsifier::updateDiagDomBound()
 
    if( nFails >= 60 )
    {
-	   if( diagDomBoundsPosition == 3 )
+	   if( diagDomBoundsPosition == 4 )
 	   {
 		   decreaseDiagDomBound(wasIncreased);
 		   assert(wasIncreased);

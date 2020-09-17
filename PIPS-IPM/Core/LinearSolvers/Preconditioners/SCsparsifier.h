@@ -18,11 +18,13 @@ class sData;
 
 const static double diagDomBoundsLeaf[] = {   0.002,
 										      0.001,
-										      0.0002,
+										      0.0003,
 										      0.000025,
+										      0.000005,
 										      0.000001   };
 
 const static double diagDomBounds[] = {   0.001,
+										  0.0005,
 										  0.0002,
 										  0.000025,
 										  0.000005,

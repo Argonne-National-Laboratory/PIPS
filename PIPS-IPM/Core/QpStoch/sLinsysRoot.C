@@ -1223,6 +1223,8 @@ void sLinsysRoot::factorizeKKT(sData* prob)
      if( myRank == 0)
         precondSC.getSparsifiedSC_fortran(*prob, *kktDist);
 
+   //  precondSC.updateStats();
+
 #if 0
       {
          ofstream myfile;
