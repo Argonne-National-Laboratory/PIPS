@@ -26,6 +26,8 @@
 extern int gOuterBiCGIter;
 extern int gOuterBiCGFails;
 
+static std::vector<int> bicgIters;
+
 
 int QpGenLinsys::getIntValue(const std::string& s) const
 {
@@ -82,7 +84,15 @@ static void biCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
    if( myRank != 0 )
       return;
 
-   std::cout << "BiCGStab (it=" << it << ", rel.res.norm=" << resnorm << ", rel.r.norm=" << rnorm  << ")";
+   bicgIters.push_back(it);
+   double iterAvg = 0;
+
+   for( size_t i = 0; i < bicgIters.size(); i++ )
+	  iterAvg += double(bicgIters[i]);
+
+   iterAvg /= bicgIters.size();
+
+   std::cout << "BiCGStab (it=" << it << ", rel.res.norm=" << resnorm << ", rel.r.norm=" << rnorm  << ", avg.iter=" << iterAvg << ")";
 
    if( flag == 5 )
       std::cout << " diverged" << std::endl;
