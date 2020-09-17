@@ -41,6 +41,14 @@ SCsparsifier::getDiagDomBound() const
 }
 
 
+double
+SCsparsifier::getDiagDomBoundLeaf() const
+{
+	assert(diagDomBoundsPosition < sizeof(diagDomBounds) / sizeof(diagDomBounds[0]));
+	return diagDomBoundsLeaf[diagDomBoundsPosition];
+}
+
+
 void
 SCsparsifier::decreaseDiagDomBound(bool& success)
 {
@@ -86,8 +94,39 @@ SCsparsifier::increaseDiagDomBound(bool& success)
 
 
 void
+SCsparsifier::updateStats()
+{
+#ifdef SCSPARSIFIER_SAVE_STATS
+    int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
+    int nEntriesAll;
+    int nDeletedAll;
+
+    MPI_Reduce(&(nEntriesLocal), &nEntriesAll, 1, MPI_INT, MPI_SUM, 0, mpiComm);
+    MPI_Reduce(&(nDeletedLocal), &nDeletedAll, 1, MPI_INT, MPI_SUM, 0, mpiComm);
+
+    if( myRank == 0 )
+    {
+		const double ratio = double(nDeletedAll) / double(nEntriesAll);
+
+		allratios.push_back(ratio);
+
+		double ratioAvg = 0.0;
+		for( double ratio : allratios )
+		{
+		   ratioAvg += ratio;
+		}
+
+		ratioAvg /= double(allratios.size());
+
+		printf("nentries=%d, ndeleted=%d ratio =%f ratioAvg=%f\n", nEntriesAll, nDeletedAll, ratio, ratioAvg);
+    }
+#endif
+}
+
+void
 SCsparsifier::unmarkDominatedSCdistLocals(const sData& prob,
-      SparseSymMatrix& sc) const
+      SparseSymMatrix& sc)
 {
    const std::vector<bool>& rowIsMyLocal = prob.getSCrowMarkerMyLocal();
 
@@ -96,7 +135,12 @@ SCsparsifier::unmarkDominatedSCdistLocals(const sData& prob,
    const double* const M = sc.M();
    const int sizeSC = sc.size();
 
-   std::vector<double> diag = getDomDiagDist(prob, sc);
+   std::vector<double> diag = getDomDiagDist(prob, sc, false);
+
+#ifdef SCSPARSIFIER_SAVE_STATS
+   nEntriesLocal = 0;
+   nDeletedLocal = 0;
+#endif
 
    /* loop over all rows */
    for( int r = 0; r < sizeSC; r++ )
@@ -112,10 +156,21 @@ SCsparsifier::unmarkDominatedSCdistLocals(const sData& prob,
 
             assert(col >= 0);
 
+#ifdef SCSPARSIFIER_SAVE_STATS
+            const bool isNonzero = ( absM >= 1e-40 );
+            if( isNonzero )
+            	nEntriesLocal++;
+#endif
+
             if( (absM < epsilonZero && col != r) || (absM < diag[r] && absM < diag[col]) )
             {
                assert(col != r);
                jcolM[j] = -jcolM[j] - 1;
+
+#ifdef SCSPARSIFIER_SAVE_STATS
+               if( isNonzero )
+            	  nDeletedLocal++;
+#endif
             }
 
          }
@@ -131,10 +186,21 @@ SCsparsifier::unmarkDominatedSCdistLocals(const sData& prob,
          {
             const double absM = fabs(M[j]);
 
+#ifdef SCSPARSIFIER_SAVE_STATS
+            const bool isNonzero = ( absM >= 1e-40 );
+            if( isNonzero )
+            	nEntriesLocal++;
+#endif
+
             if( (absM < epsilonZero && col != r) || (absM < diag[r] && absM < diag[col]) )
             {
                assert(col != r);
                jcolM[j] = -jcolM[j] - 1;
+
+#ifdef SCSPARSIFIER_SAVE_STATS
+               if( isNonzero )
+                 nDeletedLocal++;
+#endif
             }
          }
       }
@@ -170,8 +236,7 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
 
    std::vector<double> diag(sizeSC);
 
-// assert
-   const double t = diagDomBounds[diagDomBoundsPosition];
+   const double t = getDiagDomBound();
 
    assert(t > 0.0 && t < 1.0);
 
@@ -215,9 +280,16 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
 
                   jcolM[nnznew] = jcolM[j] + 1;
                   M[nnznew++] = M[j];
+#ifdef SCSPARSIFIER_SAVE_STATS
+                  nEntriesLocal++;
+#endif
                }
                else
                {
+#ifdef SCSPARSIFIER_SAVE_STATS
+                  nDeletedLocal++;
+                  nEntriesLocal++;
+#endif
                   assert(jcolM[j] != r);
                }
             }
@@ -243,6 +315,8 @@ void SCsparsifier::updateDiagDomBound()
 
    assert(nIter >= 0);
    assert(nFails >= 0);
+
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
    if( nIter >= 5 && static_cast<int>(g_iterNumber) > 0 )
    {
@@ -282,7 +356,7 @@ void SCsparsifier::updateDiagDomBound()
 }
 
 
-std::vector<double> SCsparsifier::getDomDiagDist(const sData& prob, SparseSymMatrix& sc) const
+std::vector<double> SCsparsifier::getDomDiagDist(const sData& prob, SparseSymMatrix& sc, bool isLeaf) const
 {
    int* const krowM = sc.krowM();
    double* const M = sc.M();
@@ -307,7 +381,7 @@ std::vector<double> SCsparsifier::getDomDiagDist(const sData& prob, SparseSymMat
 
    MPI_Allreduce(MPI_IN_PLACE, &diag[0], sizeSC, MPI_DOUBLE, MPI_SUM, mpiComm);
 
-   const double diagDomBound = getDiagDomBound();
+   const double diagDomBound = isLeaf ? getDiagDomBoundLeaf() : getDiagDomBound();
 
    for( size_t i = 0; i < diag.size(); ++i )
       diag[i] = fabs(diag[i]) * diagDomBound;

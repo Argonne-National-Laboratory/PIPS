@@ -12,7 +12,15 @@
 #include "sData.h"
 #include <vector>
 
+//#define SCSPARSIFIER_SAVE_STATS
+
 class sData;
+
+const static double diagDomBoundsLeaf[] = {   0.002,
+										      0.001,
+										      0.0002,
+										      0.000025,
+										      0.000001   };
 
 const static double diagDomBounds[] = {   0.001,
 										  0.0002,
@@ -35,14 +43,18 @@ class SCsparsifier
       // returns sparsification bound
       double getDiagDomBound() const;
 
+      double getDiagDomBoundLeaf() const;
+
       // increases sparsification (more aggressive)
       void increaseDiagDomBound(bool& success);
 
       // decreases sparsification (less aggressive)
       void decreaseDiagDomBound(bool& success);
 
+      void updateStats();
+
       // sets CSR column marker col of dominated local Schur complement (distributed) entries to -col
-      void unmarkDominatedSCdistLocals(const sData& prob, SparseSymMatrix& sc) const;
+      void unmarkDominatedSCdistLocals(const sData& prob, SparseSymMatrix& sc);
 
       // resets unmarkDominatedSCdistEntries actions
       void resetSCdistEntries(SparseSymMatrix& sc) const;
@@ -55,11 +67,17 @@ class SCsparsifier
       // by the solver
       void updateDiagDomBound();
 
+
    private:
+#ifdef SCSPARSIFIER_SAVE_STATS
+      std::vector<double> allratios;
+      int nEntriesLocal;
+      int nDeletedLocal;
+#endif
 
       MPI_Comm mpiComm;
 
-      std::vector<double> getDomDiagDist(const sData& prob, SparseSymMatrix& sc) const;
+      std::vector<double> getDomDiagDist(const sData& prob, SparseSymMatrix& sc, bool isLeaf = false) const;
 
 };
 
