@@ -436,7 +436,6 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    OoqpVector &x = *sol, &r = *res, &b = *rhs;
 
    const double tol = qpgen_options::getDoubleParameter("OUTER_BICG_TOL");
-
    const double n2b = b.twonorm();
    const double tolb = max(n2b * tol, outer_bicg_eps);
 
@@ -467,10 +466,10 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    if( normr <= tolb )
    {
       this->separateVars(stepx, stepy, stepz, x);
-      if( myRank == 0 )
-         std::cout << "outer BiCGStab skipped: " << normr << " <= " << tolb <<  std::endl;
 
       bicg_conv_flag = 1;
+      biCGStabPrintStatus(bicg_conv_flag, bicg_niterations, bicg_relresnorm, normr / n2b);
+
       return;
    }
 
@@ -658,7 +657,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    } //~ end of BiCGStab loop
 
    bicg_relresnorm = bicg_resnorm / n2b;
-   biCGStabPrintStatus(bicg_conv_flag, bicg_niterations, bicg_relresnorm, normr / n2b);
+   biCGStabPrintStatus(bicg_conv_flag, std::max(bicg_niterations, 1), bicg_relresnorm, normr / n2b);
    biCGStabCommunicateStatus(bicg_conv_flag, bicg_niterations);
 
    this->separateVars(stepx, stepy, stepz, x);
