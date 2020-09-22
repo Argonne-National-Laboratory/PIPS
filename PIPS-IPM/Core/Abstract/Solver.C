@@ -26,6 +26,7 @@ int onSafeSolver=0;
 
 int gOuterBiCGFails=0;
 int gOuterBiCGIter=0;
+double gOuterBiCGIterAvg=0.0;
 int gInnerBiCGIter=0;
 int gInnerBiCGFails=0;
 

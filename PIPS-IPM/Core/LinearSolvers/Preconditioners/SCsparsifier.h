@@ -12,7 +12,7 @@
 #include "sData.h"
 #include <vector>
 
-//#define SCSPARSIFIER_SAVE_STATS
+#define SCSPARSIFIER_SAVE_STATS
 
 class sData;
 
@@ -73,9 +73,13 @@ class SCsparsifier
    private:
 #ifdef SCSPARSIFIER_SAVE_STATS
       std::vector<double> allratios;
+      double ratioAvg;
       int nEntriesLocal;
       int nDeletedLocal;
 #endif
+      double diagDomBound;
+      double diagDomBoundLeaf;
+
 
       MPI_Comm mpiComm;
 

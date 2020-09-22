@@ -24,6 +24,8 @@
 #include <fstream>
 
 extern int gOuterBiCGIter;
+extern double gOuterBiCGIterAvg;
+extern double g_iterNumber;
 extern int gOuterBiCGFails;
 
 static std::vector<int> bicgIters;
@@ -76,7 +78,6 @@ double QpGenLinsys::getDoubleValue(const std::string& s) const
    }
 }
 
-// todo provide statistics vector, print if TIMING
 static void biCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
 {
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -84,15 +85,7 @@ static void biCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
    if( myRank != 0 )
       return;
 
-   bicgIters.push_back(it);
-   double iterAvg = 0;
-
-   for( size_t i = 0; i < bicgIters.size(); i++ )
-	  iterAvg += double(bicgIters[i]);
-
-   iterAvg /= bicgIters.size();
-
-   std::cout << "BiCGStab (it=" << it << ", rel.res.norm=" << resnorm << ", rel.r.norm=" << rnorm  << ", avg.iter=" << iterAvg << ")";
+   std::cout << "BiCGStab (it=" << it << ", rel.res.norm=" << resnorm << ", rel.r.norm=" << rnorm  << ", avg.iter=" << gOuterBiCGIterAvg << ")";
 
    if( flag == 5 )
       std::cout << " diverged" << std::endl;
@@ -113,9 +106,27 @@ static void biCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
 
 static void biCGStabCommunicateStatus(int flag, int it)
 {
+   double iterAvg = 0.0;
+
+	/* IP algorithm started? */
+   if( g_iterNumber >= 0.5 )
+   {
+	   bicgIters.push_back(it);
+
+	   for( size_t i = 0; i < bicgIters.size(); i++ )
+	     iterAvg += double(bicgIters[i]);
+
+	   iterAvg /= bicgIters.size();
+   }
+   else
+   {
+	   iterAvg = it;
+   }
+
+   gOuterBiCGIterAvg = iterAvg;
    gOuterBiCGIter = it;
 
-   if( flag != 0 )
+   if( flag != 0 && flag != 1 )
       gOuterBiCGFails++;
 
 }
@@ -468,6 +479,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
       this->separateVars(stepx, stepy, stepz, x);
 
       bicg_conv_flag = 1;
+      biCGStabCommunicateStatus(bicg_conv_flag, bicg_niterations);
       biCGStabPrintStatus(bicg_conv_flag, bicg_niterations, bicg_relresnorm, normr / n2b);
 
       return;
@@ -657,8 +669,8 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    } //~ end of BiCGStab loop
 
    bicg_relresnorm = bicg_resnorm / n2b;
+   biCGStabCommunicateStatus(bicg_conv_flag, std::max(bicg_niterations, 1));
    biCGStabPrintStatus(bicg_conv_flag, std::max(bicg_niterations, 1), bicg_relresnorm, normr / n2b);
-   biCGStabCommunicateStatus(bicg_conv_flag, bicg_niterations);
 
    this->separateVars(stepx, stepy, stepz, x);
 }

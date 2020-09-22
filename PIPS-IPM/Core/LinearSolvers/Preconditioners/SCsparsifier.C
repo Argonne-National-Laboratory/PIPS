@@ -16,14 +16,23 @@
 extern double g_iterNumber;
 extern int gOuterBiCGFails;
 extern int gOuterBiCGIter;
+extern double gOuterBiCGIterAvg;
 extern int gInnerBiCGIter;
 extern int gInnerBiCGFails;
 
 
 SCsparsifier::SCsparsifier(MPI_Comm mpiComm_)
 {
+   diagDomBound = diagDomBounds[0];
+   diagDomBoundLeaf = diagDomBoundsLeaf[0];
    mpiComm = mpiComm_;
    diagDomBoundsPosition = 0;
+
+#ifdef SCSPARSIFIER_SAVE_STATS
+   nEntriesLocal = 0;
+   nDeletedLocal = 0;
+   ratioAvg = 0.0;
+#endif
 }
 
 
@@ -36,16 +45,14 @@ SCsparsifier::~SCsparsifier()
 double
 SCsparsifier::getDiagDomBound() const
 {
-	assert(diagDomBoundsPosition < sizeof(diagDomBounds) / sizeof(diagDomBounds[0]));
-	return diagDomBounds[diagDomBoundsPosition];
+	return diagDomBound;
 }
 
 
 double
 SCsparsifier::getDiagDomBoundLeaf() const
 {
-	assert(diagDomBoundsPosition < sizeof(diagDomBounds) / sizeof(diagDomBounds[0]));
-	return diagDomBoundsLeaf[diagDomBoundsPosition];
+	return diagDomBoundLeaf;
 }
 
 
@@ -61,6 +68,9 @@ SCsparsifier::decreaseDiagDomBound(bool& success)
 	    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
 		diagDomBoundsPosition++;
+		diagDomBound = diagDomBounds[diagDomBoundsPosition];
+		diagDomBoundLeaf = diagDomBoundsLeaf[diagDomBoundsPosition];
+
 		success = true;
 
 		if( myRank == 0 )
@@ -81,6 +91,8 @@ SCsparsifier::increaseDiagDomBound(bool& success)
 	    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
 		diagDomBoundsPosition--;
+		diagDomBound = diagDomBounds[diagDomBoundsPosition];
+		diagDomBoundLeaf = diagDomBoundsLeaf[diagDomBoundsPosition];
 		success = true;
 
 		if( myRank == 0 )
@@ -102,25 +114,23 @@ SCsparsifier::updateStats()
     int nEntriesAll;
     int nDeletedAll;
 
-    MPI_Reduce(&(nEntriesLocal), &nEntriesAll, 1, MPI_INT, MPI_SUM, 0, mpiComm);
-    MPI_Reduce(&(nDeletedLocal), &nDeletedAll, 1, MPI_INT, MPI_SUM, 0, mpiComm);
+    MPI_Allreduce(&(nEntriesLocal), &nEntriesAll, 1, MPI_INT, MPI_SUM, mpiComm);
+    MPI_Allreduce(&(nDeletedLocal), &nDeletedAll, 1, MPI_INT, MPI_SUM, mpiComm);
+
+    const double ratio = double(nDeletedAll) / double(nEntriesAll);
+
+    allratios.push_back(ratio);
+
+    ratioAvg = 0.0;
+    for( double ratio : allratios )
+    {
+       ratioAvg += ratio;
+    }
+
+    ratioAvg /= double(allratios.size());
 
     if( myRank == 0 )
-    {
-		const double ratio = double(nDeletedAll) / double(nEntriesAll);
-
-		allratios.push_back(ratio);
-
-		double ratioAvg = 0.0;
-		for( double ratio : allratios )
-		{
-		   ratioAvg += ratio;
-		}
-
-		ratioAvg /= double(allratios.size());
-
-		printf("nentries=%d, ndeleted=%d ratio =%f ratioAvg=%f\n", nEntriesAll, nDeletedAll, ratio, ratioAvg);
-    }
+       printf("Global Schur complement: nentries=%d, ndeleted=%d ratio=%f ratioAvg=%f\n", nEntriesAll, nDeletedAll, ratio, ratioAvg);
 #endif
 }
 
@@ -309,15 +319,15 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
 // todo should be done properly and needs to be tested....
 void SCsparsifier::updateDiagDomBound()
 {
+   /* IP algorithm not started yet? */
    if( g_iterNumber <= 0.5 )
       return;
 
    bool wasIncreased = false;
-   const int nIter = std::max(gOuterBiCGIter, gInnerBiCGIter);
-   const int nFails = std::max(gOuterBiCGFails, gInnerBiCGFails);
+   const int nIter = gOuterBiCGIter;
+   const int nIterAvgUp = static_cast<int>(gOuterBiCGIterAvg + 1.0);
 
    assert(nIter >= 0);
-   assert(nFails >= 0);
 
    int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
@@ -327,43 +337,34 @@ void SCsparsifier::updateDiagDomBound()
       {
     	 decreaseDiagDomBound(wasIncreased);
     	 assert(wasIncreased);
+    	 return;
       }
    }
 
-   if( nIter >= 5 )
+   if( nIter > nIterAvgUp && nIter >= 3 && allratios.back() >= ratioAvg )
    {
-      if( diagDomBoundsPosition == 1 )
-      {
-    	 decreaseDiagDomBound(wasIncreased);
-    	 assert(wasIncreased);
-      }
-   }
+	   const size_t positionUpperBound = sizeof(diagDomBounds) / sizeof(diagDomBounds[0]);
+	   diagDomBound /= 2.0;
+	   diagDomBoundLeaf /= 2.0;
 
-   if( nFails >= 3 )
-   {
-      if( diagDomBoundsPosition == 2 )
-      {
-    	  decreaseDiagDomBound(wasIncreased);
-    	  assert(wasIncreased);
-      }
-   }
-
-   if( nFails >= 20 )
-   {
-	   if( diagDomBoundsPosition == 3 )
+	   if( myRank == 0 )
 	   {
-		   decreaseDiagDomBound(wasIncreased);
-	  	   assert(wasIncreased);
+		  printf("\n SCsparsifier (internal) switched to sparsify factors root: %f leaf: %f "
+				"(nIters: %d > %d ratios: %f >= %f )  \n", diagDomBound, diagDomBoundLeaf,  nIter, nIterAvgUp, allratios.back(), ratioAvg);
 	   }
-   }
 
-   if( nFails >= 60 )
-   {
-	   if( diagDomBoundsPosition == 4 )
+	   if( diagDomBoundsPosition < positionUpperBound - 1 )
 	   {
-		   decreaseDiagDomBound(wasIncreased);
-		   assert(wasIncreased);
+		   if( diagDomBound < diagDomBounds[diagDomBoundsPosition + 1] ||
+		       diagDomBoundLeaf < diagDomBoundsLeaf[diagDomBoundsPosition + 1] )
+		   {
+			  bool success;
+		      decreaseDiagDomBound(success);
+		      assert(success);
+		   }
 	   }
+
+  	   return;
    }
 }
 
