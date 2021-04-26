@@ -1,6 +1,6 @@
 # What is PIPS-IPM++?
 
-PIPS-IPM++ is a (MPI + OpenMP) parallel interior-point method for doubly bordered block diagonal Linear Programms (QPs are currently not supported). For more information on the current algorithm implemented in PIPS and on how to use it see [here](https://opus4.kobv.de/opus4-zib/files/7432/ip4energy.pdf). Currently, the only general purpose interface to PIPS-IPM++ is via [GAMS](https://www.gams.com/) and thus a GAMS license is required (or you write your own interface).
+PIPS-IPM++ is a (MPI + OpenMP) parallel interior-point method for doubly bordered block diagonal Linear Programs (QPs are currently not supported). For more information on the current algorithm implemented in PIPS and on how to use it see [here](https://opus4.kobv.de/opus4-zib/files/7432/ip4energy.pdf). Currently, the only general purpose interface to PIPS-IPM++ is via [GAMS](https://www.gams.com/) and thus a GAMS license is required (or you write your own interface).
 
 PIPS-IPM++ is a derivative of the [PIPS](https://github.com/Argonne-National-Laboratory/PIPS) solver originally developed at Argonne National Laboratory.
 
